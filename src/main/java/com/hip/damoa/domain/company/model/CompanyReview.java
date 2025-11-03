@@ -1,0 +1,142 @@
+package com.hip.damoa.domain.company.model;
+
+import com.hip.damoa.domain.common.BaseEntity;
+import com.hip.damoa.domain.user.model.User;
+import io.hypersistence.utils.hibernate.type.array.StringArrayType;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.Type;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/**
+ * 업체 리뷰
+ */
+@Entity
+@Getter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "company_reviews", indexes = {
+    @Index(name = "idx_company_reviews_company_id", columnList = "company_id"),
+    @Index(name = "idx_company_reviews_user_id", columnList = "user_id"),
+    @Index(name = "idx_company_reviews_rating", columnList = "rating")
+})
+public class CompanyReview extends BaseEntity {
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(name = "rating", nullable = false, precision = 2, scale = 1)
+    private BigDecimal rating; // 1.0 ~ 5.0
+
+    @Column(name = "title", length = 200)
+    private String title;
+
+    @Column(name = "content", columnDefinition = "TEXT", nullable = false)
+    private String content;
+
+    @Type(StringArrayType.class)
+    @Column(name = "images", columnDefinition = "text[]")
+    private String[] images;
+
+    @Column(name = "reply", columnDefinition = "TEXT")
+    private String reply;
+
+    @Column(name = "replied_at")
+    private LocalDateTime repliedAt;
+
+    @Column(name = "like_count", nullable = false)
+    @Builder.Default
+    private Integer likeCount = 0;
+
+    @Column(name = "report_count", nullable = false)
+    @Builder.Default
+    private Integer reportCount = 0;
+
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private String status = "PUBLISHED"; // PUBLISHED, HIDDEN, REPORTED, DELETED
+
+    @Column(name = "is_verified_purchase", nullable = false)
+    @Builder.Default
+    private Boolean isVerifiedPurchase = false;
+
+    // ===== Business Methods =====
+
+    /**
+     * 답변 작성
+     */
+    public void addReply(String reply) {
+        this.reply = reply;
+        this.repliedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 답변 수정
+     */
+    public void updateReply(String reply) {
+        this.reply = reply;
+    }
+
+    /**
+     * 답변 삭제
+     */
+    public void deleteReply() {
+        this.reply = null;
+        this.repliedAt = null;
+    }
+
+    /**
+     * 좋아요 증가
+     */
+    public void incrementLikeCount() {
+        this.likeCount++;
+    }
+
+    /**
+     * 좋아요 감소
+     */
+    public void decrementLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
+
+    /**
+     * 신고 증가
+     */
+    public void incrementReportCount() {
+        this.reportCount++;
+        if (this.reportCount >= 5) {
+            this.status = "REPORTED";
+        }
+    }
+
+    /**
+     * 상태 변경
+     */
+    public void changeStatus(String status) {
+        this.status = status;
+    }
+
+    /**
+     * 리뷰 숨기기
+     */
+    public void hide() {
+        this.status = "HIDDEN";
+    }
+
+    /**
+     * 리뷰 게시
+     */
+    public void publish() {
+        this.status = "PUBLISHED";
+    }
+}

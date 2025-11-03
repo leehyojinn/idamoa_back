@@ -1,0 +1,112 @@
+# ===========================================
+# Damoa Full Stack (PostgreSQL 16 + Redis + Application)
+# ===========================================
+# Usage:
+#   Start:  docker-compose up --build
+#   Stop:   docker-compose down
+#   Logs:   docker-compose logs -f app
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: damoa-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-hip_damoa_local}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-my-secret-pw}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-hip_damoa_local}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - damoa-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: damoa-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - damoa-network
+
+  app:
+    build: .
+    container_name: damoa-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-hip_damoa_local}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-my-secret-pw}
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      # OAuth
+      OAUTH_REDIRECT_BASE_URL: ${OAUTH_REDIRECT_BASE_URL:-http://localhost:8080}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
+      NAVER_CLIENT_ID: ${NAVER_CLIENT_ID}
+      NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      # AWS S3
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      AWS_REGION: ${AWS_REGION}
+      # Payment Gateways
+      KAKAOPAY_ADMIN_KEY: ${KAKAOPAY_ADMIN_KEY}
+      KAKAOPAY_CID: ${KAKAOPAY_CID}
+      TOSS_SECRET_KEY: ${TOSS_SECRET_KEY}
+      TOSS_CLIENT_KEY: ${TOSS_CLIENT_KEY}
+      INICIS_MID: ${INICIS_MID}
+      INICIS_SIGN_KEY: ${INICIS_SIGN_KEY}
+      # Notifications
+      EMAIL_NOTIFICATION_ENABLED: ${EMAIL_NOTIFICATION_ENABLED:-true}
+      EMAIL_FROM: ${EMAIL_FROM}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMS_NOTIFICATION_ENABLED: ${SMS_NOTIFICATION_ENABLED:-true}
+      SMS_PROVIDER: ${SMS_PROVIDER:-ALIGO}
+      SMS_SENDER: ${SMS_SENDER}
+      ALIGO_API_KEY: ${ALIGO_API_KEY}
+      ALIGO_USER_ID: ${ALIGO_USER_ID}
+    networks:
+      - damoa-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  damoa-network:
+    driver: bridge
+

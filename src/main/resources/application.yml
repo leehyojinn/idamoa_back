@@ -1,0 +1,112 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:hip_damoa_local}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:my-secret-pw}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    schemas: public
+    validate-on-migrate: true
+
+jwt:
+  secret: V29vTGVlS2ltSmVvbmdNaW5Hb29kSGVsbG9Xb3JsZEhpSGVsbG9Xb3JsZEhpSGVsbG9Xb3JsZEhpSGVsbG9Xb3JsZEhp
+
+oauth:
+  redirect-base-url: ${OAUTH_REDIRECT_BASE_URL:http://localhost:8080}
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID:your-kakao-client-id}
+    client-secret: ${KAKAO_CLIENT_SECRET:your-kakao-client-secret}
+  naver:
+    client-id: ${NAVER_CLIENT_ID:your-naver-client-id}
+    client-secret: ${NAVER_CLIENT_SECRET:your-naver-client-secret}
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
+    client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
+
+# AWS S3 Configuration
+# 실제 사용 시 환경변수로 설정하세요:
+# - AWS_ACCESS_KEY_ID: AWS IAM Access Key
+# - AWS_SECRET_ACCESS_KEY: AWS IAM Secret Key
+# - AWS_S3_BUCKET: S3 버킷 이름
+# - AWS_REGION: S3 리전 (예: ap-northeast-2)
+aws:
+  s3:
+    access-key: ${AWS_ACCESS_KEY_ID:AKIAIOSFODNN7EXAMPLE}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY}
+    bucket: ${AWS_S3_BUCKET:damoa-files}
+    region: ${AWS_REGION:ap-northeast-2}
+  cloudfront:
+    domain: ${AWS_CLOUDFRONT_DOMAIN:}  # CDN 사용 시 설정 (선택사항)
+
+# File Upload Configuration
+file:
+  upload:
+    max-size: 10485760  # 10MB (bytes)
+    allowed-extensions: jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,ppt,pptx,zip
+    base-url: ${FILE_BASE_URL:https://damoa-files.s3.ap-northeast-2.amazonaws.com}
+
+# Payment Gateway Configuration
+# 실제 사용 시 환경변수로 설정하세요:
+# KakaoPay: https://developers.kakao.com/docs/latest/ko/kakaopay/common
+# Toss Payments: https://docs.tosspayments.com/
+# INICIS: https://manual.inicis.com/
+payment:
+  kakaopay:
+    admin-key: ${KAKAOPAY_ADMIN_KEY:your-kakaopay-admin-key}
+    cid: ${KAKAOPAY_CID:TC0ONETIME}  # 테스트: TC0ONETIME, 실제: 발급받은 CID
+    approval-url: ${PAYMENT_APPROVAL_URL:http://localhost:8080/api/payments/kakaopay/success}
+    cancel-url: ${PAYMENT_CANCEL_URL:http://localhost:8080/api/payments/kakaopay/cancel}
+    fail-url: ${PAYMENT_FAIL_URL:http://localhost:8080/api/payments/kakaopay/fail}
+  toss:
+    secret-key: ${TOSS_SECRET_KEY:test_sk_XXXXXXXXXXXXXXXXXXXXXXXXXXXX}  # 실제: 발급받은 Secret Key
+    client-key: ${TOSS_CLIENT_KEY:test_ck_XXXXXXXXXXXXXXXXXXXXXXXXXXXX}  # 실제: 발급받은 Client Key
+    success-url: ${PAYMENT_APPROVAL_URL:http://localhost:8080/api/payments/toss/success}
+    fail-url: ${PAYMENT_FAIL_URL:http://localhost:8080/api/payments/toss/fail}
+  inicis:
+    mid: ${INICIS_MID:INIpayTest}  # 테스트: INIpayTest, 실제: 발급받은 MID
+    sign-key: ${INICIS_SIGN_KEY:SU5JTElURV9UUklQTEVERVNfS0VZU1RS}  # 실제: 발급받은 Sign Key
+    return-url: ${PAYMENT_APPROVAL_URL:http://localhost:8080/api/payments/inicis/return}
+    close-url: ${PAYMENT_CANCEL_URL:http://localhost:8080/api/payments/inicis/close}
+
+# Notification Configuration
+# 실제 사용 시 환경변수로 설정하세요
+notification:
+  email:
+    enabled: ${EMAIL_NOTIFICATION_ENABLED:true}
+    from: ${EMAIL_FROM:noreply@damoa.com}
+    # SMTP 설정 (Gmail 예시)
+    smtp:
+      host: ${SMTP_HOST:smtp.gmail.com}
+      port: ${SMTP_PORT:587}
+      username: ${SMTP_USERNAME:your-email@gmail.com}
+      password: ${SMTP_PASSWORD:your-app-password}  # Gmail 앱 비밀번호
+      auth: true
+      starttls: true
+  sms:
+    enabled: ${SMS_NOTIFICATION_ENABLED:true}
+    provider: ${SMS_PROVIDER:ALIGO}  # ALIGO, NCP (Naver Cloud Platform)
+    # ALIGO SMS (https://smartsms.aligo.in/)
+    aligo:
+      api-key: ${ALIGO_API_KEY:your-aligo-api-key}
+      user-id: ${ALIGO_USER_ID:your-aligo-user-id}
+      sender: ${SMS_SENDER:01012345678}
+    # NCP (Naver Cloud Platform) SMS
+    ncp:
+      access-key: ${NCP_ACCESS_KEY:your-ncp-access-key}
+      secret-key: ${NCP_SECRET_KEY:your-ncp-secret-key}
+      service-id: ${NCP_SERVICE_ID:ncp:sms:kr:service-id}
+      sender: ${SMS_SENDER:01012345678}

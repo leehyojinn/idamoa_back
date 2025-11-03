@@ -1,0 +1,167 @@
+# ===========================================
+# Production Environment Configuration
+# ===========================================
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:hip_damoa_prod}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Never use create or update in production
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          batch_size: 25
+          batch_versioned_data: true
+        order_inserts: true
+        order_updates: true
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}  # Redis password for production
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+# Logging Configuration for Production
+logging:
+  level:
+    root: WARN
+    com.interior: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+  file:
+    name: /var/log/damoa/application.log
+    max-size: 10MB
+    max-history: 30
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# OAuth Configuration for Production
+oauth:
+  redirect-base-url: ${OAUTH_REDIRECT_BASE_URL:https://www.damoa.com}
+
+# File Upload Configuration for Production
+file:
+  upload:
+    base-url: ${FILE_BASE_URL:https://damoa-prod-files.s3.ap-northeast-2.amazonaws.com}
+    max-size: 52428800  # 50MB for production
+
+# AWS S3 Configuration for Production
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET:damoa-prod-files}
+  cloudfront:
+    domain: ${AWS_CLOUDFRONT_DOMAIN}  # Use CloudFront CDN in production
+
+# Server Configuration
+server:
+  port: 8080
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+  forward-headers-strategy: native  # For proxy/load balancer
+
+# Security Headers
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
+        http-only: true
+        same-site: strict
+
+# Actuator Configuration for Production
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Swagger/OpenAPI Configuration (Disabled in Production)
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Performance Optimization
+spring:
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+
+# Cache Configuration
+spring:
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000  # 1 hour
+      cache-null-values: false
+
+# Database Connection Pool Monitoring
+spring:
+  datasource:
+    hikari:
+      metrics:
+        enabled: true
+      leak-detection-threshold: 60000  # 60 seconds
+
+# CORS Configuration for Production
+cors:
+  allowed-origins:
+    - https://www.damoa.com
+    - https://damoa.com
+    - https://admin.damoa.com
+  allowed-methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+  allowed-headers:
+    - Authorization
+    - Content-Type
+    - Accept
+    - Origin
+    - X-Requested-With
+  exposed-headers:
+    - Content-Type
+    - Authorization
+  max-age: 3600

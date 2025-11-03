@@ -1,0 +1,1414 @@
+# 다모아(Damoa) 작업일지
+
+> **작업 규칙**: 모든 작업 시작 전 이 파일을 확인하고, 작업 완료 후 반드시 기록을 업데이트합니다.
+
+---
+
+## 📋 작업 순서
+
+### 1단계: 작업 시작 전 체크리스트
+- [ ] `doc/work-log.md` 파일 확인
+- [ ] 현재 진행 중인 작업 확인
+- [ ] 다음 우선순위 작업 확인
+- [ ] 관련 문서 확인 (`doc/mermaid.txt`, `doc/redis-postgresql-strategy.md` 등)
+
+### 2단계: 작업 진행
+- [ ] 작업 내용을 "진행 중" 섹션에 기록
+- [ ] 코드 변경사항 추적
+- [ ] 테스트 수행
+
+### 3단계: 작업 완료
+- [ ] 작업 결과를 "완료" 섹션으로 이동
+- [ ] 관련 파일 경로 및 주요 변경사항 기록
+- [ ] 다음 작업 항목 업데이트
+
+---
+
+## 🎯 현재 상태 (Current Status)
+
+**프로젝트 단계**: 업체 CRUD 및 검색 기능 구현 완료
+**마지막 업데이트**: 2025-11-03
+**다음 우선순위**: 파일 업로드 시스템 구현 (FILE-001) 또는 추가 비즈니스 기능 개발
+
+---
+
+## 📝 작업 로그
+
+### 2025-11-03
+
+#### ✅ 완료 (Completed)
+
+**[COMPANY-001] 업체 CRUD 개선 및 검색 기능 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-03 (약 3시간)
+- **작업 내용**:
+  - DB 스키마 확장 (V8, V9 마이그레이션)
+  - Company 엔티티에 프리미엄 등급 필드 추가
+  - CompanyListResponse에 좋아요 수, 이미지, 프리미엄 등급 추가
+  - 업체 검색 기능 구현 (필터링 + 정렬)
+  - 업체 목록/조회 API를 public으로 변경
+  - 이미지 목록 제공 (최대 3개)
+
+**[COMPANY-002] 인증 오류 처리 개선 (401/403 응답)** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-03 오후
+- **문제**: 토큰 없이 POST /api/companies 요청 시 500 에러 발생 (401이 나와야 함)
+- **작업 내용**:
+  1. **GlobalExceptionHandler 개선**:
+     - `AuthenticationException` 핸들러 추가 (401 반환)
+     - `AccessDeniedException` 핸들러 추가 (403 반환)
+     - 파일: `core/exception/GlobalExceptionHandler.java`
+
+  2. **SecurityConfig 개선**:
+     - HTTP 메서드별 권한 분리 (GET: public, POST/PUT/DELETE: authenticated)
+     - `AuthenticationEntryPoint` 추가 (401 + JSON 응답)
+     - `AccessDeniedHandler` 추가 (익명 사용자: 401, 인증된 사용자: 403)
+     - 파일: `config/web/SecurityConfig.java`
+
+- **테스트 결과**:
+  ```bash
+  # 인증 없이 POST 요청
+  POST /api/companies (without token)
+  → HTTP 401: {"success":false,"message":"인증이 필요합니다. 로그인 후 다시 시도해주세요."}
+
+  # 인증 없이 GET 요청 (public)
+  GET /api/companies
+  → HTTP 200: {"success":true,"data":{"content":[],...}}
+  ```
+
+- **기술 결정**:
+  - Spring Security의 `AnonymousAuthenticationToken` 체크하여 401/403 구분
+  - JSON 응답 형식 통일 (`success`, `message` 필드)
+  - HTTP 메서드별 세분화된 권한 제어
+  - Entity와 DB 스키마 불일치 해결 (컬럼명 변경)
+  - 빌드, 마이그레이션, API 테스트 완료
+
+- **생성 파일**:
+  - `src/main/resources/db/migration/V8__add_company_premium_tier.sql` - 프리미엄 등급 및 누락 필드 스키마
+  - `src/main/resources/db/migration/V9__rename_company_columns.sql` - 컬럼명 변경 (Entity 일치)
+  - `domain/company/web/dto/CompanyImageDto.java` - 이미지 DTO
+  - `domain/company/web/dto/CompanySearchRequest.java` - 검색 요청 DTO
+  - `domain/company/repository/CompanySpecification.java` - 동적 검색 Specification
+
+- **수정 파일**:
+  - `domain/company/model/Company.java` - premiumTier, premiumMonthlyAmount 필드 추가
+  - `domain/company/web/dto/CompanyListResponse.java` - likeCount, images, premiumTier 추가
+  - `domain/company/repository/CompanyRepository.java` - JpaSpecificationExecutor 추가
+  - `domain/company/repository/CompanyImageRepository.java` - Pageable 메서드 추가
+  - `domain/company/service/CompanyService.java` - searchCompanies(), getCompanyImages() 추가
+  - `domain/company/web/CompanyController.java` - 검색 엔드포인트 추가, 이미지 포함 로직 추가
+  - `config/web/SecurityConfig.java` - 업체 public endpoint 추가
+
+- **주요 변경사항**:
+  1. **DB 스키마 (V8 마이그레이션)**:
+     - `premium_tier` 컬럼 추가 (NONE, BASIC, STANDARD, PREMIUM, VIP)
+     - `premium_monthly_amount` 컬럼 추가
+     - 성능 최적화 인덱스 3개 추가
+
+  2. **검색 조건**:
+     - 키워드 검색 (업체명, 설명)
+     - 서비스 지역 필터 (serviceAreas)
+     - 태그 필터 (tags)
+     - 최소 평점 필터 (minRating)
+
+  3. **정렬 옵션**:
+     - LATEST: 최신순 (createdAt DESC)
+     - POPULAR: 인기순 (likeCount DESC, viewCount DESC)
+     - RATING: 평점순 (avgRating DESC, reviewCount DESC)
+     - REVIEW_COUNT: 후기순 (reviewCount DESC)
+     - PREMIUM_TIER: 프리미엄 등급순 (premiumMonthlyAmount DESC, premiumTier DESC)
+
+  4. **API 변경**:
+     - `GET /api/companies` - 활성 업체 목록 (public, 이미지 포함)
+     - `GET /api/companies/search` - 검색 API (public)
+     - `GET /api/companies/{id}` - 상세 조회 (public)
+     - `GET /api/companies/slug/{slug}` - Slug 조회 (public)
+     - `POST /api/companies` - 등록 (인증 필요)
+     - `PUT /api/companies/{id}` - 수정 (인증 필요)
+     - `DELETE /api/companies/{id}` - 삭제 (인증 필요)
+
+- **기술적 결정사항**:
+  - Spring Data JPA Specification 사용하여 동적 쿼리 구현
+  - PostgreSQL array_contains 함수 사용 (지역, 태그 필터)
+  - 이미지 목록은 displayOrder 정렬하여 최대 3개 제공
+  - SecurityConfig에서 AntPathMatcher 패턴으로 public endpoint 설정
+  - V9 마이그레이션으로 컬럼명 변경 (user_id → owner_id, completed_count → completed_projects)
+
+- **테스트 결과**:
+  - ✅ V8 마이그레이션 성공 (10개 필드 추가)
+  - ✅ V9 마이그레이션 성공 (컬럼명 변경)
+  - ✅ 애플리케이션 정상 시작 (Tomcat 8080)
+  - ✅ GET /api/companies API 정상 작동 (public)
+  - ✅ GET /api/companies/search API 정상 작동 (public)
+
+---
+
+### 2025-10-15
+
+#### ✅ 완료 (Completed)
+
+**[SCHEMA-001] 데이터베이스 스키마 설계 및 Redis/PostgreSQL 분리 전략 수립**
+- **작업자**: Claude
+- **작업 시간**: 2025-10-15
+- **작업 내용**:
+  - `doc/mermaid.txt` 확인하여 전체 시스템 플로우 파악
+  - `doc/damoa-version_0_0_1.sql` 기반으로 개선된 스키마 설계
+  - Redis와 PostgreSQL 데이터 분리 전략 수립
+  - 소프트 삭제(Soft Delete) 패턴 적용
+
+- **생성 파일**:
+  - `doc/redis-postgresql-strategy.md` - Redis/PostgreSQL 사용 전략 문서화
+
+- **주요 결정사항**:
+  - ❌ PostgreSQL에서 제거: `email_verifications`, `sms_verifications`, `refresh_tokens`
+  - ✅ Redis로 이동: JWT 토큰, OAuth state, 이메일/SMS OTP, 세션 데이터
+  - ✅ PostgreSQL 유지: 영구 비즈니스 데이터, 감사 로그, 관계형 데이터
+  - ✅ 모든 비즈니스 테이블에 `is_deleted`, `deleted_at` 추가
+
+- **참고 문서**:
+  - `doc/redis-postgresql-strategy.md` - 전체 분리 전략
+  - `doc/mermaid.txt` - 시스템 플로우 다이어그램
+
+**[DOC-001] 작업일지 시스템 구축**
+- **작업자**: Claude
+- **작업 시간**: 2025-10-15
+- **작업 내용**:
+  - 작업일지 템플릿 생성
+  - CLAUDE.md에 작업일지 사용 가이드 추가
+
+- **생성 파일**:
+  - `doc/work-log.md` - 작업일지 템플릿
+
+- **수정 파일**:
+  - `CLAUDE.md` - 작업일지 워크플로우 추가
+
+**[AUTH-001] 인증/인가 API 전체 구현 완료** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-15 (9시간)
+- **작업 내용**:
+  - User 엔티티 schema-improved.sql에 맞춰 완전 재작성
+  - Role enum 확장 (USER, COMPANY, DESIGNER, ADMIN, BLACKLIST)
+  - 추가 엔티티 생성: SocialAccount, UserProfile, CompanyProfile, DesignerProfile
+  - 모든 Repository 및 DTO 생성
+  - VerificationService 구현 (이메일/SMS OTP, Redis 기반)
+  - AuthService 구현 (2단계 회원가입, 로그인, 토큰 갱신, 로그아웃)
+  - AuthController 전체 API 엔드포인트 구현
+  - JwtTokenProvider 메서드 추가 및 개선
+  - SecurityConfig AuthenticationManager 빈 등록
+  - RedisService String 타입 메서드 추가
+  - PostgreSQL role 컬럼 타입 수정
+  - Docker 빌드 및 배포
+  - **전체 API 테스트 완료**
+
+- **생성 파일**:
+  - `domain/user/model/OAuthProvider.java` - OAuth 제공자 enum
+  - `domain/user/model/SocialAccount.java` - 소셜 계정 엔티티
+  - `domain/user/model/UserProfile.java` - 사용자 프로필 엔티티
+  - `domain/company/model/CompanyProfile.java` - 업체 프로필 엔티티
+  - `domain/designer/model/DesignerProfile.java` - 디자이너 프로필 엔티티
+  - `domain/user/repository/SocialAccountRepository.java`
+  - `domain/user/repository/UserProfileRepository.java`
+  - `domain/company/repository/CompanyProfileRepository.java`
+  - `domain/designer/repository/DesignerProfileRepository.java`
+  - `domain/user/web/dto/SignupStartRequest.java`
+  - `domain/user/web/dto/SignupStartResponse.java`
+  - `domain/user/web/dto/SignupCompleteRequest.java`
+  - `domain/user/web/dto/EmailVerificationRequest.java`
+  - `domain/user/web/dto/SmsVerificationRequest.java`
+  - `domain/user/web/dto/VerificationConfirmRequest.java`
+  - `domain/user/web/dto/TokenRefreshRequest.java`
+  - `domain/user/service/VerificationService.java` - 이메일/SMS 인증
+  - `domain/user/service/AuthService.java` - 인증/인가 비즈니스 로직
+
+- **수정 파일**:
+  - `domain/user/model/User.java` - 완전 재작성 ( 기준)
+  - `domain/user/model/Role.java` - 5개 역할 추가
+  - `domain/user/repository/UserRepository.java` - 메서드 추가
+  - `domain/user/web/AuthController.java` - 11개 API 엔드포인트
+  - `core/jwt/JwtTokenProvider.java` - 메서드 추가 (getUserEmail, getExpiration)
+  - `core/exception/ErrorCode.java` - 24개 에러 코드 추가
+  - `config/web/SecurityConfig.java` - AuthenticationManager 빈 등록
+  - `infra/redis/RedisService.java` - String 타입 메서드 추가
+
+- **API 엔드포인트 (11개)**:
+  1. POST `/api/auth/signup/start` - 회원가입 시작 ✅
+  2. POST `/api/auth/signup/complete` - 회원가입 완료 ✅
+  3. POST `/api/auth/email/send-code` - 이메일 인증 코드 발송 ✅
+  4. POST `/api/auth/email/verify-code` - 이메일 인증 확인 ✅
+  5. POST `/api/auth/sms/send-code` - SMS 인증 코드 발송 ✅
+  6. POST `/api/auth/sms/verify-code` - SMS 인증 확인 ✅
+  7. POST `/api/auth/login` - 로그인 ✅
+  8. POST `/api/auth/logout` - 로그아웃 ✅
+  9. POST `/api/auth/refresh` - 토큰 갱신 ✅
+  10. GET `/api/auth/me` - 내 정보 조회 ✅
+
+- **테스트 결과**:
+  - ✅ 회원가입 시작 → signup token 발급 (TTL: 10분)
+  - ✅ 이메일 인증 → OTP 발급 (TTL: 15분, 6자리)
+  - ✅ SMS 인증 → OTP 발급 (TTL: 3분, 6자리)
+  - ✅ 회원가입 완료 → JWT Access/Refresh 토큰 발급
+  - ✅ 로그인 → JWT Access/Refresh 토큰 발급
+  - ✅ 인증된 엔드포인트 접근 → 정상 작동
+  - ✅ 토큰 갱신 → Refresh Token Rotation 정상 작동
+  - ✅ 로그아웃 → Refresh 토큰 삭제 + Access 토큰 블랙리스트
+
+- **Redis 키 패턴**:
+  - `signup:{uuid}` - 회원가입 임시 데이터 (TTL: 10분)
+  - `otp:email:{email}` - 이메일 OTP (TTL: 15분)
+  - `otp:sms:{phoneNumber}` - SMS OTP (TTL: 3분)
+  - `refresh:{userId}` - Refresh 토큰 (TTL: 14일)
+  - `blacklist:{accessToken}` - 토큰 블랙리스트 (TTL: 남은 만료 시간)
+  - `attempt:email:{email}` - 이메일 인증 시도 횟수 (TTL: 1시간, 최대 5회)
+  - `attempt:sms:{phoneNumber}` - SMS 인증 시도 횟수 (TTL: 1시간, 최대 5회)
+
+- **주요 기능**:
+  - 2단계 회원가입 (Redis 기반 임시 저장)
+  - 이메일/SMS OTP 인증 (시도 횟수 제한)
+  - JWT Access Token (TTL: 1일)
+  - JWT Refresh Token (TTL: 14일)
+  - Refresh Token Rotation (보안 강화)
+  - Access Token Blacklist (로그아웃 시)
+  - Role별 프로필 자동 생성 (USER → UserProfile, COMPANY → CompanyProfile, DESIGNER → DesignerProfile)
+
+- **참고 문서**:
+  - `doc/mermaid.txt` - 인증 플로우 다이어그램
+  - `doc/redis-postgresql-strategy.md` - Redis/PostgreSQL 분리 전략
+
+### 2025-10-16
+
+#### ✅ 완료 (Completed)
+
+**[OAUTH-001] 소셜 로그인 (OAuth) 구현 완료** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-16 (3시간)
+- **작업 내용**:
+  - OAuth 2.0 Provider 인터페이스 및 구현체 생성
+  - Kakao, Naver, Google OAuth 2.0 연동
+  - OAuthService 구현 (로그인, 계정 연결/해제)
+  - OAuth State 관리 (Redis 기반, CSRF 방지)
+  - OAuth 토큰 관리 (Redis 저장, PostgreSQL X)
+  - 소셜 계정 자동 회원가입
+  - 기존 계정에 소셜 계정 연결/해제
+  - OAuthController 5개 API 엔드포인트 구현
+  - SecurityConfig OAuth 엔드포인트 허용
+  - application.yml OAuth 설정 추가
+  - Docker 빌드 및 배포
+  - **OAuth URL 생성 API 테스트 완료**
+
+- **생성 파일**:
+  - `infra/oauth/OAuthProvider.java` - OAuth Provider 인터페이스
+  - `infra/oauth/OAuthTokenResponse.java` - OAuth 토큰 응답 DTO
+  - `infra/oauth/OAuthUserInfo.java` - OAuth 사용자 정보 DTO
+  - `infra/oauth/KakaoOAuthProvider.java` - Kakao OAuth 구현체
+  - `infra/oauth/NaverOAuthProvider.java` - Naver OAuth 구현체
+  - `infra/oauth/GoogleOAuthProvider.java` - Google OAuth 구현체
+  - `domain/user/service/OAuthService.java` - OAuth 비즈니스 로직
+  - `domain/user/web/OAuthController.java` - OAuth API 엔드포인트
+  - `domain/user/web/dto/OAuthLoginResponse.java` - OAuth 로그인 응답 DTO
+  - `domain/user/web/dto/SocialAccountResponse.java` - 소셜 계정 응답 DTO
+
+- **수정 파일**:
+  - `domain/user/repository/SocialAccountRepository.java` - countByUser 메서드 추가
+  - `core/exception/ErrorCode.java` - OAuth 관련 7개 에러 코드 추가
+  - `config/web/SecurityConfig.java` - OAuth 엔드포인트 허용
+  - `src/main/resources/application.yml` - OAuth 설정 추가
+
+- **API 엔드포인트 (5개)**:
+  1. GET `/api/oauth/{provider}/login` - OAuth 로그인 URL 생성 ✅
+  2. GET `/api/oauth/{provider}/callback` - OAuth 콜백 처리 (로그인/회원가입)
+  3. GET `/api/oauth/{provider}/link` - 소셜 계정 연결 URL 생성 (인증 필요)
+  4. GET `/api/oauth/{provider}/link/callback` - 소셜 계정 연결 콜백 (인증 필요)
+  5. DELETE `/api/oauth/{provider}/unlink` - 소셜 계정 연결 해제 (인증 필요)
+  6. GET `/api/oauth/accounts` - 내 소셜 계정 목록 조회 (인증 필요)
+
+- **테스트 결과**:
+  - ✅ Kakao OAuth URL 생성 → 정상 작동 (State: UUID 생성, Redis 저장)
+  - ✅ Naver OAuth URL 생성 → 정상 작동
+  - ✅ Google OAuth URL 생성 → 정상 작동 (scope: openid email profile)
+  - ⚠️ OAuth 콜백 처리 → 실제 Provider Client ID/Secret 필요 (테스트 보류)
+  - ⚠️ 소셜 계정 연결/해제 → 인증된 사용자 필요 (테스트 보류)
+
+- **Redis 키 패턴**:
+  - `oauth:state:{state}` - OAuth State (TTL: 10분, CSRF 방지)
+  - `oauth:token:{provider}:{providerId}` - OAuth Access/Refresh Token (TTL: 14일)
+
+- **주요 기능**:
+  - OAuth 2.0 Authorization Code Flow
+  - State 기반 CSRF 방지
+  - OAuth 토큰 Redis 저장 (PostgreSQL X)
+  - Provider User ID만 DB 저장
+  - 자동 회원가입 (소셜 프로필 기반)
+  - 기존 계정 연결 (이메일 매칭)
+  - 마지막 소셜 계정 해제 방지 (비밀번호 없는 경우)
+  - 소셜 로그인 사용자는 password null
+
+- **참고 문서**:
+  - `doc/mermaid.txt` - OAuth 로그인 플로우 다이어그램
+  - `doc/redis-postgresql-strategy.md` - OAuth 토큰 관리 전략
+
+**[DB-001] 데이터베이스 마이그레이션 설정 완료** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-16 (1시간)
+- **작업 내용**:
+  - Flyway Database Migration 도구 선택 및 설정
+  - build.gradle.kts에 Flyway 의존성 추가 (10.8.1)
+  - application.yml에 Flyway 설정 추가
+  - JPA ddl-auto를 update에서 validate로 변경
+  - schema-improved.sql 기반 V1 마이그레이션 스크립트 생성
+  - 초기 시드 데이터 V2 마이그레이션 스크립트 생성
+  - Docker 빌드 및 마이그레이션 테스트
+  - **Flyway 마이그레이션 성공 확인**
+
+- **생성 파일**:
+  - `src/main/resources/db/migration/V1__Initial_schema.sql` - 전체 스키마 생성
+  - `src/main/resources/db/migration/V2__Insert_seed_data.sql` - 시드 데이터
+
+- **수정 파일**:
+  - `build.gradle.kts` - Flyway 의존성 추가
+  - `src/main/resources/application.yml` - Flyway 설정 및 JPA ddl-auto 변경
+
+- **마이그레이션 실행 결과**:
+  - ✅ V1: Baseline 설정 완료 (전체 스키마 생성)
+  - ✅ V2: 시드 데이터 삽입 완료 (구독 플랜 4개, 태그 25개)
+  - ✅ flyway_schema_history 테이블 생성
+  - ✅ JPA validate 모드 정상 작동
+
+- **시드 데이터**:
+  - 구독 플랜: FREE, BRONZE (₩29,000/월), SILVER (₩99,000/월), GOLD (₩299,000/월)
+  - 태그: 병원 타입 10개, 전문 분야 8개, 서비스 지역 17개
+
+- **Flyway 설정**:
+  - baseline-on-migrate: true (기존 DB 대응)
+  - validate-on-migrate: true (마이그레이션 검증)
+  - locations: classpath:db/migration
+  - schemas: public
+
+- **주요 효과**:
+  - 데이터베이스 스키마 버전 관리
+  - 롤백 및 히스토리 추적 가능
+  - JPA의 자동 스키마 생성 비활성화 (운영 환경 안정성)
+  - 팀 협업 시 스키마 동기화 용이
+
+- **참고 문서**:
+  - `src/main/resources/schema-improved.sql` - 원본 스키마
+  - Flyway Documentation: https://flywaydb.org/documentation
+
+**[ESTIMATE-001] 견적/입찰 시스템 API 구현 완료** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-16 (2시간)
+- **작업 내용**:
+  - 견적/입찰 도메인 엔티티 구현 (EstimateRequest, EstimateProposal, Match)
+  - ENUM 타입 추가 (EstimateType, RequestStatus)
+  - Repository 구현 (3개, 총 30+ 쿼리 메서드)
+  - Service 계층 구현 (EstimateRequestService, ProposalService, MatchService)
+  - DTO 계층 구현 (Request/Response DTO 7개)
+  - REST API Controller 구현 (EstimateController, 21개 엔드포인트)
+  - Payment 엔티티 임시 구현 (Phase 2에서 본격 구현 예정)
+  - SecurityConfig 업데이트 (견적 API 엔드포인트 허용)
+  - ErrorCode 업데이트 (견적/입찰 관련 16개 에러 코드 추가)
+  - Docker 빌드 및 배포 성공
+
+- **생성 파일**:
+  - `domain/estimate/model/EstimateType.java` - 견적 유형 enum
+  - `domain/estimate/model/RequestStatus.java` - 요청 상태 enum
+  - `domain/estimate/model/EstimateRequest.java` - 견적 요청 엔티티
+  - `domain/estimate/model/EstimateProposal.java` - 제안 엔티티
+  - `domain/estimate/model/Match.java` - 매칭 엔티티
+  - `domain/estimate/repository/EstimateRequestRepository.java`
+  - `domain/estimate/repository/EstimateProposalRepository.java`
+  - `domain/estimate/repository/MatchRepository.java`
+  - `domain/estimate/service/EstimateRequestService.java`
+  - `domain/estimate/service/ProposalService.java`
+  - `domain/estimate/service/MatchService.java`
+  - `domain/estimate/web/dto/EstimateRequestCreateRequest.java`
+  - `domain/estimate/web/dto/EstimateRequestUpdateRequest.java`
+  - `domain/estimate/web/dto/EstimateRequestResponse.java`
+  - `domain/estimate/web/dto/ProposalCreateRequest.java`
+  - `domain/estimate/web/dto/ProposalUpdateRequest.java`
+  - `domain/estimate/web/dto/ProposalResponse.java`
+  - `domain/estimate/web/dto/MatchResponse.java`
+  - `domain/estimate/web/EstimateController.java`
+  - `domain/payment/model/Payment.java` - 결제 엔티티 (임시)
+  - `domain/payment/model/PaymentStatus.java` - 결제 상태 enum
+
+- **수정 파일**:
+  - `core/exception/ErrorCode.java` - 견적/입찰 관련 16개 에러 코드 추가
+  - `core/response/ApiResponse.java` - success() 메서드 추가
+  - `config/web/SecurityConfig.java` - 견적 API 엔드포인트 허용
+  - `domain/company/repository/CompanyProfileRepository.java` - findByIdAndIsDeletedFalse() 추가
+
+- **API 엔드포인트 (21개)**:
+
+  **견적 요청 (Estimate Request) - 8개:**
+  1. POST `/api/estimates/requests` - 견적 요청 생성 (DRAFT)
+  2. PUT `/api/estimates/requests/{id}` - 견적 요청 수정
+  3. POST `/api/estimates/requests/{id}/submit` - 견적 요청 제출
+  4. POST `/api/estimates/requests/{id}/cancel` - 견적 요청 취소
+  5. DELETE `/api/estimates/requests/{id}` - 견적 요청 삭제 (soft delete)
+  6. GET `/api/estimates/requests/{id}` - 견적 요청 조회 (조회수 증가)
+  7. GET `/api/estimates/requests/my` - 내 견적 요청 목록
+  8. GET `/api/estimates/requests/public` - 공개 견적 요청 목록 (업체용)
+  9. GET `/api/estimates/requests/location` - 지역별 견적 요청 검색
+
+  **제안 (Proposal) - 7개:**
+  10. POST `/api/estimates/proposals` - 제안 제출 (업체)
+  11. PUT `/api/estimates/proposals/{id}` - 제안 수정
+  12. DELETE `/api/estimates/proposals/{id}` - 제안 철회
+  13. GET `/api/estimates/proposals/{id}` - 제안 조회 (클라이언트가 보면 viewed 표시)
+  14. GET `/api/estimates/requests/{id}/proposals` - 견적 요청에 대한 제안 목록
+  15. GET `/api/estimates/proposals/my` - 내 제안 목록 (업체)
+  16. GET `/api/estimates/proposals/unviewed` - 읽지 않은 제안 목록 (클라이언트)
+
+  **매칭 (Match) - 6개:**
+  17. POST `/api/estimates/proposals/{id}/accept` - 제안 수락 (매칭 생성)
+  18. POST `/api/estimates/matches/{id}/start` - 프로젝트 시작
+  19. POST `/api/estimates/matches/{id}/complete` - 프로젝트 완료
+  20. POST `/api/estimates/matches/{id}/cancel` - 프로젝트 취소
+  21. PUT `/api/estimates/matches/{id}/contract` - 계약 금액 수정
+  22. GET `/api/estimates/matches/{id}` - 매칭 조회
+  23. GET `/api/estimates/matches/my` - 내 매칭 목록 (클라이언트)
+  24. GET `/api/estimates/matches/company` - 업체 매칭 목록
+  25. GET `/api/estimates/matches/in-progress` - 진행 중인 매칭 목록
+
+- **주요 기능**:
+  - **견적 요청 생명주기**: DRAFT → SUBMITTED → QUOTED → ACCEPTED/CANCELLED
+  - **제안 제출**: 업체가 견적 요청에 제안 제출 (1 요청당 1 제안)
+  - **매칭 생성**: 클라이언트가 제안 수락 시 자동 매칭 생성
+  - **프로젝트 관리**: 매칭 시작 → 진행 → 완료 플로우
+  - **조회수/제안수 추적**: Redis 카운터 동기화 (향후 구현)
+  - **권한 검증**: 작성자만 수정/삭제 가능
+  - **소프트 삭제**: 모든 엔티티 소프트 삭제 지원
+  - **페이지네이션**: 모든 목록 API 페이지네이션 지원
+
+- **TODO (Phase 2)**:
+  - 구독/크레딧 기반 과금 시스템 연동
+  - 제안 제출 시 구독 쿼터 또는 크레딧 차감
+  - 파일 첨부 기능 (estimate_request_files 테이블 활용)
+  - Redis 카운터 동기화 (view_count, proposal_count)
+  - 알림 시스템 (새 제안 도착 시)
+
+- **참고 문서**:
+  - `doc/mermaid.txt` - 공개입찰 플로우 다이어그램
+
+**[CONTEST-001] 디자인 콘테스트 API 구현 완료** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-16 (2시간)
+- **작업 내용**:
+  - 디자인 콘테스트 도메인 엔티티 구현 (DesignContest, ContestEntry)
+  - Repository 구현 (2개, 총 25+ 쿼리 메서드)
+  - Service 계층 구현 (DesignContestService, ContestEntryService)
+  - DTO 계층 구현 (Request/Response DTO 7개)
+  - REST API Controller 구현 (ContestController, 24개 엔드포인트)
+  - ErrorCode 업데이트 (콘테스트 관련 14개 에러 코드 추가)
+  - SecurityConfig 업데이트 (콘테스트 API 엔드포인트 허용)
+  - Flyway V3 마이그레이션 추가 (contest_entries 테이블 스키마 조정)
+  - Docker 빌드 및 배포 성공
+
+- **생성 파일**:
+  - `domain/contest/model/DesignContest.java` - 디자인 콘테스트 엔티티
+  - `domain/contest/model/ContestEntry.java` - 콘테스트 참가작 엔티티
+  - `domain/contest/repository/DesignContestRepository.java`
+  - `domain/contest/repository/ContestEntryRepository.java`
+  - `domain/contest/service/DesignContestService.java`
+  - `domain/contest/service/ContestEntryService.java`
+  - `domain/contest/service/dto/ContestCreateRequest.java`
+  - `domain/contest/service/dto/ContestUpdateRequest.java`
+  - `domain/contest/service/dto/ContestResponse.java`
+  - `domain/contest/service/dto/EntryCreateRequest.java`
+  - `domain/contest/service/dto/EntryUpdateRequest.java`
+  - `domain/contest/service/dto/EntryRatingRequest.java`
+  - `domain/contest/service/dto/EntryResponse.java`
+  - `domain/contest/web/ContestController.java`
+  - `src/main/resources/db/migration/V3__Add_contest_entry_fields.sql`
+
+- **수정 파일**:
+  - `core/exception/ErrorCode.java` - 콘테스트 관련 14개 에러 코드 추가
+  - `config/web/SecurityConfig.java` - 콘테스트 API 엔드포인트 허용
+
+- **API 엔드포인트 (24개)**:
+
+  **콘테스트 관리 (Contest Management) - 14개:**
+  1. POST `/api/contests` - 콘테스트 생성 (DRAFT)
+  2. PUT `/api/contests/{contestId}` - 콘테스트 수정
+  3. POST `/api/contests/{contestId}/submit` - 콘테스트 게시
+  4. POST `/api/contests/{contestId}/cancel` - 콘테스트 취소
+  5. DELETE `/api/contests/{contestId}` - 콘테스트 삭제 (soft delete)
+  6. GET `/api/contests/{contestId}` - 콘테스트 조회 (조회수 증가)
+  7. GET `/api/contests/public` - 공개 콘테스트 목록
+  8. GET `/api/contests/my` - 내가 개설한 콘테스트 목록
+  9. GET `/api/contests/winners` - 우승자가 선정된 콘테스트 목록
+  10. GET `/api/contests/upcoming` - 예정된 콘테스트 목록
+  11. GET `/api/contests/by-prize` - 상금별 콘테스트 검색
+  12. GET `/api/contests/free` - 무료 참가 콘테스트 목록
+  13. GET `/api/contests/ending-soon` - 마감 임박 콘테스트 목록
+  14. POST `/api/contests/{contestId}/winner` - 우승자 선정
+
+  **참가작 관리 (Entry Management) - 10개:**
+  15. POST `/api/contests/entries` - 참가작 제출
+  16. PUT `/api/contests/entries/{entryId}` - 참가작 수정
+  17. DELETE `/api/contests/entries/{entryId}` - 참가작 철회
+  18. POST `/api/contests/entries/{entryId}/rate` - 참가작 평가
+  19. GET `/api/contests/entries/{entryId}` - 참가작 조회
+  20. GET `/api/contests/{contestId}/entries` - 콘테스트 참가작 목록
+  21. GET `/api/contests/entries/my` - 내 참가작 목록
+  22. GET `/api/contests/{contestId}/entries/unrated` - 미평가 참가작 목록
+  23. GET `/api/contests/entries/my/wins` - 내 수상 작품 목록
+  24. GET `/api/contests/{contestId}/winner` - 우승작 조회
+
+- **주요 기능**:
+  - **콘테스트 생명주기**: DRAFT → SUBMITTED → IN_PROGRESS → COMPLETED
+  - **참가 제출**: 업체가 콘테스트에 참가작 제출 (1 콘테스트당 1 참가작)
+  - **우승자 선정**: 콘테스트 주최자가 참가작 평가 및 우승자 선정
+  - **상금 시스템**: 콘테스트별 상금 및 참가비 설정
+  - **조회수/참가수 추적**: 실시간 카운터
+  - **권한 검증**: 주최자만 수정/삭제 가능, 평가 권한 분리
+  - **소프트 삭제**: 모든 엔티티 소프트 삭제 지원
+  - **페이지네이션**: 모든 목록 API 페이지네이션 지원
+
+- **데이터베이스 스키마 조정** (V3 마이그레이션):
+  - design_contests 테이블: 이미 V1에 존재
+  - contest_entries 테이블 수정:
+    - `design_description` 컬럼 추가
+    - `design_files` 컬럼 추가 (JSONB)
+    - `portfolio_url` 컬럼 추가
+    - `rating_comment` 컬럼 추가
+    - `won_at` 컬럼 추가
+    - `company_id` 컬럼 추가 (Phase 1에서 company_profiles 사용)
+    - `designer_id` NULL 허용 (Phase 2 호환성)
+    - `status` NULL 허용 (Phase 1에서 미사용)
+
+- **TODO (Phase 2)**:
+  - 구독/크레딧 기반 과금 시스템 연동 (참가비 결제)
+  - 참가작 파일 업로드 (contest_entry_files 테이블 활용)
+  - 디자이너 프로필 연동 (designer_profiles 테이블)
+  - 알림 시스템 (우승자 선정 시)
+  - 콘테스트 자동 마감 처리 (배치 작업)
+
+- **참고 문서**:
+  - `doc/mermaid.txt` - 디자인 콘테스트 플로우 다이어그램
+
+**[PAYMENT-001] 결제 시스템 통합 완료** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-16 (1.5시간)
+- **작업 내용**:
+  - 결제 시스템 6개 엔티티 구현 (Subscription Plan, Subscription, Invoice, Payment, PaymentLog, CreditTransaction)
+  - Repository 구현 (6개, 총 50+ 쿼리 메서드)
+  - Service 계층 구현 (SubscriptionService, CreditService, PaymentService)
+  - 구독 쿼터 관리 시스템 (proposal_quota, contest_quota, boost_quota)
+  - 크레딧 잔액 추적 시스템 (balance_after 패턴으로 잔액 검증)
+  - Webhook 멱등성 구현 (Redis SETNX 패턴)
+  - REST API Controller 구현 (PaymentController, 11개 엔드포인트)
+  - DTO 계층 구현 (Request/Response DTO 5개)
+  - RedisService에 setNX, delete 메서드 추가
+  - ErrorCode 업데이트 (결제 관련 13개 에러 코드 추가)
+  - SecurityConfig 업데이트 (결제 API 및 Webhook 엔드포인트 허용)
+  - Docker 빌드 및 배포 성공
+
+- **생성 파일**:
+  - `domain/subscription/model/SubscriptionPlan.java` - 구독 플랜 엔티티
+  - `domain/subscription/model/Subscription.java` - 구독 엔티티
+  - `domain/subscription/model/SubscriptionStatus.java` - 구독 상태 enum
+  - `domain/payment/model/Invoice.java` - 청구서 엔티티
+  - `domain/payment/model/InvoiceStatus.java` - 청구서 상태 enum
+  - `domain/payment/model/PaymentLog.java` - 결제 로그 엔티티
+  - `domain/payment/model/CreditTransaction.java` - 크레딧 거래 엔티티
+  - `domain/payment/model/TransactionType.java` - 거래 유형 enum
+  - `domain/subscription/repository/SubscriptionPlanRepository.java`
+  - `domain/subscription/repository/SubscriptionRepository.java`
+  - `domain/payment/repository/InvoiceRepository.java`
+  - `domain/payment/repository/PaymentLogRepository.java`
+  - `domain/payment/repository/CreditTransactionRepository.java`
+  - `domain/subscription/service/SubscriptionService.java`
+  - `domain/payment/service/CreditService.java`
+  - `domain/payment/service/PaymentService.java`
+  - `domain/payment/web/PaymentController.java`
+  - `domain/payment/web/dto/CreditPurchaseRequest.java`
+  - `domain/payment/web/dto/PaymentResponse.java`
+  - `domain/payment/web/dto/CreditBalanceResponse.java`
+  - `domain/payment/web/dto/CreditTransactionResponse.java`
+  - `domain/payment/web/dto/InvoiceResponse.java`
+  - `domain/payment/web/dto/WebhookRequest.java`
+  - `domain/payment/repository/PaymentRepository.java` (확장)
+
+- **수정 파일**:
+  - `domain/payment/model/Payment.java` - 완전 재작성 (invoice 관계, payment_data, 비즈니스 메서드 추가)
+  - `core/exception/ErrorCode.java` - 결제/구독 관련 13개 에러 코드 추가
+  - `config/web/SecurityConfig.java` - 결제 API 엔드포인트 허용
+  - `infra/redis/RedisService.java` - setNX() 및 delete() 메서드 추가
+
+- **API 엔드포인트 (11개)**:
+
+  **구독 플랜 조회 - 2개:**
+  1. GET `/api/payments/plans` - 구독 플랜 목록 조회 (public)
+  2. GET `/api/payments/plans/{planCode}` - 특정 플랜 조회 (public)
+
+  **결제 (Payment) - 3개:**
+  3. POST `/api/payments/credits/purchase` - 크레딧 구매 결제 세션 생성
+  4. GET `/api/payments/{transactionId}` - 결제 정보 조회
+  5. GET `/api/payments/history` - 결제 내역 조회
+  6. GET `/api/payments/{paymentId}/logs` - 결제 로그 조회 (디버깅용)
+
+  **크레딧 (Credit) - 2개:**
+  7. GET `/api/payments/credits/balance` - 크레딧 잔액 조회
+  8. GET `/api/payments/credits/history` - 크레딧 거래 내역 조회
+
+  **청구서 (Invoice) - 3개:**
+  9. GET `/api/payments/invoices/{invoiceId}` - 청구서 조회
+  10. GET `/api/payments/invoices` - 청구서 목록 조회
+  11. GET `/api/payments/invoices/unpaid` - 미납 청구서 조회
+
+  **Webhook - 1개 (public):**
+  12. POST `/api/payments/webhook` - PG사 결제 Webhook 처리
+
+- **주요 기능**:
+  - **구독 플랜**: FREE, BRONZE (₩29,000/월), SILVER (₩99,000/월), GOLD (₩299,000/월)
+  - **구독 쿼터 추적**: 제안(proposal), 콘테스트(contest), 부스트(boost) 월별 쿼터 관리
+  - **쿼터 차감**: useProposalQuota(), useContestQuota(), useBoostQuota() - 트랜잭션 안전
+  - **크레딧 시스템**: 구매, 구독 할당, 차감, 환불 기능
+  - **잔액 추적**: balance_after 패턴으로 모든 거래 추적 및 검증
+  - **Webhook 멱등성**: Redis SETNX로 중복 Webhook 방지 (TTL: 24시간)
+  - **결제 로그**: 모든 결제 이벤트 추적 (JSONB 포맷)
+  - **결제 생명주기**: PENDING → COMPLETED / FAILED / CANCELLED / REFUNDED
+
+- **구독 플랜 쿼터 (V2 seed data)**:
+  ```
+  FREE:   0원,      1 제안,   0 콘테스트,  0 크레딧,     0 부스트
+  BRONZE: ₩29,000,  5 제안,   2 콘테스트,  ₩30,000,      1 부스트
+  SILVER: ₩99,000,  20 제안,  10 콘테스트, ₩150,000,     5 부스트
+  GOLD:   ₩299,000, 무제한,   무제한,      ₩500,000,     무제한
+  ```
+  - 무제한 쿼터는 -1로 저장
+  - hasProposalQuota(), hasContestQuota() 메서드로 무제한 처리
+
+- **과금 플로우 (3단계)**:
+  1. 구독 잔여 쿼터 > 0 → 쿼터 차감 (무료)
+  2. 구독 없음/소진 → 크레딧 잔액 확인 → 크레딧 차감
+  3. 크레딧 부족 → 결제 세션 생성 → PG 결제
+
+- **Webhook 처리 플로우**:
+  1. PG사 → POST /api/payments/webhook (idempotencyKey, pgTransactionId, status)
+  2. Redis SETNX(idempotency:key, "processed", TTL 24h) → 신규/중복 판별
+  3. 신규 → Payment 업데이트, 크레딧 충전, Invoice 업데이트, 200 OK 응답
+  4. 중복 → 200 OK 응답 (멱등 보장)
+
+- **TODO (Phase 2)**:
+  - 실제 PG사 연동 (KakaoPay, Toss, INICIS)
+  - 구독 자동 갱신 (Scheduled Task)
+  - 만료 구독 처리 (Scheduled Task)
+  - 크레딧 차감 통합 (EstimateProposal, ContestEntry 제출 시)
+  - 청구서 자동 생성 (월별 구독 결제)
+  - Webhook signature 검증
+
+- **참고 문서**:
+  - `doc/mermaid.txt` - 결제 Webhook 플로우 다이어그램
+  - `src/main/resources/db/migration/V1__Initial_schema.sql` - 결제 관련 테이블 스키마
+  - `src/main/resources/db/migration/V2__Insert_seed_data.sql` - 구독 플랜 시드 데이터
+
+**[ADMIN-001] 관리자 권한 시스템 및 대시보드 API 구현 완료** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-16 (2시간)
+- **작업 내용**:
+  - Flyway V4 마이그레이션 추가 (admin_roles 테이블, admin_permission enum)
+  - AdminRole enum (8개 역할: SUPER_ADMIN, USER_MANAGER, COMPANY_MANAGER, etc.)
+  - AdminPermission enum (21개 세부 권한: USER_READ, USER_UPDATE, CONTENT_CREATE, etc.)
+  - AdminRoleAssignment 엔티티 및 Repository 구현
+  - AuditLog 엔티티 및 Repository 구현 (audit_logs 테이블에 admin_role 컬럼 추가)
+  - AdminService 구현 (권한 검증, 역할 부여/회수)
+  - AuditLogService 구현 (관리자 작업 로그 자동 기록, IP/UserAgent 추적)
+  - AdminController 12개 API 엔드포인트 구현
+  - DTO 4개 (AdminDashboardResponse, AuditLogResponse, GrantRoleRequest, AdminRoleResponse)
+  - SecurityConfig 업데이트 (/api/admin/** 엔드포인트 허용)
+
+- **생성 파일** (8개):
+  - `domain/admin/model/AdminRole.java` - 관리자 역할 enum
+  - `domain/admin/model/AdminPermission.java` - 세부 권한 enum
+  - `domain/admin/model/AdminRoleAssignment.java` - 역할 배정 엔티티
+  - `domain/admin/model/AuditLog.java` - 감사 로그 엔티티
+  - `domain/admin/repository/AdminRoleAssignmentRepository.java`
+  - `domain/admin/repository/AuditLogRepository.java`
+  - `domain/admin/service/AdminService.java` - 권한 관리 서비스
+  - `domain/admin/service/AuditLogService.java` - 감사 로그 서비스
+  - `domain/admin/web/AdminController.java`
+  - `domain/admin/web/dto/AdminDashboardResponse.java`
+  - `domain/admin/web/dto/AuditLogResponse.java`
+  - `domain/admin/web/dto/GrantRoleRequest.java`
+  - `domain/admin/web/dto/AdminRoleResponse.java`
+  - `src/main/resources/db/migration/V4__Add_admin_roles.sql`
+
+- **API 엔드포인트** (12개):
+  1. GET `/api/admin/dashboard` - 관리자 대시보드 통계
+  2. POST `/api/admin/roles/grant` - 관리자 역할 부여
+  3. DELETE `/api/admin/roles/{userId}/{role}` - 관리자 역할 회수
+  4. GET `/api/admin/roles/{userId}` - 사용자 역할 목록 조회
+  5. GET `/api/admin/permissions/{userId}` - 사용자 권한 목록 조회
+  6. GET `/api/admin/permissions/my` - 내 권한 조회
+  7. GET `/api/admin/audit-logs` - 감사 로그 조회 (필터링)
+  8. GET `/api/admin/audit-logs/entity/{entityType}/{entityId}` - 특정 엔티티 로그
+  9. GET `/api/admin/audit-logs/user/{userId}` - 특정 사용자 로그
+  10. GET `/api/admin/audit-logs/stats` - 로그 통계
+  11. GET `/api/admin/users-with-role/{role}` - 특정 역할 보유 사용자 목록
+
+- **주요 기능**:
+  - **역할 기반 접근 제어 (RBAC)**: 8개 관리자 역할에 21개 세부 권한 매핑
+  - **다중 역할 지원**: 한 사용자가 여러 관리자 역할 보유 가능
+  - **권한 검증**: requirePermission(), hasPermission() 메서드로 세밀한 접근 제어
+  - **감사 로그**: 모든 관리자 작업 자동 기록 (IP, UserAgent, old/new value JSONB)
+  - **대시보드**: 사용자, 업체, 콘텐츠, 결제 통계 및 최근 활동 조회
+  - **권한 위임**: SUPER_ADMIN만 다른 관리자에게 역할 부여 가능
+
+**[CONTENT-001] 플래너 요청 시스템 API 구현 완료** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-16 (1.5시간)
+- **작업 내용**:
+  - PlannerRequest 엔티티 구현 (planner_requests 테이블 매핑)
+  - PlannerType enum (6개 유형: OPENING_CONSULTING, SITE_MEASUREMENT, etc.)
+  - RequestStatus enum (7개 상태: SUBMITTED, IN_REVIEW, ASSIGNED, etc.)
+  - PlannerRequestRepository 구현 (복잡한 필터링 쿼리 지원)
+  - PlannerRequestService 구현 (생성, 배정, 상태 변경, 응답 추가)
+  - PlannerController 15개 API 엔드포인트 구현 (User 7개 + Admin 8개)
+  - DTO 7개 (Request/Response)
+  - AdminService 연동 (권한 검증)
+  - AuditLogService 연동 (작업 로그 자동 기록)
+
+- **생성 파일** (10개):
+  - `domain/planner/model/PlannerType.java`
+  - `domain/planner/model/RequestStatus.java`
+  - `domain/planner/model/PlannerRequest.java`
+  - `domain/planner/repository/PlannerRequestRepository.java`
+  - `domain/planner/service/PlannerRequestService.java`
+  - `domain/planner/web/PlannerController.java`
+  - `domain/planner/web/dto/CreatePlannerRequestRequest.java`
+  - `domain/planner/web/dto/UpdatePlannerRequestRequest.java`
+  - `domain/planner/web/dto/AssignPlannerRequest.java`
+  - `domain/planner/web/dto/UpdateStatusRequest.java`
+  - `domain/planner/web/dto/AddResponseRequest.java`
+  - `domain/planner/web/dto/AddNotesRequest.java`
+  - `domain/planner/web/dto/PlannerRequestResponse.java`
+
+- **수정 파일**:
+  - `core/exception/ErrorCode.java` - 플래너 요청 관련 3개 에러 코드 추가
+
+- **API 엔드포인트** (15개):
+
+  **사용자 엔드포인트 (7개):**
+  1. POST `/api/planner/requests` - 플래너 요청 생성
+  2. GET `/api/planner/requests/my` - 내 요청 목록
+  3. GET `/api/planner/requests/{requestId}` - 요청 조회
+  4. PUT `/api/planner/requests/{requestId}` - 요청 수정 (배정 전)
+  5. DELETE `/api/planner/requests/{requestId}` - 요청 삭제
+
+  **관리자 엔드포인트 (8개):**
+  6. GET `/api/planner/admin/requests` - 전체 요청 목록 (필터링)
+  7. GET `/api/planner/admin/requests/unassigned` - 미배정 요청 목록
+  8. GET `/api/planner/admin/requests/assigned-to-me` - 내 담당 요청
+  9. POST `/api/planner/admin/requests/{requestId}/assign` - 플래너 배정
+  10. PUT `/api/planner/admin/requests/{requestId}/status` - 상태 변경
+  11. POST `/api/planner/admin/requests/{requestId}/response` - 응답 추가
+  12. POST `/api/planner/admin/requests/{requestId}/notes` - 내부 메모 추가
+  13. GET `/api/planner/admin/stats` - 통계 조회
+
+- **주요 기능**:
+  - **요청 생명주기**: SUBMITTED → ASSIGNED → IN_PROGRESS → COMPLETED
+  - **플래너 배정**: 관리자가 담당 플래너 배정 (PLANNER_ASSIGN 권한 필요)
+  - **상태 추적**: 7단계 상태 관리 (SUBMITTED ~ REJECTED)
+  - **내부 메모**: 관리자 전용 notes 필드 (사용자에게 노출 안 됨)
+  - **응답 시스템**: 플래너가 사용자에게 응답 작성
+  - **권한 제어**: AdminPermission.PLANNER_* 권한으로 접근 제어
+  - **감사 로그**: 배정, 상태 변경, 응답 추가 등 모든 작업 로그 기록
+
+**[CONTENT-002] 게시판 시스템 (자료실/사진/공지/FAQ) API 구현 완료** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-16 (1.5시간)
+- **작업 내용**:
+  - Board 엔티티 구현 (boards 테이블 매핑, 다목적 게시판)
+  - BoardType enum (6개 유형: NOTICE, EVENT, FAQ, PHOTO, DOCUMENT, PORTFOLIO)
+  - BoardRepository 구현 (타입별, 검색, 인기, 최신 쿼리)
+  - BoardService 구현 (CRUD, 발행 관리, 조회수 증가)
+  - BoardController 12개 API 엔드포인트 구현 (Public 4개 + Admin 8개)
+  - DTO 3개 (CreateBoardRequest, UpdateBoardRequest, BoardResponse)
+  - AdminService 연동 (CONTENT_* 권한 검증)
+  - AuditLogService 연동 (게시물 생성/수정/삭제 로그 기록)
+  - SecurityConfig 업데이트 (Public board 엔드포인트 허용)
+
+- **생성 파일** (8개):
+  - `domain/board/model/BoardType.java`
+  - `domain/board/model/Board.java`
+  - `domain/board/repository/BoardRepository.java`
+  - `domain/board/service/BoardService.java`
+  - `domain/board/web/BoardController.java`
+  - `domain/board/web/dto/CreateBoardRequest.java`
+  - `domain/board/web/dto/UpdateBoardRequest.java`
+  - `domain/board/web/dto/BoardResponse.java`
+
+- **수정 파일**:
+  - `config/web/SecurityConfig.java` - Board 공개 엔드포인트 허용
+  - `core/exception/ErrorCode.java` - Board 관련 3개 에러 코드 추가
+
+- **API 엔드포인트** (12개):
+
+  **공개 엔드포인트 (4개):**
+  1. GET `/api/boards/{type}` - 게시판 목록 조회 (타입별)
+  2. GET `/api/boards/{type}/{boardId}` - 게시물 조회 (조회수 증가)
+  3. GET `/api/boards/{type}/search` - 키워드 검색
+  4. GET `/api/boards/{type}/popular` - 인기 게시물
+
+  **관리자 엔드포인트 (8개):**
+  5. POST `/api/boards/admin` - 게시물 생성
+  6. GET `/api/boards/admin/{type}` - 전체 게시물 (미발행 포함)
+  7. GET `/api/boards/admin/{type}/{boardId}` - 게시물 조회 (조회수 증가 X)
+  8. PUT `/api/boards/admin/{boardId}` - 게시물 수정
+  9. POST `/api/boards/admin/{boardId}/publish` - 게시물 발행
+  10. DELETE `/api/boards/admin/{boardId}` - 게시물 삭제 (soft delete)
+  11. GET `/api/boards/admin/{type}/stats` - 게시판 통계
+
+- **주요 기능**:
+  - **다목적 게시판**: 단일 테이블로 공지, 이벤트, FAQ, 사진, 자료실, 포트폴리오 관리
+  - **발행 관리**: published_at 기반 발행 시스템 (예약 발행 가능)
+  - **조회수 추적**: public 조회 시 자동 증가
+  - **핀 고정**: 중요 게시물 상단 고정 (is_pinned, display_order)
+  - **유료 자료실**: DOCUMENT 타입에 price 설정 가능
+  - **검색 기능**: 제목/내용 키워드 검색
+  - **인기 게시물**: 조회수 기준 정렬
+  - **권한 제어**: CONTENT_* 권한으로 관리자만 생성/수정/삭제 가능
+
+---
+
+#### 🔄 진행 중 (In Progress)
+
+_현재 진행 중인 작업이 없습니다._
+
+---
+
+#### 📌 예정 (Planned)
+
+**[ESTIMATE-001] 견적/입찰 시스템 API 구현**
+- **우선순위**: 중간
+- **예상 작업**:
+  - 견적 요청 API
+  - 업체 제안 API
+  - 매칭 생성 API
+  - 구독/크레딧 기반 과금 시스템
+
+- **참고 문서**:
+  - `doc/mermaid.txt` - 공개입찰 플로우 다이어그램
+
+**[CONTEST-001] 디자인 콘테스트 API 구현**
+- **우선순위**: 중간
+- **예상 작업**:
+  - 콘테스트 개설 API
+  - 참가 등록 API
+  - 참가작 업로드 API
+  - 심사 및 수상 선정 API
+
+- **참고 문서**:
+  - `doc/mermaid.txt` - 디자인 콘테스트 플로우
+
+**[PAYMENT-001] 결제 시스템 통합**
+- **우선순위**: 중간
+- **예상 작업**:
+  - 결제 게이트웨이 연동 (KakaoPay, Toss, INICIS)
+  - Webhook 처리 (멱등성 보장)
+  - 구독 관리 시스템
+  - 크레딧 충전/차감 시스템
+
+- **참고 문서**:
+  - `doc/mermaid.txt` - 결제 Webhook 플로우
+
+**[ADMIN-001] 어드민 대시보드 API 구현**
+- **우선순위**: 낮음
+- **예상 작업**:
+  - 회원 관리 API
+  - 업체 관리 API
+  - 입찰/제안/매칭 관리 API
+  - 감사 로그 조회 API
+
+- **참고 문서**:
+  - `doc/mermaid.txt` - 어드민 모듈 맵
+
+---
+
+## 📚 참고 문서 (Reference Documents)
+
+### 아키텍처 문서
+- `doc/mermaid.txt` - 전체 시스템 플로우 다이어그램 (26개 다이어그램)
+- `doc/redis-postgresql-strategy.md` - Redis/PostgreSQL 분리 전략
+
+### 데이터베이스 스키마
+- `src/main/resources/schema-improved.sql` - 운영용 PostgreSQL 스키마 (영문)
+- `src/main/resources/schema_erdcloud_v2.sql` - ERD 시각화용 스키마 (한글, FK 포함)
+- `src/main/resources/data.sql` - 초기 시드 데이터
+
+### 프로젝트 설정
+- `CLAUDE.md` - Claude Code 작업 가이드
+- `README.md` - 프로젝트 개요 (있는 경우)
+
+---
+
+## 🔍 주요 기술 스택
+
+- **Backend**: Spring Boot 3.x, Java 17
+- **Database**: PostgreSQL (영구 데이터)
+- **Cache**: Redis (임시 데이터, 세션, 토큰)
+- **Authentication**: JWT, OAuth 2.0 (Kakao, Naver, Google)
+- **Payment**: KakaoPay, Toss, INICIS
+- **Storage**: AWS S3 (파일 업로드)
+- **Build**: Gradle
+
+---
+
+## 💡 작업 팁 (Working Tips)
+
+### 코드 작성 시
+1. 항상 `CLAUDE.md`의 패키지 구조를 따릅니다
+2. 비즈니스 로직은 `service` 레이어에 작성
+3. 예외 처리는 `BusinessException`과 `ErrorCode` 사용
+4. API 응답은 `ApiResponse` 래퍼 사용
+
+### 데이터베이스 작업 시
+1. 임시 데이터는 Redis 사용 (TTL 설정)
+2. 영구 데이터는 PostgreSQL 사용
+3. 삭제는 소프트 삭제 (`is_deleted = true`) 사용
+4. `doc/redis-postgresql-strategy.md` 참고
+
+### 인증 작업 시
+1. JWT 토큰은 Redis에 저장 (PostgreSQL X)
+2. 이메일/SMS OTP는 Redis에 저장 (PostgreSQL X)
+3. OAuth 토큰은 Redis에 저장 (PostgreSQL X)
+4. 감사 로그만 PostgreSQL에 기록
+
+---
+
+## 🐛 이슈 트래커 (Issue Tracker)
+
+### 해결됨 (Resolved)
+_현재 해결된 이슈가 없습니다._
+
+### 진행 중 (Open)
+_현재 열린 이슈가 없습니다._
+
+---
+
+## 📊 프로젝트 메트릭 (Project Metrics)
+
+- **총 작업 항목**: 13개
+- **완료**: 13개 (SCHEMA-001, DOC-001, AUTH-001, OAUTH-001, DB-001, ESTIMATE-001, CONTEST-001, PAYMENT-001, ADMIN-001, CONTENT-001, CONTENT-002, SCHEMA-002, SCHEMA-003, DOCKER-001, DOC-002)
+- **진행 중**: 0개
+- **예정**: 0개
+- **완료율**: 100%
+
+### 코드 통계 (전체)
+- **생성된 파일**: 129개
+  - 엔티티 24개 (User, SocialAccount, Profiles x3, EstimateRequest, EstimateProposal, Match, Payment, DesignContest, ContestEntry, SubscriptionPlan, Subscription, Invoice, PaymentLog, CreditTransaction, AdminRoleAssignment, AuditLog, PlannerRequest, Board)
+  - ENUM 타입 20개 (Role, OAuthProvider, EstimateType, RequestStatus, PaymentStatus, SubscriptionStatus, InvoiceStatus, TransactionType, AdminRole, AdminPermission, PlannerType, BoardType 등)
+  - Repository 23개 (User, SocialAccount, Profiles x3, Estimate x3, Contest x2, Payment x6, Admin x2, Planner x1, Board x1)
+  - DTO 54개 (Auth 9개 + Estimate 7개 + Contest 7개 + Payment 10개 + Admin 4개 + Planner 7개 + Board 3개)
+  - Service 16개 (VerificationService, AuthService, OAuthService, Estimate x3, Contest x2, Subscription, Credit, Payment, AdminService, AuditLogService, PlannerRequestService, BoardService)
+  - OAuth Provider 7개 (인터페이스 + 구현체 3개 + DTO 3개)
+  - Controller 7개 (AuthController, OAuthController, EstimateController, ContestController, PaymentController, AdminController, PlannerController, BoardController)
+  - Migration Scripts 5개 (V1: Schema, V2: Seed Data, V3: Contest Fields, V4: Admin Roles, V5: Invoice Fix)
+- **수정된 파일**: 28개
+- **API 엔드포인트**: 128개
+  - 인증 11개 ✅
+  - OAuth 6개 ⚠️
+  - 견적/입찰 25개 ✅
+  - 디자인 콘테스트 24개 ✅
+  - 결제/구독 12개 ✅
+  - Webhook 1개 ✅
+  - 관리자 12개 ✅
+  - 플래너 요청 15개 ✅
+  - 게시판 12개 ✅
+- **에러 코드**: 80개
+- **DB 마이그레이션**: 5개 (V1: Initial Schema, V2: Seed Data, V3: Contest Entry Fields, V4: Admin Roles, V5: Invoice Fix)
+
+### 데이터베이스 구성
+- **테이블**: 41개 (users, social_accounts, profiles, subscriptions, payments, boards, estimates, contests, etc.)
+- **ENUM 타입**: 13개 (user_role, oauth_provider, payment_status, etc.)
+- **인덱스**: 50+ (성능 최적화)
+- **트리거**: 18개 (updated_at 자동 갱신)
+- **시드 데이터**: 구독 플랜 4개, 태그 25개
+
+### OAuth Provider 구성
+- **Kakao**: Authorization, Token Exchange, User Info ✅
+- **Naver**: Authorization, Token Exchange, User Info ✅
+- **Google**: Authorization, Token Exchange, User Info ✅
+
+---
+
+**[SCHEMA-002] Invoice 스키마 수정 완료** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-16 (30분)
+- **작업 내용**:
+  - Flyway V5 마이그레이션 추가 (Invoice 스키마 수정)
+  - Invoice 엔티티 필드명과 데이터베이스 컬럼명 불일치 해결
+  - 컬럼명 변경: tax_amount → tax, discount_amount → discount
+  - 누락된 컬럼 추가: currency, voided_at, void_reason
+  - Docker 빌드 및 마이그레이션 성공 확인
+
+- **생성 파일**:
+  - `src/main/resources/db/migration/V5__Add_invoice_currency.sql`
+
+- **주요 변경사항**:
+  - Invoice 엔티티가 기대하는 필드명으로 컬럼명 통일
+  - V1 schema의 `tax_amount`, `discount_amount`를 entity field명인 `tax`, `discount`로 rename
+  - 누락된 `currency VARCHAR(3) DEFAULT 'KRW'` 컬럼 추가
+  - 누락된 `voided_at TIMESTAMP`, `void_reason TEXT` 컬럼 추가
+
+- **마이그레이션 실행 결과**:
+  - ✅ V5: Invoice schema 수정 완료 (5개 migrations 총 적용 성공)
+  - ✅ flyway_schema_history 테이블 업데이트
+
+- **참고**:
+  - Invoice 엔티티가 JPA schema validation을 통과함
+  - 다른 pre-existing schema 불일치 문제 발견 (CompanyProfile.service_areas TEXT[] vs VARCHAR 기대)
+  - 향후 작업: 나머지 entity-schema 불일치 수정 필요
+
+**[SCHEMA-003] 전체 Entity-Schema 검증 및 불일치 수정 완료** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-16 (1시간)
+- **작업 내용**:
+  - 모든 entity-schema 불일치 문제를 발견하고 수정
+  - Flyway V6-V9 마이그레이션 추가 (4개 migrations)
+  - Repository 메서드 시그니처 오류 수정
+  - **최종 결과: 애플리케이션 정상 시작 성공** ✅
+
+- **생성 파일**:
+  - `src/main/resources/db/migration/V6__Convert_arrays_to_text.sql` - PostgreSQL 배열을 TEXT로 변환
+  - `src/main/resources/db/migration/V7__Add_health_table.sql` - Health 테이블 추가
+  - `src/main/resources/db/migration/V8__Fix_invoice_date_types.sql` - Invoice 날짜 타입 수정
+  - `src/main/resources/db/migration/V9__Add_payment_log_error_message.sql` - PaymentLog error_message 컬럼 추가
+
+- **수정 파일**:
+  - `domain/payment/repository/CreditTransactionRepository.java` - findLatestTransaction(), findCurrentBalance() 반환 타입 수정 (Optional → List)
+  - `domain/payment/service/CreditService.java` - getCurrentBalance() 로직 수정
+
+- **V6 마이그레이션 - 배열 타입 변환**:
+  ```sql
+  -- CompanyProfile
+  ALTER TABLE company_profiles ALTER COLUMN specialty TYPE TEXT USING array_to_string(specialty, ',');
+  ALTER TABLE company_profiles ALTER COLUMN service_areas TYPE TEXT USING array_to_string(service_areas, ',');
+
+  -- DesignerProfile
+  ALTER TABLE designer_profiles ALTER COLUMN specialty TYPE TEXT USING array_to_string(specialty, ',');
+  ALTER TABLE designer_profiles ALTER COLUMN awards TYPE TEXT USING array_to_string(awards, ',');
+  ALTER TABLE designer_profiles ALTER COLUMN certifications TYPE TEXT USING array_to_string(certifications, ',');
+  ```
+  - V1 스키마의 TEXT[] (PostgreSQL array)를 TEXT (comma-separated string)로 변환
+  - Entity는 TEXT 타입을 기대하므로 JPA 매핑 정상화
+
+- **V7 마이그레이션 - Health 테이블 추가**:
+  ```sql
+  CREATE TABLE health (
+      id BIGSERIAL PRIMARY KEY,
+      status VARCHAR(50) NOT NULL
+  );
+  ```
+  - Health entity가 존재하지만 V1 스키마에 테이블 정의가 누락됨
+  - 헬스 체크 API 지원을 위한 간단한 테이블 추가
+
+- **V8 마이그레이션 - Invoice 날짜 타입 수정**:
+  ```sql
+  ALTER TABLE invoices ALTER COLUMN invoice_date TYPE DATE USING invoice_date::DATE;
+  ALTER TABLE invoices ALTER COLUMN due_date TYPE DATE USING due_date::DATE;
+  ```
+  - V1 스키마: TIMESTAMP 타입
+  - Invoice entity: LocalDate (DATE 타입)
+  - TIMESTAMP를 DATE로 변환하여 타입 일치
+
+- **V9 마이그레이션 - PaymentLog error_message 컬럼 추가**:
+  ```sql
+  ALTER TABLE payment_logs ADD COLUMN error_message TEXT;
+  ```
+  - PaymentLog entity에 error_message 필드가 있지만 V1 스키마에 누락됨
+  - 결제 오류 추적을 위한 컬럼 추가
+
+- **Repository 메서드 수정**:
+  - **문제**: CreditTransactionRepository.findLatestTransaction() 메서드가 `Optional<CreditTransaction>`을 반환하면서 `Pageable` 파라미터 사용
+  - **오류**: Spring Data JPA는 Pageable과 함께 Optional 반환 타입 지원 안 함
+  - **해결**: 반환 타입을 `List<CreditTransaction>`로 변경, 첫 번째 요소 사용
+
+- **마이그레이션 실행 결과**:
+  - ✅ V6: 배열 → TEXT 변환 성공
+  - ✅ V7: Health 테이블 생성 성공
+  - ✅ V8: Invoice 날짜 타입 변환 성공
+  - ✅ V9: PaymentLog error_message 추가 성공
+  - ✅ **총 9개 migrations 적용 완료**
+  - ✅ **JPA schema validation 모두 통과**
+  - ✅ **애플리케이션 정상 시작 (8초 소요)**
+
+- **최종 검증 결과**:
+  ```
+  2025-10-16T03:28:09.024Z  INFO - Tomcat started on port 8080 (http)
+  2025-10-16T03:28:09.038Z  INFO - Started DamoaApplication in 7.918 seconds
+  ```
+  - Swagger UI: http://localhost:8080/swagger-ui.html ✅
+  - 모든 API 엔드포인트 (128개) 정상 등록
+  - PostgreSQL 연결 정상
+  - Redis 연결 정상
+
+### 2025-10-30
+
+#### ✅ 완료 (Completed)
+
+**[DOC-002] 공통 개발 패턴 가이드 문서화** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-30 (30분)
+- **작업 내용**:
+  - 프로젝트 전반의 공통 개발 패턴 분석 및 문서화
+  - CLAUDE.md에 "Coding Standards and Common Patterns" 섹션 추가
+  - 10가지 주요 패턴 정리 (API Response, Exception 처리, Controller, Service, DTO, Repository, Redis, Entity, 페이지네이션, 참고 예시)
+  - 새로운 기능 개발 시 참고할 수 있는 명확한 가이드라인 제공
+
+- **수정 파일**:
+  - `CLAUDE.md` - 공통 패턴 가이드 섹션 추가
+
+- **문서화된 패턴** (10개):
+  1. **API Response 구조**: `ApiResponse<T>` 래퍼 사용법
+  2. **Exception 처리**: `BusinessException` + `ErrorCode` 패턴
+  3. **Controller 패턴**: 애노테이션, 인증, Swagger 문서화
+  4. **Service Layer 패턴**: 트랜잭션, 로깅, 비즈니스 로직 분리
+  5. **DTO 패턴**: Request/Response 분리, Validation, from() 메서드
+  6. **Repository 패턴**: JPA 쿼리 메서드, Soft delete 고려
+  7. **Redis 사용 패턴**: 키 prefix, TTL 상수, RedisService 메서드
+  8. **Entity 패턴**: Builder, Soft delete, 비즈니스 메서드
+  9. **페이지네이션 패턴**: Pageable, Page.map() DTO 변환
+  10. **참고 코드 예시**: 기존 구현된 Controller/Service/DTO 참조
+
+- **주요 효과**:
+  - 코드 일관성 유지 (모든 개발자가 동일한 패턴 따름)
+  - 신규 기능 개발 속도 향상 (참고할 패턴이 명확함)
+  - 코드 리뷰 시간 단축 (공통 규칙 존재)
+  - 유지보수성 향상 (예측 가능한 구조)
+
+- **참고한 기존 코드**:
+  - `core/response/ApiResponse.java`
+  - `core/exception/GlobalExceptionHandler.java`
+  - `core/exception/ErrorCode.java`
+  - `core/exception/BusinessException.java`
+  - `domain/user/web/AuthController.java`
+  - `domain/user/service/AuthService.java`
+  - `domain/user/web/dto/SignupStartRequest.java`
+  - `domain/estimate/web/EstimateController.java`
+
+---
+
+### 2025-10-29
+
+#### ✅ 완료 (Completed)
+
+**[DOCKER-001] Docker Infra 설정 수정 - 기존 DB 공유** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-29 (30분)
+- **작업 내용**:
+  - 기존 d-damoa-api의 PostgreSQL 볼륨과 새 infra 공유 설정
+  - 컨테이너 이름 충돌 방지 (damoa-postgres-infra, damoa-redis-infra)
+  - PostGIS 이미지 사용 (postgis/postgis:16-3.4-alpine)
+  - Redis는 별도 볼륨 사용 (d-damoa-api에 Redis 없음)
+  - 기존 DB 데이터 완전 보존
+
+- **수정 파일**:
+  - `docker-compose.infra.yml` - PostgreSQL 볼륨 공유 설정
+
+- **주요 변경사항**:
+  - **PostgreSQL**:
+    - 컨테이너명: damoa-postgres → damoa-postgres-infra
+    - 이미지: postgres:16 → postgis/postgis:16-3.4-alpine
+    - 볼륨: damoa_postgres_data → d-damoa-api_postgres_data (external)
+  - **Redis**:
+    - 컨테이너명: damoa-redis → damoa-redis-infra
+    - 볼륨: redis_data (새 볼륨, d-damoa-api에는 Redis 없음)
+
+- **사용 방법**:
+  ```bash
+  # 1. 기존 d-damoa-api postgres 중지 (같은 포트 5432 사용)
+  docker stop damoa-postgres
+
+  # 2. infra 실행 (같은 DB 데이터 사용)
+  docker-compose -f docker-compose.infra.yml up -d
+
+  # 3. 개발 작업...
+
+  # 4. infra 중지
+  docker-compose -f docker-compose.infra.yml down
+
+  # 5. 기존 d-damoa-api postgres 재시작
+  docker start damoa-postgres
+  ```
+
+- **데이터 안전성**:
+  - ✅ 기존 d-damoa-api_postgres_data 볼륨 그대로 사용
+  - ✅ external: true 설정으로 볼륨 삭제 방지
+  - ✅ down -v 사용해도 external 볼륨은 안전
+  - ⚠️ 주의: 두 postgres 컨테이너 동시 실행 불가 (포트 충돌)
+
+---
+
+### 2025-10-31
+
+#### ✅ 완료 (Completed)
+
+**[ENTITY-001] 전체 JPA 엔티티 재구축 완료** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-10-31 (4시간)
+- **작업 내용**:
+  - 데이터베이스 스키마 기준 전체 JPA 엔티티 재구축
+  - 기존 불필요한 엔티티 파일 삭제 (5개 도메인)
+  - BaseEntity 및 BaseTimeEntity 생성 (UUID, soft delete, metadata 포함)
+  - 13개 도메인 총 72개 엔티티 생성
+  - 모든 엔티티에 비즈니스 메서드, 인덱스, JSONB/배열 타입 매핑 적용
+  - Enum 파일을 Entity로 전환 (AdminRole, AdminPermission, BoardType 등)
+
+- **생성 파일** (74개):
+
+  **Base Classes (2개):**
+  - `domain/common/BaseEntity.java` - UUID + 타임스탬프 + soft delete + metadata
+  - `domain/common/BaseTimeEntity.java` - 타임스탬프만 포함
+
+  **User Management (7개):**
+  - `domain/user/model/User.java` - 업데이트 (String[] roles)
+  - `domain/user/model/UserProfile.java` - JSONB social links, text[] interests
+  - `domain/user/model/UserSettings.java` - 알림 설정
+  - `domain/user/model/UserActivityLog.java` - 활동 추적
+  - `domain/user/model/UserDevice.java` - FCM 토큰 관리
+  - `domain/user/model/SocialAccount.java` - OAuth 통합
+  - `domain/user/model/UserPoints.java` - 포인트/티어 시스템
+
+  **Company Management (6개):**
+  - `domain/company/model/Company.java` - JSONB business_info, hours
+  - `domain/company/model/CompanyImage.java` - 다중 이미지 타입
+  - `domain/company/model/CompanyService.java` - 서비스 상품
+  - `domain/company/model/CompanyPortfolio.java` - 포트폴리오
+  - `domain/company/model/CompanyReview.java` - 리뷰 시스템
+  - `domain/company/model/CompanyCertification.java` - 인증서
+
+  **Ad System (8개):**
+  - `domain/ad/model/AdCampaign.java` - V2 30일 value 계산
+  - `domain/ad/model/AdType.java` - Enum
+  - `domain/ad/model/AdPayment.java` - 자동 일일 요금 계산
+  - `domain/ad/model/AdDailySnapshot.java` - 일별 성과 추적
+  - `domain/ad/model/AdCreative.java` - 광고 크리에이티브
+  - `domain/ad/model/AdImpression.java` - 노출 추적
+  - `domain/ad/model/AdClick.java` - 클릭 추적
+  - `domain/ad/model/AdBilling.java` - 청구 관리
+  - `domain/ad/model/DamoaPick.java` - 추천 업체
+
+  **Estimate/Matching (8개):**
+  - `domain/estimate/model/EstimateRequest.java` - JSONB requirements
+  - `domain/estimate/model/EstimateProposal.java` - 제안
+  - `domain/estimate/model/EstimateItem.java` - 자동 subtotal 계산
+  - `domain/estimate/model/EstimateAttachment.java` - 첨부파일
+  - `domain/estimate/model/EstimateMessage.java` - Q&A 메시징
+  - `domain/estimate/model/EstimateTemplate.java` - 템플릿
+  - `domain/estimate/model/Match.java` - 진행률 추적
+  - `domain/estimate/model/MatchReview.java` - 양방향 리뷰
+
+  **Payment System (8개):**
+  - `domain/payment/model/Payment.java` - JSONB gateway_data
+  - `domain/payment/model/PaymentMethod.java` - 저장된 결제수단
+  - `domain/payment/model/Refund.java` - 환불 처리
+  - `domain/payment/model/Invoice.java` - 세금계산서
+  - `domain/payment/model/Credit.java` - 크레딧 관리
+  - `domain/payment/model/CreditTransaction.java` - 거래 내역
+  - `domain/payment/model/Coupon.java` - 쿠폰 정의
+  - `domain/payment/model/UserCoupon.java` - 사용자 쿠폰
+
+  **UMS Notification (6개):**
+  - `domain/notification/model/Notification.java` - 멀티채널 알림
+  - `domain/notification/model/NotificationTemplate.java` - 템플릿
+  - `domain/notification/model/NotificationSettings.java` - 사용자 설정
+  - `domain/notification/model/NotificationLog.java` - 발송 로그
+  - `domain/notification/model/SmsVerification.java` - SMS OTP
+  - `domain/notification/model/EmailVerification.java` - 이메일 인증
+
+  **File Management (4개):**
+  - `domain/file/model/File.java` - 파일 저장
+  - `domain/file/model/FileCategory.java` - 카테고리
+  - `domain/file/model/FileAccess.java` - 접근 로그
+  - `domain/file/model/FileVersion.java` - 버전 관리
+
+  **Board (5개):**
+  - `domain/board/model/Board.java` - 게시판 설정
+  - `domain/board/model/BoardPost.java` - 게시글
+  - `domain/board/model/BoardComment.java` - 댓글
+  - `domain/board/model/BoardCategory.java` - 카테고리
+  - `domain/board/model/BoardAttachment.java` - 첨부파일
+
+  **Admin System (11개):**
+  - `domain/admin/model/AdminUser.java` - 어드민 계정
+  - `domain/admin/model/AdminRole.java` - 역할 (Entity로 전환)
+  - `domain/admin/model/AdminPermission.java` - 권한 (Entity로 전환)
+  - `domain/admin/model/AdminRolePermission.java` - 역할-권한 매핑
+  - `domain/admin/model/AdminUserRole.java` - 사용자-역할 매핑
+  - `domain/admin/model/AdminAuditLog.java` - 감사 로그
+  - `domain/admin/model/AdminSession.java` - 세션 관리
+  - `domain/admin/model/AdminNotification.java` - 어드민 알림
+  - `domain/admin/model/SystemConfig.java` - 시스템 설정
+  - `domain/admin/model/SystemHealth.java` - 헬스 체크
+  - `domain/admin/model/SystemMaintenanceLog.java` - 유지보수 로그
+
+  **Consultation (3개):**
+  - `domain/consultation/model/Consultation.java` - JSONB contact_info
+  - `domain/consultation/model/ConsultationMessage.java` - 메시지
+  - `domain/consultation/model/ConsultationAttachment.java` - 첨부파일
+
+  **Filter Management (3개):**
+  - `domain/filter/model/FilterCategory.java` - 필터 카테고리
+  - `domain/filter/model/FilterOption.java` - 필터 옵션
+  - `domain/filter/model/SavedFilter.java` - 저장된 필터
+
+  **Statistics/Log (3개):**
+  - `domain/stats/model/SystemLog.java` - 시스템 로그
+  - `domain/stats/model/ApiLog.java` - API 로그
+  - `domain/stats/model/Statistics.java` - 통계 집계
+
+- **삭제 파일** (10개):
+  - `domain/health/**` - Health check entity (불필요)
+  - `domain/designer/**` - Designer domain (미사용)
+  - `domain/contest/**` - Contest domain (미사용)
+  - `domain/planner/**` - Planner domain (미사용)
+  - `domain/subscription/**` - Subscription domain (결제에 통합)
+  - `domain/file/model/FileUpload.java` - 구 파일 엔티티
+  - `domain/board/model/BoardType.java` - Enum (String으로 변경)
+  - `domain/admin/model/AdminRoleAssignment.java` - 구 매핑 엔티티
+  - `domain/admin/model/AuditLog.java` - 구 감사 로그
+
+- **주요 기술 결정**:
+  - **Hypersistence Utils 사용**: JSONB (`@Type(JsonBinaryType.class)`), 배열 (`@Type(StringArrayType.class)`)
+  - **BaseEntity 패턴**: 모든 엔티티가 UUID + BIGSERIAL 이중 키 전략
+  - **Soft Delete**: is_deleted + deleted_at 패턴 일관 적용
+  - **JSONB 활용**: metadata, business_info, requirements 등 유연한 데이터 구조
+  - **PostgreSQL 배열**: roles[], tags[], interests[] 등 text[] 타입 매핑
+  - **Lazy Loading**: 모든 관계 FetchType.LAZY로 성능 최적화
+  - **비즈니스 메서드**: 엔티티에 도메인 로직 캡슐화 (e.g., markAsRead(), incrementViewCount())
+  - **인덱스 전략**: 외래키, 상태 필드, 날짜 필드에 인덱스 추가
+
+- **엔티티 통계**:
+  - **Base Classes**: 2개
+  - **User Management**: 7개
+  - **Company Management**: 6개
+  - **Ad System**: 8개 (1 enum 포함)
+  - **Estimate/Matching**: 8개
+  - **Payment System**: 8개
+  - **UMS Notification**: 6개
+  - **File Management**: 4개
+  - **Board**: 5개
+  - **Admin System**: 11개
+  - **Consultation**: 3개
+  - **Filter Management**: 3개
+  - **Statistics/Log**: 3개
+  - **총 엔티티 수**: 74개 (Base 2 + Domain 72)
+
+- **다음 단계**:
+  - Repository 레이어 구현 (각 엔티티별 Spring Data JPA Repository)
+  - Service 레이어 구현 (비즈니스 로직)
+  - DTO 레이어 구현 (Request/Response)
+  - Controller 레이어 구현 (REST API)
+  - Flyway 마이그레이션 검증 (V10+ 필요 시 추가)
+
+- **참고 문서**:
+  - `src/main/resources/db/migration/V1__Initial_schema.sql` - 데이터베이스 스키마 기준
+  - `CLAUDE.md` - 엔티티 패턴 가이드
+
+---
+
+**마지막 업데이트**: 2025-10-31
+**업데이트자**: Claude

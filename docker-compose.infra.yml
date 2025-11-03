@@ -1,0 +1,53 @@
+# ===========================================
+# Damoa Infrastructure Only (PostgreSQL 16 + Redis)
+# ===========================================
+# Usage:
+#   Start:  docker-compose -f docker-compose.infra.yml up -d
+#   Stop:   docker-compose -f docker-compose.infra.yml down
+#   Logs:   docker-compose -f docker-compose.infra.yml logs -f
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: damoa-postgres-infra
+    environment:
+      POSTGRES_DB: ${DB_NAME:-hip_damoa_local}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-my-secret-pw}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - d-damoa-api_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-hip_damoa_local}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - damoa-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: damoa-redis-infra
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - damoa-network
+
+volumes:
+  d-damoa-api_postgres_data:
+    external: true
+  redis_data:
+    driver: local
+
+networks:
+  damoa-network:
+    driver: bridge
