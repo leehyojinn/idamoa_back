@@ -91,9 +91,9 @@ public class AuthService {
 
     /**
      * 회원가입 완료 (2단계)
-     * - 이메일/SMS 인증 확인
+     * - 이메일 인증 확인
      * - Redis에서 회원가입 정보 조회
-     * - User 및 Profile 생성
+     * - User 생성 (프로필은 별도 단계에서 생성)
      */
     @Transactional
     public TokenInfo completeSignup(SignupCompleteRequest request) {
@@ -115,59 +115,48 @@ public class AuthService {
             throw new BusinessException(ErrorCode.SIGNUP_TOKEN_INVALID);
         }
 
-        // 이메일 인증 확인
-        verificationService.verifyEmailCode(signupData.getEmail(), request.getEmailVerificationCode());
+        // 이메일 인증 완료 여부 확인 (필수)
+        if (!verificationService.isEmailVerified(request.getSignupToken())) {
+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_REQUIRED);
+        }
 
-        // SMS 인증 확인
-        verificationService.verifySmsCode(signupData.getPhoneNumber(), request.getSmsVerificationCode());
+        // SMS 인증은 선택사항 (나중에 인증 가능)
+        boolean smsVerified = verificationService.isSmsVerified(request.getSignupToken());
 
-        // User 생성
+        LocalDateTime now = LocalDateTime.now();
+
+        // User 생성 (role은 항상 USER로 고정, ADMIN은 관리자 패널에서만 부여)
         User user = User.builder()
                 .email(signupData.getEmail())
                 .password(passwordEncoder.encode(signupData.getPassword()))
-                .roles(new String[]{signupData.getRole()})
+                .roles(new String[]{"USER"})  // 강제로 USER 고정
                 .emailVerified(true)
-                .phoneVerified(true)
+                .emailVerifiedAt(now)
+                .phoneVerified(smsVerified)
+                .phoneVerifiedAt(smsVerified ? now : null)
                 .termsAgreed(signupData.getTermsAgreed())
+                .termsAgreedAt(signupData.getTermsAgreed() ? now : null)
                 .privacyAgreed(signupData.getPrivacyAgreed())
-                .marketingAgreed(signupData.getMarketingAgreed())
+                .privacyAgreedAt(signupData.getPrivacyAgreed() ? now : null)
+                .marketingAgreed(signupData.getMarketingAgreed() != null ? signupData.getMarketingAgreed() : false)
+                .marketingAgreedAt(Boolean.TRUE.equals(signupData.getMarketingAgreed()) ? now : null)
+                .profileCompleted(false)  // 프로필 미완성 상태
                 .build();
 
-        // 약관 동의 시간 설정
-        if (signupData.getTermsAgreed()) {
-            user = User.builder()
-                    .email(user.getEmail())
-                    .password(user.getPassword())
-                    .roles(user.getRoles())
-                    .emailVerified(true)
-                    .emailVerifiedAt(LocalDateTime.now())
-                    .phoneVerified(true)
-                    .phoneVerifiedAt(LocalDateTime.now())
-                    .termsAgreed(true)
-                    .termsAgreedAt(LocalDateTime.now())
-                    .privacyAgreed(true)
-                    .privacyAgreedAt(LocalDateTime.now())
-                    .marketingAgreed(signupData.getMarketingAgreed())
-                    .marketingAgreedAt(signupData.getMarketingAgreed() ? LocalDateTime.now() : null)
-                    .build();
-        }
-
         user = userRepository.save(user);
-        log.info("사용자 생성 완료: id={}, email={}, roles={}", user.getId(), user.getEmail(), String.join(",", user.getRoles()));
-
-        // Role별 프로필 생성
-        createProfileByRole(user, signupData);
+        log.info("사용자 생성 완료: id={}, email={}, profileCompleted={}", user.getId(), user.getEmail(), user.getProfileCompleted());
 
         // Redis에서 회원가입 토큰 삭제
         redisService.deleteValues(redisKey);
 
-        // JWT 토큰 발급
-        TokenInfo tokenInfo = jwtTokenProvider.generateToken(user.getEmail(), user.getRoles()[0]);
+        // JWT 토큰 발급 (프로필 상태 포함)
+        TokenInfo tokenInfo = jwtTokenProvider.generateToken(user);
 
         // Refresh 토큰 Redis에 저장
         saveRefreshToken(user.getId(), tokenInfo.getRefreshToken());
 
-        log.info("회원가입 완료: userId={}, email={}", user.getId(), user.getEmail());
+        log.info("회원가입 완료: userId={}, email={}, profileCompleted={}, currentRole={}",
+                user.getId(), user.getEmail(), tokenInfo.isProfileCompleted(), tokenInfo.getCurrentRole());
 
         return tokenInfo;
     }
@@ -202,15 +191,16 @@ public class AuthService {
         // 로그인 성공 처리
         String ipAddress = getClientIp(httpRequest);
         user.loginSuccess(ipAddress);
-        userRepository.save(user);
+        user = userRepository.save(user);
 
-        // JWT 토큰 발급
-        TokenInfo tokenInfo = jwtTokenProvider.generateToken(user.getEmail(), user.getRoles()[0]);
+        // JWT 토큰 발급 (프로필 상태 포함)
+        TokenInfo tokenInfo = jwtTokenProvider.generateToken(user);
 
         // Refresh 토큰 Redis에 저장
         saveRefreshToken(user.getId(), tokenInfo.getRefreshToken());
 
-        log.info("로그인 성공: userId={}, email={}, ip={}", user.getId(), user.getEmail(), ipAddress);
+        log.info("로그인 성공: userId={}, email={}, ip={}, profileCompleted={}",
+                user.getId(), user.getEmail(), ipAddress, user.getProfileCompleted());
 
         return tokenInfo;
     }
@@ -240,13 +230,14 @@ public class AuthService {
             throw new BusinessException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
         }
 
-        // 새로운 토큰 발급
-        TokenInfo tokenInfo = jwtTokenProvider.generateToken(user.getEmail(), user.getRoles()[0]);
+        // 새로운 토큰 발급 (프로필 상태 포함)
+        TokenInfo tokenInfo = jwtTokenProvider.generateToken(user);
 
         // 새로운 Refresh 토큰 저장 (Refresh Token Rotation)
         saveRefreshToken(user.getId(), tokenInfo.getRefreshToken());
 
-        log.info("토큰 갱신 완료: userId={}, email={}", user.getId(), user.getEmail());
+        log.info("토큰 갱신 완료: userId={}, email={}, profileCompleted={}",
+                user.getId(), user.getEmail(), user.getProfileCompleted());
 
         return tokenInfo;
     }
@@ -281,37 +272,6 @@ public class AuthService {
     private void saveRefreshToken(Long userId, String refreshToken) {
         String redisKey = REFRESH_TOKEN_PREFIX + userId;
         redisService.setValues(redisKey, refreshToken, REFRESH_TOKEN_TTL);
-    }
-
-    /**
-     * Role별 프로필 생성
-     */
-    private void createProfileByRole(User user, SignupStartRequest signupData) {
-        String role = user.getRoles()[0];
-        switch (role) {
-            case "USER" -> {
-                UserProfile userProfile = UserProfile.builder()
-                        .user(user)
-                        .name(signupData.getName())
-                        .phone(signupData.getPhoneNumber())
-                        .build();
-                userProfileRepository.save(userProfile);
-                log.info("UserProfile 생성 완료: userId={}", user.getId());
-            }
-            case "COMPANY" -> {
-                Company company = Company.builder()
-                        .owner(user)
-                        .name(signupData.getCompanyName())
-                        .primaryPhone(signupData.getPhoneNumber())
-                        .build();
-                companyRepository.save(company);
-                log.info("Company 생성 완료: userId={}", user.getId());
-            }
-            default -> {
-                // ADMIN, BLACKLIST, DESIGNER 등은 프로필 미생성
-                log.info("프로필 미생성 role: {}", role);
-            }
-        }
     }
 
     /**

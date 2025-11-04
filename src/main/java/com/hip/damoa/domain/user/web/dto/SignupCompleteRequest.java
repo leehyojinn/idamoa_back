@@ -14,10 +14,4 @@ public class SignupCompleteRequest {
 
     @NotBlank(message = "회원가입 토큰은 필수입니다")
     private String signupToken;
-
-    @NotBlank(message = "이메일 인증 코드는 필수입니다")
-    private String emailVerificationCode;
-
-    @NotBlank(message = "SMS 인증 코드는 필수입니다")
-    private String smsVerificationCode;
 }

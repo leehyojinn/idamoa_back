@@ -62,6 +62,7 @@ public class SecurityConfig {
                                 "/api/auth/signup/**",
                                 "/api/auth/email/**",
                                 "/api/auth/sms/**",
+                                "/api/auth/verification/**",
                                 "/api/auth/refresh",
                                 "/api/oauth/*/login",
                                 "/api/oauth/*/callback",

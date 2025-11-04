@@ -29,6 +29,8 @@ public enum ErrorCode {
     TOO_MANY_ATTEMPTS(HttpStatus.TOO_MANY_REQUESTS, "V003", "Too many attempts. Please try again later"),
     EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN, "V004", "Email not verified"),
     PHONE_NOT_VERIFIED(HttpStatus.FORBIDDEN, "V005", "Phone not verified"),
+    EMAIL_VERIFICATION_REQUIRED(HttpStatus.BAD_REQUEST, "V006", "Email verification is required"),
+    SMS_VERIFICATION_REQUIRED(HttpStatus.BAD_REQUEST, "V007", "SMS verification is required"),
 
     // JWT
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "J001", "Invalid token"),
@@ -123,6 +125,12 @@ public enum ErrorCode {
     FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "F003", "File size exceeds maximum limit (10MB)"),
     FILE_TYPE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "F004", "File type not allowed"),
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "F005", "File upload failed"),
+
+    // Profile
+    INVALID_PROFILE_TYPE(HttpStatus.BAD_REQUEST, "PR001", "Invalid profile type"),
+    PROFILE_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "PR002", "Profile already completed"),
+    PROFILE_TYPE_NOT_SELECTED(HttpStatus.BAD_REQUEST, "PR003", "Profile type not selected"),
+    UNAUTHORIZED_ROLE_CHANGE(HttpStatus.FORBIDDEN, "PR004", "Unauthorized role change attempt"),
 
     // Board/Content
     BOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "BD001", "Board not found"),

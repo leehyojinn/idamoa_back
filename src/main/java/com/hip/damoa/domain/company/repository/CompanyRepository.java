@@ -15,6 +15,8 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
 
     Optional<Company> findByOwnerAndIsDeletedFalse(User owner);
 
+    Optional<Company> findByOwnerId(Long ownerId);
+
     Optional<Company> findBySlug(String slug);
 
     boolean existsBySlug(String slug);

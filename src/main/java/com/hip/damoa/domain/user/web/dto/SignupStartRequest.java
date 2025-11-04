@@ -9,6 +9,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 회원가입 시작 요청 DTO
+ * 이메일/비밀번호 + 약관동의만 필요
+ * 프로필 정보는 회원가입 완료 후 별도 입력
+ */
 @Getter
 @Builder
 @NoArgsConstructor
@@ -24,9 +29,6 @@ public class SignupStartRequest {
             message = "비밀번호는 8자 이상, 영문, 숫자, 특수문자를 포함해야 합니다")
     private String password;
 
-    @NotBlank(message = "역할은 필수입니다")
-    private String role;
-
     @NotNull(message = "이용약관 동의는 필수입니다")
     private Boolean termsAgreed;
 
@@ -34,12 +36,4 @@ public class SignupStartRequest {
     private Boolean privacyAgreed;
 
     private Boolean marketingAgreed;
-
-    // Role-specific fields
-    private String name;
-    private String phoneNumber;
-    private String hospitalName;
-    private String companyName;
-    private String businessRegistrationNumber;
-    private String designerName;
 }

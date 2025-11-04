@@ -11,4 +11,8 @@ public class TokenInfo {
     private String grantType;
     private String accessToken;
     private String refreshToken;
+
+    // 프로필 정보
+    private boolean profileCompleted;
+    private String currentRole;
 }

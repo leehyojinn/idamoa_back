@@ -24,10 +24,17 @@ import java.util.stream.Collectors;
 public class JwtTokenProvider {
 
     private final Key key;
+    private final long accessTokenValidity;
+    private final long refreshTokenValidity;
 
-    public JwtTokenProvider(@Value("${jwt.secret}") String secretKey) {
+    public JwtTokenProvider(
+            @Value("${jwt.secret}") String secretKey,
+            @Value("${jwt.access-token-validity}") long accessTokenValidity,
+            @Value("${jwt.refresh-token-validity}") long refreshTokenValidity) {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         this.key = Keys.hmacShaKeyFor(keyBytes);
+        this.accessTokenValidity = accessTokenValidity;
+        this.refreshTokenValidity = refreshTokenValidity;
     }
 
     public TokenInfo generateToken(Authentication authentication) {
@@ -36,7 +43,7 @@ public class JwtTokenProvider {
                 .collect(Collectors.joining(","));
 
         long now = (new Date()).getTime();
-        Date accessTokenExpiresIn = new Date(now + 86400000); // 1 day
+        Date accessTokenExpiresIn = new Date(now + accessTokenValidity);
 
         String accessToken = Jwts.builder()
                 .setSubject(authentication.getName())
@@ -47,7 +54,7 @@ public class JwtTokenProvider {
 
         String refreshToken = Jwts.builder()
                 .setSubject(authentication.getName())
-                .setExpiration(new Date(now + 86400000 * 14)) // 14 days
+                .setExpiration(new Date(now + refreshTokenValidity))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
 
@@ -61,7 +68,7 @@ public class JwtTokenProvider {
     // Overload method for email and role
     public TokenInfo generateToken(String email, String role) {
         long now = (new Date()).getTime();
-        Date accessTokenExpiresIn = new Date(now + 86400000); // 1 day
+        Date accessTokenExpiresIn = new Date(now + accessTokenValidity);
 
         String accessToken = Jwts.builder()
                 .setSubject(email)
@@ -72,7 +79,7 @@ public class JwtTokenProvider {
 
         String refreshToken = Jwts.builder()
                 .setSubject(email)
-                .setExpiration(new Date(now + 86400000 * 14)) // 14 days
+                .setExpiration(new Date(now + refreshTokenValidity))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
 
@@ -80,6 +87,41 @@ public class JwtTokenProvider {
                 .grantType("Bearer")
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .build();
+    }
+
+    // Overload method for User entity (includes profile status)
+    public TokenInfo generateToken(com.hip.damoa.domain.user.model.User user) {
+        // Join all roles with comma
+        String authorities = Arrays.stream(user.getRoles())
+                .map(role -> "ROLE_" + role)
+                .collect(Collectors.joining(","));
+
+        // Get primary role (first role in array)
+        String currentRole = user.getRoles()[0];
+
+        long now = (new Date()).getTime();
+        Date accessTokenExpiresIn = new Date(now + accessTokenValidity);
+
+        String accessToken = Jwts.builder()
+                .setSubject(user.getEmail())
+                .claim("auth", authorities)
+                .setExpiration(accessTokenExpiresIn)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+
+        String refreshToken = Jwts.builder()
+                .setSubject(user.getEmail())
+                .setExpiration(new Date(now + refreshTokenValidity))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+
+        return TokenInfo.builder()
+                .grantType("Bearer")
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .profileCompleted(user.getProfileCompleted())
+                .currentRole(currentRole)
                 .build();
     }
 
