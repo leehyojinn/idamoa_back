@@ -3,7 +3,7 @@ package com.hip.damoa.domain.user.web;
 import com.hip.damoa.core.jwt.TokenInfo;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.user.service.AuthService;
-import com.hip.damoa.domain.user.web.dto.*;
+import com.hip.damoa.domain.user.service.VerificationService;
 import com.hip.damoa.domain.user.web.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final VerificationService verificationService;
 
     /**
      * 회원가입 시작 (1단계)
@@ -87,6 +88,46 @@ public class AuthController {
         }
 
         authService.logout(accessToken, userDetails.getUsername());
+        return ApiResponse.success();
+    }
+
+    /**
+     * 이메일 인증 코드 발송
+     */
+    @Operation(summary = "이메일 인증 코드 발송", description = "회원가입 시 이메일 인증 코드를 발송합니다")
+    @PostMapping("/verification/email/send")
+    public ApiResponse<Void> sendEmailVerification(@Valid @RequestBody EmailVerificationRequest request) {
+        verificationService.sendEmailVerificationCode(request.getSignupToken(), request.getEmail());
+        return ApiResponse.success();
+    }
+
+    /**
+     * 이메일 인증 코드 확인
+     */
+    @Operation(summary = "이메일 인증 코드 확인", description = "발송된 이메일 인증 코드를 확인합니다")
+    @PostMapping("/verification/email/verify")
+    public ApiResponse<Void> verifyEmail(@Valid @RequestBody VerificationConfirmRequest request) {
+        verificationService.verifyEmailCode(request.getSignupToken(), request.getCode());
+        return ApiResponse.success();
+    }
+
+    /**
+     * SMS 인증 코드 발송
+     */
+    @Operation(summary = "SMS 인증 코드 발송", description = "회원가입 시 SMS 인증 코드를 발송합니다")
+    @PostMapping("/verification/sms/send")
+    public ApiResponse<Void> sendSmsVerification(@Valid @RequestBody SmsVerificationRequest request) {
+        verificationService.sendSmsVerificationCode(request.getSignupToken(), request.getPhoneNumber());
+        return ApiResponse.success();
+    }
+
+    /**
+     * SMS 인증 코드 확인
+     */
+    @Operation(summary = "SMS 인증 코드 확인", description = "발송된 SMS 인증 코드를 확인합니다")
+    @PostMapping("/verification/sms/verify")
+    public ApiResponse<Void> verifySms(@Valid @RequestBody VerificationConfirmRequest request) {
+        verificationService.verifySmsCode(request.getSignupToken(), request.getCode());
         return ApiResponse.success();
     }
 }

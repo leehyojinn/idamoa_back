@@ -12,8 +12,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class VerificationConfirmRequest {
 
-    @NotBlank(message = "이메일 또는 전화번호는 필수입니다")
-    private String target; // email or phone
+    @NotBlank(message = "회원가입 토큰은 필수입니다")
+    private String signupToken;
 
     @NotBlank(message = "인증 코드는 필수입니다")
     private String code;

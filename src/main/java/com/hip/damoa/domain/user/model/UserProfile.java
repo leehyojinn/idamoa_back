@@ -1,7 +1,6 @@
 package com.hip.damoa.domain.user.model;
 
 import com.hip.damoa.domain.common.BaseEntity;
-import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -56,13 +55,13 @@ public class UserProfile extends BaseEntity {
     @Column(name = "social_links", columnDefinition = "jsonb")
     private Map<String, Object> socialLinks;
 
-    @Type(StringArrayType.class)
-    @Column(name = "interests", columnDefinition = "text[]")
-    private String[] interests;
-
     @Column(name = "profile_visibility", length = 20, nullable = false)
     @Builder.Default
     private String profileVisibility = "PUBLIC"; // PUBLIC, PRIVATE, FRIENDS_ONLY
+
+    @Column(name = "profile_type", length = 20, nullable = false)
+    @Builder.Default
+    private String profileType = "USER_PROFILE"; // USER_PROFILE, COMPANY
 
     // ===== Business Methods =====
 

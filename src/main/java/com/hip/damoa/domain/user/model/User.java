@@ -23,7 +23,8 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "users")
-public class User extends BaseEntity implements UserDetails {
+public class
+User extends BaseEntity implements UserDetails {
 
     @Column(name = "email", unique = true, nullable = false, length = 100)
     private String email;
@@ -73,7 +74,7 @@ public class User extends BaseEntity implements UserDetails {
     @Builder.Default
     private Integer failedLoginCount = 0;
 
-    @Column(name = "account_locked_until")
+    @Column(name = "locked_until")
     private LocalDateTime accountLockedUntil;
 
     // 약관 동의
@@ -97,6 +98,14 @@ public class User extends BaseEntity implements UserDetails {
 
     @Column(name = "marketing_agreed_at")
     private LocalDateTime marketingAgreedAt;
+
+    // 프로필 완료
+    @Column(name = "profile_completed", nullable = false)
+    @Builder.Default
+    private Boolean profileCompleted = false;
+
+    @Column(name = "profile_completed_at")
+    private LocalDateTime profileCompletedAt;
 
     // ===== UserDetails Implementation =====
 
@@ -241,5 +250,27 @@ public class User extends BaseEntity implements UserDetails {
     public void disagreeMarketing() {
         this.marketingAgreed = false;
         this.marketingAgreedAt = null;
+    }
+
+    /**
+     * 프로필 설정 완료 처리
+     */
+    public void completeProfile() {
+        this.profileCompleted = true;
+        this.profileCompletedAt = LocalDateTime.now();
+    }
+
+    /**
+     * COMPANY role로 업그레이드
+     */
+    public void upgradeToCompany() {
+        this.roles = new String[]{"COMPANY"};
+    }
+
+    /**
+     * Role 설정
+     */
+    public void setRoles(String[] roles) {
+        this.roles = roles;
     }
 }

@@ -24,6 +24,8 @@ spring:
 
 jwt:
   secret: V29vTGVlS2ltSmVvbmdNaW5Hb29kSGVsbG9Xb3JsZEhpSGVsbG9Xb3JsZEhpSGVsbG9Xb3JsZEhpSGVsbG9Xb3JsZEhp
+  access-token-validity: 3600000  # 1 hour (1 * 60 * 60 * 1000 ms)
+  refresh-token-validity: 1209600000  # 14 days (14 * 24 * 60 * 60 * 1000 ms)
 
 oauth:
   redirect-base-url: ${OAUTH_REDIRECT_BASE_URL:http://localhost:8080}
