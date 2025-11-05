@@ -50,6 +50,9 @@ public enum ErrorCode {
     SOCIAL_ACCOUNT_ALREADY_LINKED(HttpStatus.CONFLICT, "O005", "Social account already linked to another user"),
     SOCIAL_ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "O006", "Social account not found"),
     CANNOT_UNLINK_LAST_SOCIAL_ACCOUNT(HttpStatus.BAD_REQUEST, "O007", "Cannot unlink last social account. Set a password first"),
+    OAUTH_PROVIDER_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "O008", "OAuth provider not supported"),
+    OAUTH_EMAIL_NOT_PROVIDED(HttpStatus.BAD_REQUEST, "O009", "Email not provided by OAuth provider"),
+    EMAIL_ALREADY_REGISTERED(HttpStatus.CONFLICT, "O010", "This email is already registered. Please login with email/password or use password recovery"),
 
     // Estimate/Bidding
     ESTIMATE_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "E001", "Estimate request not found"),

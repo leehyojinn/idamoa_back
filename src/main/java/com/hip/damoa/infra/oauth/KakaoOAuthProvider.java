@@ -86,9 +86,10 @@ public class KakaoOAuthProvider implements OAuthProvider {
             JsonNode kakaoAccount = jsonNode.get("kakao_account");
             String email = kakaoAccount.has("email") ? kakaoAccount.get("email").asText() : null;
 
-            JsonNode profile = kakaoAccount.get("profile");
-            String name = profile.has("nickname") ? profile.get("nickname").asText() : null;
-            String profileImageUrl = profile.has("profile_image_url") ?
+            // profile이 null일 수 있으므로 null 체크
+            JsonNode profile = kakaoAccount.has("profile") ? kakaoAccount.get("profile") : null;
+            String name = (profile != null && profile.has("nickname")) ? profile.get("nickname").asText() : null;
+            String profileImageUrl = (profile != null && profile.has("profile_image_url")) ?
                     profile.get("profile_image_url").asText() : null;
 
             return OAuthUserInfo.builder()

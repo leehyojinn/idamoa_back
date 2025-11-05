@@ -64,7 +64,7 @@ public class SecurityConfig {
                                 "/api/auth/sms/**",
                                 "/api/auth/verification/**",
                                 "/api/auth/refresh",
-                                "/api/oauth/*/login",
+                                "/api/oauth/*/authorize",
                                 "/api/oauth/*/callback",
                                 "/api/estimates/requests/public",  // Public estimate requests
                                 "/api/estimates/requests/{requestId}",  // View estimate request
@@ -100,7 +100,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/companies/{companyId}").authenticated()
                         // Authenticated endpoints
                         .requestMatchers("/api/auth/logout", "/api/auth/me").authenticated()
-                        .requestMatchers("/api/oauth/**").authenticated()
                         .requestMatchers("/api/estimates/**").authenticated()  // Estimate/bidding endpoints
                         .requestMatchers("/api/contests/**").authenticated()  // Contest endpoints
                         .requestMatchers("/api/payments/**").authenticated()  // Payment endpoints (except webhook and plans)
