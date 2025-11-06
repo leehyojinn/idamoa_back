@@ -10,6 +10,9 @@ import com.hip.damoa.domain.file.web.dto.PresignedUrlResponse;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import com.hip.damoa.infra.redis.RedisService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,6 +46,7 @@ public class FileUploadService {
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
     private final RedisService redisService;
+    private final ObjectMapper objectMapper;
 
     @Value("${aws.s3.bucket}")
     private String bucketName;
@@ -104,7 +108,13 @@ public class FileUploadService {
         metadata.put("entityId", request.getEntityId());
 
         String redisKey = UPLOAD_METADATA_PREFIX + uploadId;
-        redisService.setValues(redisKey, metadata.toString(), UPLOAD_METADATA_TTL);
+        try {
+            String metadataJson = objectMapper.writeValueAsString(metadata);
+            redisService.setValues(redisKey, metadataJson, UPLOAD_METADATA_TTL);
+        } catch (JsonProcessingException e) {
+            log.error("메타데이터 JSON 변환 실패", e);
+            throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED);
+        }
 
         log.info("Presigned URL 생성 완료: uploadId={}, fileKey={}", uploadId, fileKey);
 
@@ -139,7 +149,7 @@ public class FileUploadService {
         // 사용자 확인
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
+        log.info("metadata: {}",metadata);
         if (!user.getEmail().equals(metadata.get("userEmail"))) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
@@ -161,12 +171,12 @@ public class FileUploadService {
                 .storedFilename(extractFilenameFromKey(request.getFileKey()))
                 .filePath(request.getFileKey())
                 .fileUrl(fileUrl)
-                .fileSize((Long) metadata.get("fileSize"))
+                .fileSize(toLong(metadata.get("fileSize")))
                 .mimeType((String) metadata.get("mimeType"))
                 .fileExtension(fileExtension)
                 .uploader(user)
                 .entityType((String) metadata.get("entityType"))
-                .entityId((Long) metadata.get("entityId"))
+                .entityId(toLong(metadata.get("entityId")))
                 .imageMetadata(imageMetadata)
                 .description(request.getDescription())
                 .isPublic(true)
@@ -292,13 +302,33 @@ public class FileUploadService {
     }
 
     /**
-     * 메타데이터 파싱 (간단한 구현)
+     * 메타데이터 파싱
      */
     private Map<String, Object> parseMetadata(String metadataStr) {
-        // 실제로는 JSON 파싱 사용 권장
-        Map<String, Object> metadata = new HashMap<>();
-        // 임시 구현: toString으로 저장했으므로 간단히 처리
-        // 프로덕션에서는 ObjectMapper 사용
-        return metadata;
+        try {
+            return objectMapper.readValue(metadataStr, new TypeReference<Map<String, Object>>() {});
+        } catch (JsonProcessingException e) {
+            log.error("메타데이터 JSON 파싱 실패: {}", metadataStr, e);
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
+        }
+    }
+
+    /**
+     * Object를 Long으로 안전하게 변환
+     */
+    private Long toLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Long) {
+            return (Long) value;
+        }
+        if (value instanceof Integer) {
+            return ((Integer) value).longValue();
+        }
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        throw new IllegalArgumentException("Cannot convert " + value.getClass() + " to Long");
     }
 }

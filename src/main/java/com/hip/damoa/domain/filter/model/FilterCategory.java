@@ -13,15 +13,15 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "filter_categories", indexes = {
-    @Index(name = "idx_filter_categories_code", columnList = "category_code"),
+    @Index(name = "idx_filter_categories_code", columnList = "code"),
     @Index(name = "idx_filter_categories_type", columnList = "filter_type")
 })
 public class FilterCategory extends BaseEntity {
 
-    @Column(name = "category_code", unique = true, nullable = false, length = 50)
+    @Column(name = "code", unique = true, nullable = false, length = 50)
     private String categoryCode;
 
-    @Column(name = "category_name", nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100)
     private String categoryName;
 
     @Column(name = "filter_type", nullable = false, length = 20)

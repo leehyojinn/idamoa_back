@@ -1,19 +1,18 @@
 package com.hip.damoa.domain.company.web.dto;
 
 import com.hip.damoa.domain.company.model.Company;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 /**
  * 업체 조회 응답 DTO
  */
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -56,8 +55,10 @@ public class CompanyResponse {
     private LocalDateTime verifiedAt;
     private LocalDateTime premiumUntil;
     private Boolean isPremium;
+    private Boolean isLiked; // 현재 사용자의 좋아요 여부
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<CompanyImageDto> images;
 
     /**
      * Entity → DTO 변환

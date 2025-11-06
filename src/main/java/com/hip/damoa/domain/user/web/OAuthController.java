@@ -37,11 +37,19 @@ public class OAuthController {
      */
     @Operation(summary = "카카오 로그인 Callback", description = "카카오 OAuth Callback을 처리하고 JWT 토큰을 발급합니다")
     @GetMapping("/kakao/callback")
-    public ApiResponse<OAuthCallbackResponse> handleKakaoCallback(
+    public String handleKakaoCallback(
             @RequestParam String code,
             @RequestParam String state) {
         OAuthCallbackResponse response = oauthService.handleCallback("kakao", code, state);
-        return ApiResponse.success(response);
+
+        // HTML 페이지로 리다이렉트 (test-oauth.html)
+        String redirectUrl = "/test-oauth.html" +
+                "?success=true" +
+                "&accessToken=" + response.getTokenInfo().getAccessToken() +
+                "&refreshToken=" + response.getTokenInfo().getRefreshToken() +
+                "&requiresProfileSetup=" + !response.getTokenInfo().isProfileCompleted();
+
+        return "redirect:" + redirectUrl;
     }
 
     /**
@@ -59,11 +67,19 @@ public class OAuthController {
      */
     @Operation(summary = "네이버 로그인 Callback", description = "네이버 OAuth Callback을 처리하고 JWT 토큰을 발급합니다")
     @GetMapping("/naver/callback")
-    public ApiResponse<OAuthCallbackResponse> handleNaverCallback(
+    public String handleNaverCallback(
             @RequestParam String code,
             @RequestParam String state) {
         OAuthCallbackResponse response = oauthService.handleCallback("naver", code, state);
-        return ApiResponse.success(response);
+
+        // HTML 페이지로 리다이렉트 (test-oauth.html)
+        String redirectUrl = "/test-oauth.html" +
+                "?success=true" +
+                "&accessToken=" + response.getTokenInfo().getAccessToken() +
+                "&refreshToken=" + response.getTokenInfo().getRefreshToken() +
+                "&requiresProfileSetup=" + !response.getTokenInfo().isProfileCompleted();
+
+        return "redirect:" + redirectUrl;
     }
 
     /**
@@ -81,10 +97,18 @@ public class OAuthController {
      */
     @Operation(summary = "구글 로그인 Callback", description = "구글 OAuth Callback을 처리하고 JWT 토큰을 발급합니다")
     @GetMapping("/google/callback")
-    public ApiResponse<OAuthCallbackResponse> handleGoogleCallback(
+    public String handleGoogleCallback(
             @RequestParam String code,
             @RequestParam String state) {
         OAuthCallbackResponse response = oauthService.handleCallback("google", code, state);
-        return ApiResponse.success(response);
+
+        // HTML 페이지로 리다이렉트 (test-oauth.html)
+        String redirectUrl = "/test-oauth.html" +
+                "?success=true" +
+                "&accessToken=" + response.getTokenInfo().getAccessToken() +
+                "&refreshToken=" + response.getTokenInfo().getRefreshToken() +
+                "&requiresProfileSetup=" + !response.getTokenInfo().isProfileCompleted();
+
+        return "redirect:" + redirectUrl;
     }
 }

@@ -21,4 +21,6 @@ public interface CompanyImageRepository extends JpaRepository<CompanyImage, Long
     Optional<CompanyImage> findByCompanyAndImageTypeAndIsPrimaryTrue(Company company, String imageType);
 
     long countByCompanyAndIsDeletedFalse(Company company);
+
+    List<CompanyImage> findByCompany_IdAndIsDeletedFalse(Long companyId);
 }

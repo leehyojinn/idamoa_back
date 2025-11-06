@@ -138,7 +138,10 @@ public enum ErrorCode {
     // Board/Content
     BOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "BD001", "Board not found"),
     BOARD_CANNOT_BE_EDITED(HttpStatus.BAD_REQUEST, "BD002", "Board cannot be edited"),
-    BOARD_CANNOT_BE_DELETED(HttpStatus.BAD_REQUEST, "BD003", "Board cannot be deleted");
+    BOARD_CANNOT_BE_DELETED(HttpStatus.BAD_REQUEST, "BD003", "Board cannot be deleted"),
+
+    // Filter
+    FILTER_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "FC001", "Filter category not found");
 
     private final HttpStatus status;
     private final String code;

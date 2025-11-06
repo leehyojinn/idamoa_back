@@ -85,6 +85,12 @@ public class SecurityConfig {
                                 "/api/boards/*/popular",  // Popular boards (public)
                                 "/api/boards/*/*",  // View specific board (public)
                                 "/api/boards/*",  // View boards by type (public)
+                                "/api/filters",  // Get all filter categories (public)
+                                "/api/filters/**",  // Get specific filter category/options (public)
+                                "/*.html",  // HTML pages (public)
+                                "/js/**",  // JavaScript files
+                                "/css/**",  // CSS files
+                                "/images/**",  // Image files
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
@@ -98,6 +104,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/companies").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/companies/{companyId}").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/companies/{companyId}").authenticated()
+                        // Company Review endpoints - public (GET only)
+                        .requestMatchers(HttpMethod.GET, "/api/companies/{companyId}/reviews").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/{reviewId}").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/companies/{companyId}/reviews").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/reviews/{reviewId}").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/reviews/{reviewId}").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/{reviewId}/reply").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/reviews/{reviewId}/reply").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/reviews/{reviewId}/reply").authenticated()
                         // Authenticated endpoints
                         .requestMatchers("/api/auth/logout", "/api/auth/me").authenticated()
                         .requestMatchers("/api/estimates/**").authenticated()  // Estimate/bidding endpoints

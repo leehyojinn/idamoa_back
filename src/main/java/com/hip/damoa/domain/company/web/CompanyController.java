@@ -2,8 +2,9 @@ package com.hip.damoa.domain.company.web;
 
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.company.model.Company;
+import com.hip.damoa.domain.company.model.CompanyImage;
+import com.hip.damoa.domain.company.service.CompanyImageService;
 import com.hip.damoa.domain.company.service.CompanyService;
-import com.hip.damoa.domain.company.web.dto.*;
 import com.hip.damoa.domain.company.web.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +21,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 업체 관리 REST API (업체 소유자용)
@@ -32,6 +35,7 @@ import java.util.List;
 public class CompanyController {
 
     private final CompanyService companyService;
+    private final CompanyImageService companyImageService;
 
     /**
      * 업체 등록
@@ -64,9 +68,27 @@ public class CompanyController {
      */
     @Operation(summary = "업체 조회 (ID)", description = "업체 ID로 업체 정보를 조회합니다")
     @GetMapping("/{companyId}")
-    public ApiResponse<CompanyResponse> getCompany(@PathVariable Long companyId) {
+    public ApiResponse<CompanyResponse> getCompany(
+            @PathVariable Long companyId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
         Company company = companyService.getCompany(companyId);
-        return ApiResponse.success(CompanyResponse.from(company));
+        List<CompanyImage> images = companyImageService.getCompanyImages(companyId);
+
+        CompanyResponse response = CompanyResponse.from(company);
+        response.setImages(images.stream()
+                .map(CompanyImageDto::from)
+                .collect(Collectors.toList()));
+
+        // 로그인한 사용자의 좋아요 여부 설정
+        if (userDetails != null) {
+            boolean isLiked = companyService.isLiked(userDetails.getUsername(), companyId);
+            response.setIsLiked(isLiked);
+        } else {
+            response.setIsLiked(false);
+        }
+
+        return ApiResponse.success(response);
     }
 
     /**
@@ -74,9 +96,27 @@ public class CompanyController {
      */
     @Operation(summary = "업체 조회 (Slug)", description = "업체 Slug로 업체 정보를 조회합니다")
     @GetMapping("/slug/{slug}")
-    public ApiResponse<CompanyResponse> getCompanyBySlug(@PathVariable String slug) {
+    public ApiResponse<CompanyResponse> getCompanyBySlug(
+            @PathVariable String slug,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
         Company company = companyService.getCompanyBySlug(slug);
-        return ApiResponse.success(CompanyResponse.from(company));
+        List<CompanyImage> images = companyImageService.getCompanyImages(company.getId());
+
+        CompanyResponse response = CompanyResponse.from(company);
+        response.setImages(images.stream()
+                .map(CompanyImageDto::from)
+                .collect(Collectors.toList()));
+
+        // 로그인한 사용자의 좋아요 여부 설정
+        if (userDetails != null) {
+            boolean isLiked = companyService.isLiked(userDetails.getUsername(), company.getId());
+            response.setIsLiked(isLiked);
+        } else {
+            response.setIsLiked(false);
+        }
+
+        return ApiResponse.success(response);
     }
 
     /**
@@ -86,12 +126,23 @@ public class CompanyController {
     @GetMapping
     public ApiResponse<Page<CompanyListResponse>> getActiveCompanies(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable) {
+            Pageable pageable,
+            @AuthenticationPrincipal UserDetails userDetails) {
 
         Page<Company> companies = companyService.getActiveCompanies(pageable);
         Page<CompanyListResponse> response = companies.map(company -> {
             List<CompanyImageDto> images = companyService.getCompanyImages(company);
-            return CompanyListResponse.from(company, images);
+            CompanyListResponse listResponse = CompanyListResponse.from(company, images);
+
+            // 로그인한 사용자의 좋아요 여부 설정
+            if (userDetails != null) {
+                boolean isLiked = companyService.isLiked(userDetails.getUsername(), company.getId());
+                listResponse.setIsLiked(isLiked);
+            } else {
+                listResponse.setIsLiked(false);
+            }
+
+            return listResponse;
         });
         return ApiResponse.success(response);
     }
@@ -107,7 +158,8 @@ public class CompanyController {
             @RequestParam(required = false) String[] tags,
             @RequestParam(required = false) java.math.BigDecimal minRating,
             @RequestParam(required = false, defaultValue = "LATEST") String sortBy,
-            @PageableDefault(size = 20) Pageable pageable) {
+            @PageableDefault(size = 20) Pageable pageable,
+            @AuthenticationPrincipal UserDetails userDetails) {
 
         CompanySearchRequest searchRequest = CompanySearchRequest.builder()
                 .keyword(keyword)
@@ -120,7 +172,17 @@ public class CompanyController {
         Page<Company> companies = companyService.searchCompanies(searchRequest, pageable);
         Page<CompanyListResponse> response = companies.map(company -> {
             List<CompanyImageDto> images = companyService.getCompanyImages(company);
-            return CompanyListResponse.from(company, images);
+            CompanyListResponse listResponse = CompanyListResponse.from(company, images);
+
+            // 로그인한 사용자의 좋아요 여부 설정
+            if (userDetails != null) {
+                boolean isLiked = companyService.isLiked(userDetails.getUsername(), company.getId());
+                listResponse.setIsLiked(isLiked);
+            } else {
+                listResponse.setIsLiked(false);
+            }
+
+            return listResponse;
         });
 
         return ApiResponse.success(response);
@@ -152,5 +214,33 @@ public class CompanyController {
 
         companyService.deleteCompany(userDetails.getUsername(), companyId);
         return ApiResponse.success();
+    }
+
+    /**
+     * 업체 보유 여부 확인
+     */
+    @Operation(summary = "업체 보유 여부 확인", description = "현재 사용자가 이미 업체를 보유하고 있는지 확인합니다")
+    @GetMapping("/check")
+    public ApiResponse<Map<String, Boolean>> checkHasCompany(
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        boolean hasCompany = companyService.hasCompany(userDetails.getUsername());
+        return ApiResponse.success(Map.of("hasCompany", hasCompany));
+    }
+
+    /**
+     * 업체 좋아요 토글
+     */
+    @Operation(summary = "업체 좋아요 토글", description = "업체 좋아요를 추가하거나 취소합니다")
+    @PostMapping("/{companyId}/like")
+    public ApiResponse<Map<String, Object>> toggleLike(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long companyId) {
+
+        boolean isLiked = companyService.toggleLike(userDetails.getUsername(), companyId);
+        return ApiResponse.success(Map.of(
+                "isLiked", isLiked,
+                "message", isLiked ? "좋아요를 추가했습니다" : "좋아요를 취소했습니다"
+        ));
     }
 }

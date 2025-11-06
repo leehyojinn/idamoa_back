@@ -14,7 +14,7 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "filter_options", indexes = {
     @Index(name = "idx_filter_options_category_id", columnList = "category_id"),
-    @Index(name = "idx_filter_options_code", columnList = "option_code")
+    @Index(name = "idx_filter_options_code", columnList = "code")
 })
 public class FilterOption extends BaseEntity {
 
@@ -22,19 +22,19 @@ public class FilterOption extends BaseEntity {
     @JoinColumn(name = "category_id", nullable = false)
     private FilterCategory category;
 
-    @Column(name = "option_code", nullable = false, length = 50)
+    @Column(name = "code", nullable = false, length = 50)
     private String optionCode;
 
-    @Column(name = "option_name", nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 100)
     private String optionName;
 
-    @Column(name = "option_value", length = 200)
+    @Column(name = "short_name", length = 100)
     private String optionValue;
 
     @Column(name = "display_order")
     private Integer displayOrder;
 
-    @Column(name = "icon_url", length = 500)
+    @Column(name = "icon", length = 100)
     private String iconUrl;
 
     @Column(name = "is_active", nullable = false)

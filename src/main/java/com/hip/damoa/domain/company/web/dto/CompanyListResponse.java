@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,6 +15,7 @@ import java.util.List;
  * 업체 목록 조회 응답 DTO (간단한 정보만)
  */
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -36,6 +38,7 @@ public class CompanyListResponse {
     private Boolean isPremium;
     private String premiumTier;
     private List<CompanyImageDto> images;
+    private Boolean isLiked; // 현재 사용자의 좋아요 여부
     private LocalDateTime createdAt;
 
     /**

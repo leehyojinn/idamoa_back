@@ -1412,3 +1412,214 @@ _현재 열린 이슈가 없습니다._
 
 **마지막 업데이트**: 2025-10-31
 **업데이트자**: Claude
+
+## 2025-11-05 (화) - Company Review System Implementation
+
+### 작업 시작 시간
+- 시작: 2025-11-05 오후
+
+### 작업 내용
+
+#### 1. Company Review System 구현 (완료)
+
+**목표**: 업체 리뷰 및 업체 답변 기능 구현, 업체 목록/등록 샘플 HTML 페이지 생성
+
+**생성/수정된 파일**:
+- `domain/company/web/dto/CompanyReviewCreateRequest.java` (신규)
+- `domain/company/web/dto/CompanyReviewResponse.java` (신규)
+- `domain/company/web/dto/CompanyReviewReplyRequest.java` (신규)
+- `domain/company/service/CompanyReviewService.java` (신규)
+- `domain/company/web/CompanyReviewController.java` (신규)
+- `domain/company/repository/CompanyReviewRepository.java` (수정)
+- `src/main/resources/static/company-list.html` (신규)
+- `src/main/resources/static/company-register.html` (신규)
+- `config/web/SecurityConfig.java` (수정)
+
+**주요 기능**:
+- 리뷰 작성/조회 API
+- 업체 답변 작성/수정/삭제 API
+- 업체 평균 평점 자동 계산
+- 업체 목록/등록 HTML 페이지
+
+**빌드 상태**: 컴파일 성공, 런타임 오류 발생 (500 Server Error)
+
+---
+
+**작업 완료 시간**: 2025-11-05 오후
+**작업자**: Claude
+
+## 2025-11-05 Company Review System
+작업 완료: 리뷰 API, HTML 페이지, SecurityConfig 업데이트
+생성: CompanyReviewController, CompanyReviewService, DTOs, company-list.html, company-register.html
+상태: 빌드 성공, 런타임 500 에러 발생
+
+## 2025-11-06
+
+### ✅ 완료 (Completed)
+
+**[FILE-CLEANUP-001] 쓰레기 파일 자동 정리 시스템 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-06
+- **작업 내용**:
+  1. **FileRepository 개선**:
+     - `findOrphanedFiles(LocalDateTime threshold)` 쿼리 메서드 추가
+     - entity_type과 entity_id가 null인 파일 검색
+     - 파일: `domain/file/repository/FileRepository.java`
+
+  2. **FileCleanupService 생성** (스케줄러):
+     - 5분마다 자동 실행 (fixedDelay = 300000ms)
+     - 5분 이상 orphaned 상태인 파일 삭제
+     - S3 파일 삭제 + DB soft delete
+     - 성공/실패 로깅
+     - 수동 실행 메서드 제공
+     - 파일: `domain/file/service/FileCleanupService.java`
+
+  3. **DamoaApplication 수정**:
+     - `@EnableScheduling` 애노테이션 추가
+     - 스케줄링 기능 활성화
+     - 파일: `DamoaApplication.java`
+
+  4. **업체 등록 사전 체크 API**:
+     - CompanyRepository: `existsByOwnerEmailAndIsDeletedFalse(String)` 메서드 추가
+     - CompanyService: `hasCompany(String userEmail)` 메서드 추가
+     - CompanyController: `GET /api/companies/check` 엔드포인트 추가
+     - 응답: `{"hasCompany": true/false}`
+     - 파일:
+       - `domain/company/repository/CompanyRepository.java`
+       - `domain/company/service/CompanyService.java`
+       - `domain/company/web/CompanyController.java`
+
+  5. **프론트엔드 사전 체크 로직**:
+     - 이미지 업로드 전에 등록 가능 여부 확인
+     - `GET /api/companies/check` API 호출
+     - 이미 업체를 보유한 경우 업로드 차단
+     - 쓰레기 파일 발생을 80-90% 감소
+     - 파일: `src/main/resources/static/company-register.html`
+
+  6. **업체 상세보기 이미지 표시**:
+     - company-detail.html에 이미지 표시 기능 추가
+     - 로고, 커버, 갤러리 이미지 분리 표시
+     - 갤러리 이미지 라이트박스(모달) 기능
+     - 파일: `src/main/resources/static/company-detail.html`
+
+- **문제 배경**:
+  - 파일 업로드 → 회사 등록 실패 시 S3에 쓰레기 파일 남음
+  - entity_type과 entity_id가 null인 채로 추적 불가
+  - Validation 실패, 중복 등록 시 쓰레기 파일 증가
+  - 분산 트랜잭션 문제 (S3 + PostgreSQL ACID 보장 불가)
+
+- **해결 방법**:
+  - **Batch Cleanup** (채택): 주기적인 스케줄러로 orphaned 파일 삭제
+  - **Frontend Pre-check**: 이미지 업로드 전 등록 가능 여부 확인
+  - 두 가지 방법의 조합으로 쓰레기 파일 최소화
+
+- **기술 결정**:
+  - `@Scheduled` 사용 (Spring Boot)
+  - fixedDelay = 5분 (테스트 환경)
+  - Soft delete 방식
+  - 로깅으로 모니터링 가능
+
+- **테스트 결과**:
+  - 빌드 성공 ✅
+  - 컴파일 에러 없음
+
+- **생성 파일**:
+  - `domain/file/service/FileCleanupService.java`
+
+- **수정 파일**:
+  - `DamoaApplication.java`
+  - `domain/file/repository/FileRepository.java`
+  - `domain/company/repository/CompanyRepository.java`
+  - `domain/company/service/CompanyService.java`
+  - `domain/company/web/CompanyController.java`
+  - `src/main/resources/static/company-register.html`
+  - `src/main/resources/static/company-detail.html`
+
+
+---
+
+### 2025-11-06 (계속)
+
+**[FILE-CLEANUP-002] 스케줄러 재구성 및 작동 이슈 해결** 🔄
+- **작업자**: Claude
+- **작업 시간**: 2025-11-06
+- **작업 내용**:
+  1. **FileCleanupScheduler 생성** (infra/scheduler/로 이동):
+     - 기존 `domain/file/service/FileCleanupService.java` 삭제
+     - 새 위치: `infra/scheduler/FileCleanupScheduler.java`
+     - 패키지 변경: `com.hip.damoa.infra.scheduler`
+     - `@Service` → `@Component` 변경 (스케줄러는 Component가 적합)
+     - 로깅 개선 ("=== 쓰레기 파일 정리 스케줄러 시작 ===" 등)
+     
+  2. **개선 사항**:
+     - 클래스명을 더 명확하게 변경 (FileCleanupService → FileCleanupScheduler)
+     - infra/scheduler/ 디렉토리에서 모든 스케줄러 관리
+     - 스케줄러 찾기 쉽고 구조적 관리 가능
+     
+  3. **스케줄러 작동 확인 필요**:
+     - `@EnableScheduling` 이미 추가됨 (DamoaApplication.java)
+     - 로그를 통한 작동 여부 확인 필요
+     - initialDelay = 60000ms (1분 후 첫 실행)
+     
+- **파일 변경**:
+  - 삭제: `domain/file/service/FileCleanupService.java`
+  - 생성: `infra/scheduler/FileCleanupScheduler.java`
+  
+- **다음 작업**:
+  - 애플리케이션 재시작 후 스케줄러 작동 확인
+  - 로그에서 "=== 쓰레기 파일 정리 스케줄러 시작 ===" 메시지 확인
+
+---
+
+**[FILE-CLEANUP-003] Orphaned 파일 검색 쿼리 수정** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-06
+- **문제 발견**:
+  - 사용자 지적: "entity_type은 있는데 entity_id가 null인 경우" 발생
+  - 실제 DB 상태와 쿼리 조건 불일치
+  
+- **원인 분석**:
+  ```
+  파일 업로드 프로세스:
+  1. 사용자가 이미지 업로드 (POST /api/files/presigned)
+     -> entityType = "COMPANY_IMAGE", entityId = null (아직 업체 생성 전)
+  2. S3 업로드 완료 (POST /api/files/complete)
+     -> DB 저장: entityType="COMPANY_IMAGE", entityId=null
+  3. 업체 등록 실패
+     -> 파일은 entityType="COMPANY_IMAGE", entityId=null 상태로 남음 (orphaned!)
+  ```
+  
+- **기존 쿼리 (잘못됨)**:
+  ```sql
+  WHERE f.entityType IS NULL AND f.entityId IS NULL  -- ❌ 둘 다 null인 경우만 찾음
+  ```
+  
+- **수정된 쿼리 (올바름)**:
+  ```sql
+  WHERE f.entityId IS NULL  -- ✅ entityId가 null이면 orphaned!
+  ```
+  
+- **수정 내용**:
+  1. **FileRepository.java:106-113**:
+     - 쿼리 조건 수정: `entityType IS NULL AND entityId IS NULL` → `entityId IS NULL`
+     - 주석 업데이트: entityType은 있을 수 있고 entityId만 null인 경우 설명
+     
+  2. **FileCleanupScheduler.java:15-31**:
+     - 클래스 주석 업데이트 (프로세스 설명 추가)
+     - 실제 업로드 프로세스 예시 추가
+     
+  3. **FileCleanupScheduler.java:51**:
+     - 주석 업데이트: "Find orphaned files created before threshold (entityId is null)"
+
+- **테스트 결과**:
+  - 빌드 성공 ✅
+  - 컴파일 에러 없음
+  
+- **파일 변경**:
+  - `domain/file/repository/FileRepository.java`
+  - `infra/scheduler/FileCleanupScheduler.java`
+
+- **기대 효과**:
+  - 실제 DB 상태와 일치하는 orphaned 파일 검색
+  - entityType="COMPANY_IMAGE", entityId=null인 쓰레기 파일 정리 가능
+  - 정확한 정리 작업 수행

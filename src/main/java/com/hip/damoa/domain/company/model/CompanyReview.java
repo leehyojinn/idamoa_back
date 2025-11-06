@@ -64,10 +64,6 @@ public class CompanyReview extends BaseEntity {
     @Builder.Default
     private String status = "PUBLISHED"; // PUBLISHED, HIDDEN, REPORTED, DELETED
 
-    @Column(name = "is_verified_purchase", nullable = false)
-    @Builder.Default
-    private Boolean isVerifiedPurchase = false;
-
     // ===== Business Methods =====
 
     /**
@@ -91,6 +87,23 @@ public class CompanyReview extends BaseEntity {
     public void deleteReply() {
         this.reply = null;
         this.repliedAt = null;
+    }
+
+    /**
+     * 리뷰 수정
+     */
+    public void updateReview(BigDecimal rating, String title, String content, String[] images) {
+        this.rating = rating;
+        this.title = title;
+        this.content = content;
+        this.images = images;
+    }
+
+    /**
+     * 리뷰 삭제 (Soft Delete)
+     */
+    public void softDelete() {
+        this.status = "DELETED";
     }
 
     /**

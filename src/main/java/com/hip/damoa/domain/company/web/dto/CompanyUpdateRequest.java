@@ -79,4 +79,13 @@ public class CompanyUpdateRequest {
     private String status; // ACTIVE, INACTIVE, SUSPENDED
 
     private Boolean featured;
+
+    // 이미지 URL (S3 presigned URL로 업로드 후 받은 URL)
+    @Size(max = 1000, message = "로고 이미지 URL은 1000자를 초과할 수 없습니다")
+    private String logoImageUrl;
+
+    @Size(max = 1000, message = "커버 이미지 URL은 1000자를 초과할 수 없습니다")
+    private String coverImageUrl;
+
+    private String[] galleryImageUrls;
 }
