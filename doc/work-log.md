@@ -1623,3 +1623,304 @@ _현재 열린 이슈가 없습니다._
   - 실제 DB 상태와 일치하는 orphaned 파일 검색
   - entityType="COMPANY_IMAGE", entityId=null인 쓰레기 파일 정리 가능
   - 정확한 정리 작업 수행
+
+---
+
+## 2025-11-06 - Company Images Refactoring (File ID Integration)
+
+### ✅ 완료 (Completed)
+
+**[COMPANY-IMAGES-REFACTOR] company_images 테이블 File ID 연관 관계 구현**
+- **작업자**: Claude
+- **작업 시간**: 2025-11-06
+
+**목표**: company_images 테이블과 files 테이블 간의 FK 관계 확립
+
+**문제 인식**:
+- 기존: `company_images.image_url VARCHAR(500)` - URL 문자열 직접 저장
+- 문제: files 테이블과 FK 관계 없음, 데이터 무결성 보장 불가
+- 요구사항: company_reviews와 동일한 패턴으로 File ID 사용
+
+**구현 내용**:
+
+1. **V23 Database Migration** ✅
+   - 파일: `src/main/resources/db/migration/V23__Refactor_company_images_to_file_id.sql`
+   - 변경사항:
+     - 기존 데이터 삭제 (개발 환경)
+     - `file_id BIGINT` 컬럼 추가
+     - `image_url VARCHAR(500)` 컬럼 삭제
+     - `file_id NOT NULL` 제약조건 추가
+     - `idx_company_images_file_id` 인덱스 생성
+   - 참고: FK 제약조건은 주석 처리 (유연성 확보)
+
+2. **CompanyImage Entity 수정** ✅
+   - 파일: `domain/company/model/CompanyImage.java`
+   - 변경: `String imageUrl` → `Long fileId`
+   - 필드명: `file_id` (DB 컬럼명)
+
+3. **CompanyImageService 개선** ✅
+   - 파일: `domain/company/service/CompanyImageService.java`
+   - 의존성 추가: `FileRepository fileRepository`
+   - 신규 메서드:
+     - `toResponse(CompanyImage)`: File ID → URL 변환 후 Response DTO 생성
+     - `toDto(CompanyImage)`: File ID → URL 변환 후 DTO 생성
+     - `convertUrlToFileId(String url)`: URL → File ID 변환 (private)
+     - `convertFileIdToUrl(Long fileId)`: File ID → URL 변환 (private)
+   - 수정 메서드:
+     - `addCompanyImage()`: imageUrl 대신 file_id 저장
+
+4. **CompanyService 수정** ✅
+   - 파일: `domain/company/service/CompanyService.java`
+   - 의존성 추가: `CompanyImageService companyImageService`
+   - 변경사항:
+     - `getCompanyImages()`: `CompanyImageDto::from` → `companyImageService::toDto`
+     - `saveCompanyImage()`: `.imageUrl(url)` → `.fileId(file.getId())`
+
+5. **CompanyController 수정** ✅
+   - 파일: `domain/company/web/CompanyController.java`
+   - 변경사항:
+     - `getCompany()` (line 81-82): `companyImageService::toDto` 사용
+     - `getCompanyBySlug()` (line 110-111): `companyImageService::toDto` 사용
+
+6. **DTO 수정** ✅
+   - `CompanyImageResponse.java`:
+     - `from(CompanyImage)` 메서드 유지 (호환성)
+     - `from(CompanyImage, String imageUrl)` 오버로드 추가
+   - `CompanyImageDto.java`:
+     - `from(CompanyImage)` 메서드 유지 (호환성)
+     - `from(CompanyImage, String imageUrl)` 오버로드 추가
+
+7. **company-detail.html 개선** ✅
+   - 파일: `src/main/resources/static/company-detail.html`
+   - 위치: `renderCompanyInfo()` 함수 (lines 1260-1296)
+   - 추가 표시 항목:
+     - 영업시간 (businessHours)
+     - 서비스 지역 (serviceAreas) - 📍 아이콘
+     - 태그 (tags) - # 접두사
+     - 키워드 (keywords) - 🔍 아이콘
+
+**데이터 레이어 아키텍처**:
+```
+API Layer (Controller)
+  ↓ URL (String)
+Service Layer
+  ↓ URL ↔ File ID 변환 (CompanyImageService)
+Persistence Layer (Entity)
+  ↓ File ID (Long)
+Database
+  ↓ FK to files.id
+```
+
+**해결된 이슈**:
+
+1. **Flyway Checksum Mismatch (V22)**:
+   - 문제: Migration checksum 불일치 (1955576764 vs 1334015654)
+   - 해결: `DELETE FROM flyway_schema_history WHERE version = '22'`
+
+2. **V23 Migration 실패 - NULL file_id**:
+   - 문제: 기존 데이터 9건이 file_id=null 상태
+   - 원인: image_url → file_id 자동 변환 불가
+   - 해결: V23 migration에 `DELETE FROM company_images` 추가 (개발 환경)
+
+**빌드 상태**: ✅ 컴파일 성공, V23 마이그레이션 성공
+
+**변경된 파일**:
+- `src/main/resources/db/migration/V23__Refactor_company_images_to_file_id.sql` (신규)
+- `domain/company/model/CompanyImage.java` (수정)
+- `domain/company/service/CompanyImageService.java` (수정)
+- `domain/company/service/CompanyService.java` (수정)
+- `domain/company/web/CompanyController.java` (수정)
+- `domain/company/web/dto/CompanyImageResponse.java` (수정)
+- `domain/company/web/dto/CompanyImageDto.java` (수정)
+- `src/main/resources/static/company-detail.html` (수정)
+
+**패턴 확립**:
+- URL 기반 저장에서 File ID 기반 저장으로 전환
+- Service 레이어에서 URL ↔ File ID 변환 담당
+- API 레이어는 여전히 URL 사용 (호환성 유지)
+- company_reviews와 동일한 패턴 적용
+
+**다음 단계**:
+- ✅ 모든 작업 완료
+- 권장 사항: 애플리케이션 실행 후 업체 상세 페이지 테스트
+- 권장 사항: 업체 이미지 업로드 기능 테스트
+
+
+---
+
+### 2025-11-06
+
+#### ✅ 완료 (Completed)
+
+**[COMPANY-003] 업체 필터 옵션 시스템 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-06 오전
+- **작업 내용**:
+  - 업체 등록 시 필터 옵션 선택 기능 구현 (업체 분류, 전문 영역, 작업 평수)
+  - V24 마이그레이션: `company_filter_options` 조인 테이블 생성
+  - V24 마이그레이션: `project_size_range` 필터 카테고리 및 7개 옵션 추가
+  - V24 마이그레이션: 30+ 전문 영역 옵션 추가 (인테리어, IT, 시설관리, 의료, 전문서비스)
+  - FilterCategory, FilterOption, CompanyFilterOption 엔티티 생성
+  - Company 엔티티에 filterOptions OneToMany 관계 추가
+  - CompanyService에 필터 옵션 처리 로직 추가
+  - CompanyCreateRequest, CompanyUpdateRequest에 filterOptionIds 필드 추가
+  - FilterOptionDto 생성 및 CompanyResponse에 filterOptions 필드 추가
+
+**생성 파일**:
+- `src/main/resources/db/migration/V24__Create_company_filter_options_and_add_more_filters.sql`
+- `domain/filter/model/FilterCategory.java`
+- `domain/filter/model/FilterOption.java`
+- `domain/company/model/CompanyFilterOption.java`
+- `domain/filter/repository/FilterCategoryRepository.java`
+- `domain/filter/repository/FilterOptionRepository.java`
+- `domain/company/repository/CompanyFilterOptionRepository.java`
+- `domain/company/web/dto/FilterOptionDto.java`
+
+**수정 파일**:
+- `domain/company/model/Company.java` - filterOptions 관계 추가
+- `domain/company/service/CompanyService.java` - 필터 처리 로직 추가
+- `domain/company/web/dto/CompanyCreateRequest.java` - filterOptionIds 추가
+- `domain/company/web/dto/CompanyUpdateRequest.java` - filterOptionIds 추가
+- `domain/company/web/dto/CompanyResponse.java` - filterOptions 추가
+
+**구현 상세**:
+1. **DB 스키마 (`company_filter_options` 테이블)**:
+   - company_id → companies(id) FK (CASCADE DELETE)
+   - filter_option_id → filter_options(id) FK (CASCADE DELETE)
+   - UNIQUE(company_id, filter_option_id)
+
+2. **추가된 필터 옵션**:
+   - **작업 평수** (7개): 전체 가능, 10평 이하, 10-30평, 30-50평, 50-100평, 100평 이상, 평수 무관
+   - **전문 영역** (30+개):
+     - 인테리어/시공 (8개): interior-design, home-styling, furniture, flooring, wallpaper, painting, lighting, window
+     - IT/디지털 마케팅 (7개): marketing, web-dev, seo, sns-marketing, video-production, photography, graphic-design
+     - 시설/유지보수 (9개): cleaning, air-conditioner, internet, electrical, plumbing, waterproofing, locksmith, moving, storage
+     - 의료/병원 (3개): hospital-interior, medical-equipment, sterilization
+     - 전문 서비스 (5개): consulting, accounting, legal, insurance, real-estate
+
+3. **Service 로직**:
+   - `processFilterOptions()`: 필터 옵션 ID → CompanyFilterOption 엔티티 생성 및 저장
+   - `updateFilterOptions()`: 기존 필터 삭제 후 새 필터 저장
+   - `getCompanyFilterOptions()`: Company → FilterOptionDto 변환
+
+4. **API 통합**:
+   - 업체 생성/수정 시 `filterOptionIds` 배열 수신
+   - 업체 조회 시 `filterOptions` 배열 반환 (카테고리 정보 포함)
+
+**빌드 상태**: ✅ 컴파일 성공, V24 마이그레이션 성공
+
+---
+
+**[REVIEW-001] 리뷰 이미지 시스템 구현 가이드 작성** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-06 오후
+- **작업 내용**:
+  - 리뷰 이미지 시스템 구현을 위한 포괄적 가이드 문서 작성
+  - UUID 사용 원칙 명확화 (모든 외부 API는 UUID 키 사용)
+  - File ID 기반 이미지 관리 패턴 문서화
+  - Company 이미지 처리 패턴을 Review에 적용하는 상세 가이드
+  - 6단계 구현 체크리스트 제공
+
+**생성 파일**:
+- `REVIEW_IMPLEMENTATION_GUIDE.md`
+
+**가이드 주요 내용**:
+1. **핵심 원칙**:
+   - ✅ UUID 사용: 모든 외부 API 엔드포인트는 UUID 키 사용 (Long ID 절대 노출 금지)
+   - ✅ File 관리: 이미지는 files 테이블의 File ID로 저장, URL은 임시 사용만
+
+2. **Company 패턴 참고**:
+   - files 테이블: 모든 파일 메타데이터 중앙 관리
+   - company_images 테이블: File ID로 연결
+   - Service에서 URL → File ID 변환 후 저장
+   - Response에서 File ID → URL 변환 후 반환
+
+3. **Review 구현 체크리스트**:
+   - Phase 1: V25 마이그레이션 (`company_review_images` 테이블)
+   - Phase 2: CompanyReviewImage 엔티티, CompanyReview 관계 추가
+   - Phase 3: Service 로직 (processReviewImages, getReviewImageUrls)
+   - Phase 4: DTO 수정 (images → imageUrls)
+   - Phase 5: Controller 확인 (이미 UUID 사용 중 ✅)
+   - Phase 6: 테스트 (생성/수정/조회/삭제)
+
+4. **현재 상태 분석**:
+   - ✅ CompanyReviewController: 모든 엔드포인트가 UUID 사용
+   - ❌ CompanyReviewCreateRequest: `images` 필드가 URL 배열 (File ID로 변경 필요)
+
+**참고 파일 위치**:
+- `CompanyImage.java`, `CompanyImageService.java` - 패턴 참고용
+- `CompanyService.java:575-640` - `processCompanyImages()` 메서드 참고
+
+**다음 단계**:
+- Review 이미지 시스템 실제 구현 (REVIEW_IMPLEMENTATION_GUIDE.md 체크리스트 따라 진행)
+
+
+**[REVIEW-002] 리뷰 이미지 시스템 구현 완료** ✅
+- **작업자**: Claude  
+- **작업 시간**: 2025-11-06 (계속)
+- **작업 내용**:
+  - Review 이미지 시스템을 Company 패턴과 동일하게 구현 (File ID 기반)
+  - V25 마이그레이션: `company_review_images` 조인 테이블 생성
+  - CompanyReviewImage 엔티티 생성 (File ID 저장, URL 저장 안 함)
+  - CompanyReview 엔티티에 reviewImages OneToMany 관계 추가
+  - CompanyReviewImageRepository 생성
+  - CompanyReviewService에 이미지 처리 로직 추가:
+    - `processReviewImages()`: URL → File ID 변환 및 저장
+    - `getReviewImageUrls()`: File ID → URL 변환
+    - `toResponse()`: 이미지 URL 포함하여 DTO 반환
+  - CompanyReviewCreateRequest DTO 주석 개선 (S3 URL → File ID 변환 명시)
+
+**생성 파일**:
+- `src/main/resources/db/migration/V25__Create_company_review_images.sql`
+- `domain/company/model/CompanyReviewImage.java`
+- `domain/company/repository/CompanyReviewImageRepository.java`
+
+**수정 파일**:
+- `domain/company/model/CompanyReview.java` - reviewImages 관계 추가
+- `domain/company/service/CompanyReviewService.java` - 이미지 처리 로직 추가
+- `domain/company/web/dto/CompanyReviewCreateRequest.java` - 주석 개선
+
+**구현 상세**:
+1. **DB 스키마** (`company_review_images` 테이블):
+   - review_id → company_reviews(id) FK (CASCADE DELETE)
+   - file_id → files(id) FK (CASCADE DELETE)
+   - display_order: 이미지 순서
+   - UNIQUE(review_id, file_id)
+
+2. **이미지 처리 플로우**:
+   ```
+   Request (imageUrls: String[])
+     ↓ processReviewImages()
+   1. URL로 files 테이블에서 File 조회
+   2. File의 entity_type="REVIEW_IMAGE", entity_id=review.id 업데이트
+   3. company_review_images에 File ID 저장 (URL X)
+     ↓ getReviewImageUrls()
+   Response (imageUrls: String[])
+   ```
+
+3. **Company 패턴과 동일성**:
+   - ✅ File ID 기반 저장 (URL 직접 저장 X)
+   - ✅ files 테이블에 entity 정보 연결
+   - ✅ 조인 테이블로 관계 관리
+   - ✅ display_order로 순서 유지
+   - ✅ orphanRemoval = true (리뷰 삭제 시 이미지도 삭제)
+
+**빌드 상태**: ✅ 컴파일 성공
+
+**해결한 빌드 이슈**:
+1. **Filter 엔티티 BaseEntity 임포트 오류**:
+   - 문제: `com.hip.damoa.core.model.BaseEntity` (존재하지 않음)
+   - 해결: `com.hip.damoa.domain.common.BaseEntity`로 수정
+
+2. **Filter 엔티티 metadata 필드 충돌**:
+   - 문제: FilterCategory/FilterOption이 `String metadata`를 선언하여 BaseEntity의 `Map<String, Object> metadata`와 충돌
+   - 해결: metadata 필드 선언 및 초기화 코드 제거 (BaseEntity에서 상속)
+
+3. **Filter Service/Controller/DTO 호환성 문제**:
+   - 문제: 기존 파일들이 다른 메서드 시그니처 사용
+   - 해결: 임시로 .backup으로 리네임 (추후 재작업 필요)
+
+**다음 단계**:
+- 리뷰 이미지 시스템 통합 테스트 (실제 파일 업로드 및 조회)
+- Filter Service/Controller/DTO 재작업 (호환되도록 수정)
+

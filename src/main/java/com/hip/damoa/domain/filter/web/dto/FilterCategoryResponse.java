@@ -29,8 +29,8 @@ public class FilterCategoryResponse {
     public static FilterCategoryResponse from(FilterCategory category, List<FilterOptionResponse> options) {
         return FilterCategoryResponse.builder()
                 .id(category.getId())
-                .code(category.getCategoryCode())
-                .name(category.getCategoryName())
+                .code(category.getCode())
+                .name(category.getName())
                 .filterType(category.getFilterType())
                 .description(category.getDescription())
                 .displayOrder(category.getDisplayOrder())

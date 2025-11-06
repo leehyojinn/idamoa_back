@@ -26,5 +26,9 @@ public class CompanyReviewCreateRequest {
     @Size(min = 10, max = 5000, message = "리뷰 내용은 10자 이상 5000자 이하여야 합니다")
     private String content;
 
-    private String[] images; // 리뷰 이미지 URL 배열
+    /**
+     * 리뷰 이미지 URL 배열 (S3 presigned URL로 업로드 후 받은 URL)
+     * Service 레이어에서 URL → File ID로 변환 후 company_review_images 테이블에 저장
+     */
+    private String[] images;
 }

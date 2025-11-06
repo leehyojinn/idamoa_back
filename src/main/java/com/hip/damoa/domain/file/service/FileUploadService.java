@@ -196,13 +196,13 @@ public class FileUploadService {
      * 파일 삭제
      */
     @Transactional
-    public void deleteFile(String userEmail, Long fileId) {
-        log.info("파일 삭제: fileId={}, userEmail={}", fileId, userEmail);
+    public void deleteFile(String userEmail, UUID fileUuid) {
+        log.info("파일 삭제: fileUuid={}, userEmail={}", fileUuid, userEmail);
 
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        File file = fileRepository.findById(fileId)
+        File file = fileRepository.findByUuidAndIsDeletedFalse(fileUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
 
         // 권한 확인 (업로더 또는 관리자)
@@ -217,7 +217,7 @@ public class FileUploadService {
         file.softDelete();
         fileRepository.save(file);
 
-        log.info("파일 삭제 완료: id={}", fileId);
+        log.info("파일 삭제 완료: uuid={}", fileUuid);
     }
 
     /**

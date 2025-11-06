@@ -60,7 +60,7 @@ public class FilterService {
     public FilterCategoryResponse getCategoryByCode(String categoryCode) {
         log.info("필터 카테고리 조회 시작: categoryCode={}", categoryCode);
 
-        FilterCategory category = filterCategoryRepository.findByCategoryCode(categoryCode)
+        FilterCategory category = filterCategoryRepository.findByCode(categoryCode)
                 .orElseThrow(() -> {
                     log.error("필터 카테고리를 찾을 수 없음: categoryCode={}", categoryCode);
                     return new BusinessException(ErrorCode.FILTER_CATEGORY_NOT_FOUND);
@@ -89,7 +89,7 @@ public class FilterService {
     public List<FilterOptionResponse> getOptionsByCategory(String categoryCode) {
         log.info("필터 옵션 조회 시작: categoryCode={}", categoryCode);
 
-        FilterCategory category = filterCategoryRepository.findByCategoryCode(categoryCode)
+        FilterCategory category = filterCategoryRepository.findByCode(categoryCode)
                 .orElseThrow(() -> {
                     log.error("필터 카테고리를 찾을 수 없음: categoryCode={}", categoryCode);
                     return new BusinessException(ErrorCode.FILTER_CATEGORY_NOT_FOUND);

@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -47,6 +48,9 @@ public class CompanyCreateRequest {
     private String[] tags;
 
     private String[] keywords;
+
+    // 필터 옵션 ID 목록 (업체 분류, 전문 영역, 작업 평수 등)
+    private List<Long> filterOptionIds;
 
     @NotBlank(message = "대표 전화번호는 필수입니다")
     @Pattern(regexp = "^\\d{2,3}-\\d{3,4}-\\d{4}$", message = "올바른 전화번호 형식이 아닙니다 (예: 02-1234-5678)")

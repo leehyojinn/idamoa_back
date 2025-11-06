@@ -2,6 +2,7 @@ package com.hip.damoa.domain.company.model;
 
 import com.hip.damoa.domain.common.BaseEntity;
 import com.hip.damoa.domain.user.model.User;
+import io.hypersistence.utils.hibernate.type.array.LongArrayType;
 import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -9,6 +10,8 @@ import org.hibernate.annotations.Type;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 업체 리뷰
@@ -42,9 +45,17 @@ public class CompanyReview extends BaseEntity {
     @Column(name = "content", columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @Type(StringArrayType.class)
-    @Column(name = "images", columnDefinition = "text[]")
-    private String[] images;
+    @Type(LongArrayType.class)
+    @Column(name = "images", columnDefinition = "bigint[]")
+    private Long[] images;  // File ID 배열 (Deprecated - use reviewImages instead)
+
+    /**
+     * 리뷰 이미지 목록 (OneToMany relationship via join table)
+     * Company 패턴과 동일: File ID 기반 관리
+     */
+    @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<CompanyReviewImage> reviewImages = new ArrayList<>();
 
     @Column(name = "reply", columnDefinition = "TEXT")
     private String reply;
@@ -92,11 +103,28 @@ public class CompanyReview extends BaseEntity {
     /**
      * 리뷰 수정
      */
-    public void updateReview(BigDecimal rating, String title, String content, String[] images) {
+    public void updateReview(BigDecimal rating, String title, String content, Long[] images) {
         this.rating = rating;
         this.title = title;
         this.content = content;
         this.images = images;
+    }
+
+    /**
+     * 리뷰 이미지 업데이트 (OneToMany 기반)
+     */
+    public void updateReviewImages(List<CompanyReviewImage> newImages) {
+        this.reviewImages.clear();
+        if (newImages != null) {
+            this.reviewImages.addAll(newImages);
+        }
+    }
+
+    /**
+     * 리뷰 이미지 추가
+     */
+    public void addReviewImage(CompanyReviewImage image) {
+        this.reviewImages.add(image);
     }
 
     /**

@@ -20,6 +20,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @Tag(name = "Company Review", description = "업체 리뷰 관련 API")
 @Slf4j
 @RestController
@@ -34,38 +36,38 @@ public class CompanyReviewController {
      */
     @Operation(summary = "리뷰 작성", description = "업체에 대한 리뷰를 작성합니다")
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping("/companies/{companyId}/reviews")
+    @PostMapping("/companies/{companyUuid}/reviews")
     public ApiResponse<CompanyReviewResponse> createReview(
-            @PathVariable Long companyId,
+            @PathVariable UUID companyUuid,
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CompanyReviewCreateRequest request) {
 
-        log.info("리뷰 작성 API 호출: companyId={}, userEmail={}", companyId, userDetails.getUsername());
+        log.info("리뷰 작성 API 호출: companyUuid={}, userEmail={}", companyUuid, userDetails.getUsername());
 
         CompanyReview review = reviewService.createReview(
-                companyId,
+                companyUuid,
                 userDetails.getUsername(),
                 request
         );
 
-        return ApiResponse.success(CompanyReviewResponse.from(review));
+        return ApiResponse.success(reviewService.toResponse(review));
     }
 
     /**
      * 업체 리뷰 목록 조회
      */
     @Operation(summary = "업체 리뷰 목록 조회", description = "특정 업체의 리뷰 목록을 조회합니다 (페이징)")
-    @GetMapping("/companies/{companyId}/reviews")
+    @GetMapping("/companies/{companyUuid}/reviews")
     public ApiResponse<Page<CompanyReviewResponse>> getCompanyReviews(
-            @PathVariable Long companyId,
+            @PathVariable UUID companyUuid,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
 
-        log.info("업체 리뷰 목록 조회 API 호출: companyId={}, page={}, size={}",
-                companyId, pageable.getPageNumber(), pageable.getPageSize());
+        log.info("업체 리뷰 목록 조회 API 호출: companyUuid={}, page={}, size={}",
+                companyUuid, pageable.getPageNumber(), pageable.getPageSize());
 
-        Page<CompanyReview> reviews = reviewService.getCompanyReviews(companyId, pageable);
-        Page<CompanyReviewResponse> response = reviews.map(CompanyReviewResponse::from);
+        Page<CompanyReview> reviews = reviewService.getCompanyReviews(companyUuid, pageable);
+        Page<CompanyReviewResponse> response = reviews.map(reviewService::toResponse);
 
         return ApiResponse.success(response);
     }
@@ -74,49 +76,49 @@ public class CompanyReviewController {
      * 리뷰 상세 조회
      */
     @Operation(summary = "리뷰 상세 조회", description = "특정 리뷰의 상세 정보를 조회합니다")
-    @GetMapping("/reviews/{reviewId}")
-    public ApiResponse<CompanyReviewResponse> getReview(@PathVariable Long reviewId) {
+    @GetMapping("/reviews/{reviewUuid}")
+    public ApiResponse<CompanyReviewResponse> getReview(@PathVariable UUID reviewUuid) {
 
-        log.info("리뷰 상세 조회 API 호출: reviewId={}", reviewId);
+        log.info("리뷰 상세 조회 API 호출: reviewUuid={}", reviewUuid);
 
-        CompanyReview review = reviewService.getReview(reviewId);
+        CompanyReview review = reviewService.getReview(reviewUuid);
 
-        return ApiResponse.success(CompanyReviewResponse.from(review));
+        return ApiResponse.success(reviewService.toResponse(review));
     }
 
     /**
      * 리뷰 수정
      */
     @Operation(summary = "리뷰 수정", description = "작성한 리뷰를 수정합니다 (작성자만 가능)")
-    @PutMapping("/reviews/{reviewId}")
+    @PutMapping("/reviews/{reviewUuid}")
     public ApiResponse<CompanyReviewResponse> updateReview(
-            @PathVariable Long reviewId,
+            @PathVariable UUID reviewUuid,
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CompanyReviewCreateRequest request) {
 
-        log.info("리뷰 수정 API 호출: reviewId={}, userEmail={}", reviewId, userDetails.getUsername());
+        log.info("리뷰 수정 API 호출: reviewUuid={}, userEmail={}", reviewUuid, userDetails.getUsername());
 
         CompanyReview review = reviewService.updateReview(
-                reviewId,
+                reviewUuid,
                 userDetails.getUsername(),
                 request
         );
 
-        return ApiResponse.success(CompanyReviewResponse.from(review));
+        return ApiResponse.success(reviewService.toResponse(review));
     }
 
     /**
      * 리뷰 삭제
      */
     @Operation(summary = "리뷰 삭제", description = "작성한 리뷰를 삭제합니다 (작성자만 가능)")
-    @DeleteMapping("/reviews/{reviewId}")
+    @DeleteMapping("/reviews/{reviewUuid}")
     public ApiResponse<Void> deleteReview(
-            @PathVariable Long reviewId,
+            @PathVariable UUID reviewUuid,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        log.info("리뷰 삭제 API 호출: reviewId={}, userEmail={}", reviewId, userDetails.getUsername());
+        log.info("리뷰 삭제 API 호출: reviewUuid={}, userEmail={}", reviewUuid, userDetails.getUsername());
 
-        reviewService.deleteReview(reviewId, userDetails.getUsername());
+        reviewService.deleteReview(reviewUuid, userDetails.getUsername());
 
         return ApiResponse.success();
     }
@@ -126,56 +128,56 @@ public class CompanyReviewController {
      */
     @Operation(summary = "업체 답변 작성", description = "리뷰에 대한 업체 답변을 작성합니다 (업체 소유자만 가능)")
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping("/reviews/{reviewId}/reply")
+    @PostMapping("/reviews/{reviewUuid}/reply")
     public ApiResponse<CompanyReviewResponse> addReply(
-            @PathVariable Long reviewId,
+            @PathVariable UUID reviewUuid,
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CompanyReviewReplyRequest request) {
 
-        log.info("업체 답변 작성 API 호출: reviewId={}, userEmail={}", reviewId, userDetails.getUsername());
+        log.info("업체 답변 작성 API 호출: reviewUuid={}, userEmail={}", reviewUuid, userDetails.getUsername());
 
         CompanyReview review = reviewService.addReply(
-                reviewId,
+                reviewUuid,
                 userDetails.getUsername(),
                 request.getReply()
         );
 
-        return ApiResponse.success(CompanyReviewResponse.from(review));
+        return ApiResponse.success(reviewService.toResponse(review));
     }
 
     /**
      * 업체 답변 수정
      */
     @Operation(summary = "업체 답변 수정", description = "작성한 업체 답변을 수정합니다 (업체 소유자만 가능)")
-    @PutMapping("/reviews/{reviewId}/reply")
+    @PutMapping("/reviews/{reviewUuid}/reply")
     public ApiResponse<CompanyReviewResponse> updateReply(
-            @PathVariable Long reviewId,
+            @PathVariable UUID reviewUuid,
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CompanyReviewReplyRequest request) {
 
-        log.info("업체 답변 수정 API 호출: reviewId={}, userEmail={}", reviewId, userDetails.getUsername());
+        log.info("업체 답변 수정 API 호출: reviewUuid={}, userEmail={}", reviewUuid, userDetails.getUsername());
 
         CompanyReview review = reviewService.updateReply(
-                reviewId,
+                reviewUuid,
                 userDetails.getUsername(),
                 request.getReply()
         );
 
-        return ApiResponse.success(CompanyReviewResponse.from(review));
+        return ApiResponse.success(reviewService.toResponse(review));
     }
 
     /**
      * 업체 답변 삭제
      */
     @Operation(summary = "업체 답변 삭제", description = "작성한 업체 답변을 삭제합니다 (업체 소유자만 가능)")
-    @DeleteMapping("/reviews/{reviewId}/reply")
+    @DeleteMapping("/reviews/{reviewUuid}/reply")
     public ApiResponse<Void> deleteReply(
-            @PathVariable Long reviewId,
+            @PathVariable UUID reviewUuid,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        log.info("업체 답변 삭제 API 호출: reviewId={}, userEmail={}", reviewId, userDetails.getUsername());
+        log.info("업체 답변 삭제 API 호출: reviewUuid={}, userEmail={}", reviewUuid, userDetails.getUsername());
 
-        reviewService.deleteReply(reviewId, userDetails.getUsername());
+        reviewService.deleteReply(reviewUuid, userDetails.getUsername());
 
         return ApiResponse.success();
     }

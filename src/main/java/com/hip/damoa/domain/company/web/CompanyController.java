@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -64,25 +65,30 @@ public class CompanyController {
     }
 
     /**
-     * 업체 조회 (ID)
+     * 업체 조회 (UUID)
      */
-    @Operation(summary = "업체 조회 (ID)", description = "업체 ID로 업체 정보를 조회합니다")
-    @GetMapping("/{companyId}")
+    @Operation(summary = "업체 조회 (UUID)", description = "업체 UUID로 업체 정보를 조회합니다")
+    @GetMapping("/{companyUuid}")
     public ApiResponse<CompanyResponse> getCompany(
-            @PathVariable Long companyId,
+            @PathVariable UUID companyUuid,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        Company company = companyService.getCompany(companyId);
-        List<CompanyImage> images = companyImageService.getCompanyImages(companyId);
+        Company company = companyService.getCompany(companyUuid);
+        List<CompanyImage> images = companyImageService.getCompanyImages(company.getUuid());
 
         CompanyResponse response = CompanyResponse.from(company);
+        // CompanyImageService를 사용하여 File ID → URL 변환
         response.setImages(images.stream()
-                .map(CompanyImageDto::from)
+                .map(companyImageService::toDto)
                 .collect(Collectors.toList()));
+
+        // 필터 옵션 추가 (전문영역, 진료과, 작업평수 등)
+        List<FilterOptionDto> filterOptions = companyService.getCompanyFilterOptions(company);
+        response.setFilterOptions(filterOptions);
 
         // 로그인한 사용자의 좋아요 여부 설정
         if (userDetails != null) {
-            boolean isLiked = companyService.isLiked(userDetails.getUsername(), companyId);
+            boolean isLiked = companyService.isLiked(userDetails.getUsername(), companyUuid);
             response.setIsLiked(isLiked);
         } else {
             response.setIsLiked(false);
@@ -101,16 +107,21 @@ public class CompanyController {
             @AuthenticationPrincipal UserDetails userDetails) {
 
         Company company = companyService.getCompanyBySlug(slug);
-        List<CompanyImage> images = companyImageService.getCompanyImages(company.getId());
+        List<CompanyImage> images = companyImageService.getCompanyImages(company.getUuid());
 
         CompanyResponse response = CompanyResponse.from(company);
+        // CompanyImageService를 사용하여 File ID → URL 변환
         response.setImages(images.stream()
-                .map(CompanyImageDto::from)
+                .map(companyImageService::toDto)
                 .collect(Collectors.toList()));
+
+        // 필터 옵션 추가 (전문영역, 진료과, 작업평수 등)
+        List<FilterOptionDto> filterOptions = companyService.getCompanyFilterOptions(company);
+        response.setFilterOptions(filterOptions);
 
         // 로그인한 사용자의 좋아요 여부 설정
         if (userDetails != null) {
-            boolean isLiked = companyService.isLiked(userDetails.getUsername(), company.getId());
+            boolean isLiked = companyService.isLiked(userDetails.getUsername(), company.getUuid());
             response.setIsLiked(isLiked);
         } else {
             response.setIsLiked(false);
@@ -136,7 +147,7 @@ public class CompanyController {
 
             // 로그인한 사용자의 좋아요 여부 설정
             if (userDetails != null) {
-                boolean isLiked = companyService.isLiked(userDetails.getUsername(), company.getId());
+                boolean isLiked = companyService.isLiked(userDetails.getUsername(), company.getUuid());
                 listResponse.setIsLiked(isLiked);
             } else {
                 listResponse.setIsLiked(false);
@@ -157,6 +168,7 @@ public class CompanyController {
             @RequestParam(required = false) String[] serviceAreas,
             @RequestParam(required = false) String[] tags,
             @RequestParam(required = false) java.math.BigDecimal minRating,
+            @RequestParam(required = false) java.util.List<Long> filterOptionIds,
             @RequestParam(required = false, defaultValue = "LATEST") String sortBy,
             @PageableDefault(size = 20) Pageable pageable,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -166,6 +178,7 @@ public class CompanyController {
                 .serviceAreas(serviceAreas)
                 .tags(tags)
                 .minRating(minRating)
+                .filterOptionIds(filterOptionIds)
                 .sortBy(sortBy)
                 .build();
 
@@ -176,7 +189,7 @@ public class CompanyController {
 
             // 로그인한 사용자의 좋아요 여부 설정
             if (userDetails != null) {
-                boolean isLiked = companyService.isLiked(userDetails.getUsername(), company.getId());
+                boolean isLiked = companyService.isLiked(userDetails.getUsername(), company.getUuid());
                 listResponse.setIsLiked(isLiked);
             } else {
                 listResponse.setIsLiked(false);
@@ -192,14 +205,14 @@ public class CompanyController {
      * 업체 수정
      */
     @Operation(summary = "업체 수정", description = "업체 정보를 수정합니다 (소유자만 가능)")
-    @PutMapping("/{companyId}")
+    @PutMapping("/{companyUuid}")
     public ApiResponse<CompanyResponse> updateCompany(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long companyId,
+            @PathVariable UUID companyUuid,
             @Valid @RequestBody CompanyUpdateRequest request) {
 
         Company company = companyService.updateCompany(
-                userDetails.getUsername(), companyId, request);
+                userDetails.getUsername(), companyUuid, request);
         return ApiResponse.success(CompanyResponse.from(company));
     }
 
@@ -207,12 +220,12 @@ public class CompanyController {
      * 업체 삭제
      */
     @Operation(summary = "업체 삭제", description = "업체를 삭제합니다 (소유자만 가능, Soft Delete)")
-    @DeleteMapping("/{companyId}")
+    @DeleteMapping("/{companyUuid}")
     public ApiResponse<Void> deleteCompany(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long companyId) {
+            @PathVariable UUID companyUuid) {
 
-        companyService.deleteCompany(userDetails.getUsername(), companyId);
+        companyService.deleteCompany(userDetails.getUsername(), companyUuid);
         return ApiResponse.success();
     }
 
@@ -232,12 +245,12 @@ public class CompanyController {
      * 업체 좋아요 토글
      */
     @Operation(summary = "업체 좋아요 토글", description = "업체 좋아요를 추가하거나 취소합니다")
-    @PostMapping("/{companyId}/like")
+    @PostMapping("/{companyUuid}/like")
     public ApiResponse<Map<String, Object>> toggleLike(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long companyId) {
+            @PathVariable UUID companyUuid) {
 
-        boolean isLiked = companyService.toggleLike(userDetails.getUsername(), companyId);
+        boolean isLiked = companyService.toggleLike(userDetails.getUsername(), companyUuid);
         return ApiResponse.success(Map.of(
                 "isLiked", isLiked,
                 "message", isLiked ? "좋아요를 추가했습니다" : "좋아요를 취소했습니다"

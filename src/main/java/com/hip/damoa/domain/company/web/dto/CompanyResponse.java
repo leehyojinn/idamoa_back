@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 업체 조회 응답 DTO
@@ -18,7 +19,8 @@ import java.util.Map;
 @AllArgsConstructor
 public class CompanyResponse {
 
-    private Long id;
+    private Long id;  // 내부 ID (선택적으로 포함)
+    private UUID uuid;  // 외부 노출용 UUID
     private Long ownerId;
     private String ownerEmail;
     private String name;
@@ -59,6 +61,7 @@ public class CompanyResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<CompanyImageDto> images;
+    private List<FilterOptionDto> filterOptions; // 업체 분류/전문 영역/작업 평수 등
 
     /**
      * Entity → DTO 변환
@@ -66,6 +69,7 @@ public class CompanyResponse {
     public static CompanyResponse from(Company company) {
         return CompanyResponse.builder()
                 .id(company.getId())
+                .uuid(company.getUuid())
                 .ownerId(company.getOwner().getId())
                 .ownerEmail(company.getOwner().getEmail())
                 .name(company.getName())

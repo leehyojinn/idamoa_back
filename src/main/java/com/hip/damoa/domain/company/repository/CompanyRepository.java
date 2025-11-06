@@ -12,11 +12,16 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpecificationExecutor<Company> {
 
     Optional<Company> findByIdAndIsDeletedFalse(Long id);
+
+    Optional<Company> findByUuid(UUID uuid);
+
+    Optional<Company> findByUuidAndIsDeletedFalse(UUID uuid);
 
     Optional<Company> findByOwnerAndIsDeletedFalse(User owner);
 
@@ -29,17 +34,21 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
     Page<Company> findByStatusAndIsDeletedFalse(String status, Pageable pageable);
 
     /**
-     * 업체 검색 (PostgreSQL 배열 필터 지원)
+     * 업체 검색 (PostgreSQL 배열 필터 + 필터 옵션 지원)
      *
      * @param keyword 검색 키워드 (업체명, 설명)
      * @param serviceAreas 서비스 지역 배열 (OR 조건)
      * @param tags 태그 배열 (OR 조건)
      * @param minRating 최소 평점
+     * @param filterOptionIds 필터 옵션 ID 배열 (AND 조건 - 모든 필터를 만족해야 함)
+     * @param filterCount 필터 옵션 개수
      * @param pageable 페이징 정보
      * @return 검색 결과
      */
     @Query(value = """
-        SELECT * FROM companies c
+        SELECT c.* FROM companies c
+        LEFT JOIN company_filter_options cfo ON c.id = cfo.company_id
+            AND (CAST(:filterCount AS INTEGER) = 0 OR cfo.filter_option_id IN (:filterOptionIds))
         WHERE c.is_deleted = false
         AND c.status = 'ACTIVE'
         AND (:keyword IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -47,9 +56,19 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         AND (:minRating IS NULL OR c.avg_rating >= :minRating)
         AND (CAST(:serviceAreasSize AS INTEGER) = 0 OR c.service_areas && CAST(:serviceAreas AS text[]))
         AND (CAST(:tagsSize AS INTEGER) = 0 OR c.tags && CAST(:tags AS text[]))
+        GROUP BY c.id, c.uuid, c.owner_id, c.name, c.slug, c.description, c.detail_content,
+                 c.detail_content_format, c.business_info, c.business_hours, c.business_hours_note,
+                 c.service_areas, c.tags, c.keywords, c.primary_phone, c.secondary_phone,
+                 c.emergency_contact, c.email, c.website_url, c.kakao_chat_url, c.social_links,
+                 c.address, c.postal_code, c.latitude, c.longitude, c.status, c.is_verified,
+                 c.verified_at, c.avg_rating, c.review_count, c.view_count, c.like_count,
+                 c.created_at, c.updated_at, c.is_deleted, c.deleted_at
+        HAVING CAST(:filterCount AS INTEGER) = 0 OR COUNT(DISTINCT cfo.filter_option_id) = CAST(:filterCount AS INTEGER)
         """,
         countQuery = """
-        SELECT COUNT(*) FROM companies c
+        SELECT COUNT(DISTINCT c.id) FROM companies c
+        LEFT JOIN company_filter_options cfo ON c.id = cfo.company_id
+            AND (CAST(:filterCount AS INTEGER) = 0 OR cfo.filter_option_id IN (:filterOptionIds))
         WHERE c.is_deleted = false
         AND c.status = 'ACTIVE'
         AND (:keyword IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -57,6 +76,8 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         AND (:minRating IS NULL OR c.avg_rating >= :minRating)
         AND (CAST(:serviceAreasSize AS INTEGER) = 0 OR c.service_areas && CAST(:serviceAreas AS text[]))
         AND (CAST(:tagsSize AS INTEGER) = 0 OR c.tags && CAST(:tags AS text[]))
+        GROUP BY c.id
+        HAVING CAST(:filterCount AS INTEGER) = 0 OR COUNT(DISTINCT cfo.filter_option_id) = CAST(:filterCount AS INTEGER)
         """,
         nativeQuery = true)
     Page<Company> searchCompaniesWithFilters(
@@ -66,6 +87,8 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         @Param("tags") String[] tags,
         @Param("tagsSize") Integer tagsSize,
         @Param("minRating") BigDecimal minRating,
+        @Param("filterOptionIds") Long[] filterOptionIds,
+        @Param("filterCount") Integer filterCount,
         Pageable pageable
     );
 

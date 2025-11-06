@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Getter
 @Builder
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 public class CompanyReviewResponse {
 
     private Long id;
+    private UUID uuid;
     private Long companyId;
     private String companyName;
 
@@ -45,8 +47,13 @@ public class CompanyReviewResponse {
     private LocalDateTime updatedAt;
 
     public static CompanyReviewResponse from(CompanyReview review) {
+        return from(review, null);
+    }
+
+    public static CompanyReviewResponse from(CompanyReview review, String[] imageUrls) {
         return CompanyReviewResponse.builder()
                 .id(review.getId())
+                .uuid(review.getUuid())
                 .companyId(review.getCompany().getId())
                 .companyName(review.getCompany().getName())
                 .userId(review.getUser().getId())
@@ -54,7 +61,7 @@ public class CompanyReviewResponse {
                 .rating(review.getRating())
                 .title(review.getTitle())
                 .content(review.getContent())
-                .images(review.getImages())
+                .images(imageUrls != null ? imageUrls : new String[0])
                 .reply(review.getReply())
                 .repliedAt(review.getRepliedAt())
                 .likeCount(review.getLikeCount())

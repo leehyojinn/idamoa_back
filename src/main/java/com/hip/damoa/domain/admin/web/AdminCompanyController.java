@@ -21,6 +21,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 /**
  * 업체 관리 REST API (관리자용)
  */
@@ -66,10 +68,10 @@ public class AdminCompanyController {
     /**
      * 업체 조회 (관리자용)
      */
-    @Operation(summary = "업체 조회 (관리자)", description = "업체 ID로 업체 정보를 조회합니다")
-    @GetMapping("/{companyId}")
-    public ApiResponse<CompanyResponse> getCompany(@PathVariable Long companyId) {
-        Company company = companyService.getCompany(companyId);
+    @Operation(summary = "업체 조회 (관리자)", description = "업체 UUID로 업체 정보를 조회합니다")
+    @GetMapping("/{companyUuid}")
+    public ApiResponse<CompanyResponse> getCompany(@PathVariable UUID companyUuid) {
+        Company company = companyService.getCompany(companyUuid);
         return ApiResponse.success(CompanyResponse.from(company));
     }
 
@@ -77,14 +79,14 @@ public class AdminCompanyController {
      * 업체 수정 (관리자용)
      */
     @Operation(summary = "업체 수정 (관리자)", description = "관리자가 업체 정보를 수정합니다 (status, featured 포함)")
-    @PutMapping("/{companyId}")
+    @PutMapping("/{companyUuid}")
     public ApiResponse<CompanyResponse> updateCompany(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long companyId,
+            @PathVariable UUID companyUuid,
             @Valid @RequestBody CompanyUpdateRequest request) {
 
         Company company = companyService.updateCompanyByAdmin(
-                userDetails.getUsername(), companyId, request);
+                userDetails.getUsername(), companyUuid, request);
         return ApiResponse.success(CompanyResponse.from(company));
     }
 
@@ -92,12 +94,12 @@ public class AdminCompanyController {
      * 업체 삭제 (관리자용)
      */
     @Operation(summary = "업체 삭제 (관리자)", description = "관리자가 업체를 삭제합니다 (Soft Delete)")
-    @DeleteMapping("/{companyId}")
+    @DeleteMapping("/{companyUuid}")
     public ApiResponse<Void> deleteCompany(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long companyId) {
+            @PathVariable UUID companyUuid) {
 
-        companyService.deleteCompanyByAdmin(userDetails.getUsername(), companyId);
+        companyService.deleteCompanyByAdmin(userDetails.getUsername(), companyUuid);
         return ApiResponse.success();
     }
 
@@ -105,14 +107,14 @@ public class AdminCompanyController {
      * 업체 상태 변경
      */
     @Operation(summary = "업체 상태 변경 (관리자)", description = "업체 상태를 변경합니다 (ACTIVE, INACTIVE, SUSPENDED)")
-    @PatchMapping("/{companyId}/status")
+    @PatchMapping("/{companyUuid}/status")
     public ApiResponse<CompanyResponse> changeCompanyStatus(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long companyId,
+            @PathVariable UUID companyUuid,
             @RequestParam String status) {
 
         Company company = companyService.changeCompanyStatus(
-                userDetails.getUsername(), companyId, status);
+                userDetails.getUsername(), companyUuid, status);
         return ApiResponse.success(CompanyResponse.from(company));
     }
 
@@ -120,13 +122,13 @@ public class AdminCompanyController {
      * 업체 인증
      */
     @Operation(summary = "업체 인증 (관리자)", description = "업체를 인증합니다")
-    @PostMapping("/{companyId}/verify")
+    @PostMapping("/{companyUuid}/verify")
     public ApiResponse<CompanyResponse> verifyCompany(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long companyId) {
+            @PathVariable UUID companyUuid) {
 
         Company company = companyService.verifyCompany(
-                userDetails.getUsername(), companyId);
+                userDetails.getUsername(), companyUuid);
         return ApiResponse.success(CompanyResponse.from(company));
     }
 }

@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * 업체 검색 요청 DTO
@@ -35,6 +36,12 @@ public class CompanySearchRequest {
      * 최소 평점 필터
      */
     private BigDecimal minRating;
+
+    /**
+     * 필터 옵션 ID 목록 (전문영역, 진료과, 작업평수 등)
+     * 예: 피부과(1) + 마케팅(5) + 서울(10) 검색 시 [1, 5, 10]
+     */
+    private List<Long> filterOptionIds;
 
     /**
      * 정렬 기준

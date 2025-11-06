@@ -12,9 +12,12 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface CompanyReviewRepository extends JpaRepository<CompanyReview, Long> {
+
+    Optional<CompanyReview> findByUuidAndIsDeletedFalse(UUID uuid);
 
     Page<CompanyReview> findByCompanyAndIsDeletedFalse(Company company, Pageable pageable);
 

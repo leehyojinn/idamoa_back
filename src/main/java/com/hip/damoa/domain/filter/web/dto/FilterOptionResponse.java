@@ -18,19 +18,19 @@ public class FilterOptionResponse {
     private Long id;
     private String code;
     private String name;
-    private String value;
+    private String description;
     private Integer displayOrder;
-    private String iconUrl;
-    private Long usageCount;
+    private String icon;
+    private Integer usageCount;
 
     public static FilterOptionResponse from(FilterOption option) {
         return FilterOptionResponse.builder()
                 .id(option.getId())
-                .code(option.getOptionCode())
-                .name(option.getOptionName())
-                .value(option.getOptionValue())
+                .code(option.getCode())
+                .name(option.getName())
+                .description(option.getDescription())
                 .displayOrder(option.getDisplayOrder())
-                .iconUrl(option.getIconUrl())
+                .icon(option.getIcon())
                 .usageCount(option.getUsageCount())
                 .build();
     }

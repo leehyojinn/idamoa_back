@@ -27,6 +27,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **작업일지 위치**: `doc/work-log.md`
 
+## ⚠️ 핵심 원칙
+
+### 1. UUID 사용 원칙
+- **모든 외부 API 엔드포인트는 UUID를 키로 사용**
+- **내부 ID (Long)는 절대 외부에 노출하지 않음**
+
+```java
+// ✅ 올바른 방식
+@PostMapping("/companies/{companyUuid}/reviews")
+public ApiResponse<CompanyReviewResponse> createReview(
+    @PathVariable UUID companyUuid,  // ✅ UUID 사용
+    @AuthenticationPrincipal UserDetails userDetails,
+    @Valid @RequestBody CompanyReviewCreateRequest request) {
+    ...
+}
+
+// ❌ 잘못된 방식
+@PostMapping("/companies/{companyId}/reviews")  // ❌ Long ID 노출
+public ApiResponse<CompanyReviewResponse> createReview(
+    @PathVariable Long companyId,
+    ...
+}
+```
+
 ## Project Overview
 
 Damoa is a Spring Boot web application built with Java 17, using JPA for persistence, PostgreSQL 16 as the database, and Redis 7 for caching. The application implements JWT-based authentication with Spring Security.
