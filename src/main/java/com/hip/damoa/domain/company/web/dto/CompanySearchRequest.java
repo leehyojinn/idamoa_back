@@ -38,8 +38,11 @@ public class CompanySearchRequest {
     private BigDecimal minRating;
 
     /**
-     * 필터 옵션 ID 목록 (전문영역, 진료과, 작업평수 등)
+     * 필터 옵션 ID 목록 (카테고리별로 OR, 카테고리 간에는 AND)
      * 예: 피부과(1) + 마케팅(5) + 서울(10) 검색 시 [1, 5, 10]
+     *
+     * 카테고리 내 OR: [내과(1), 외과(2)] → 내과 OR 외과
+     * 카테고리 간 AND: 진료과[1,2] + 지역[10,11] → (내과 OR 외과) AND (서울 OR 경기)
      */
     private List<Long> filterOptionIds;
 

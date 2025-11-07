@@ -477,34 +477,37 @@ public class CompanyService {
         // 정렬 기준 결정
         Pageable sortedPageable = createSortedPageable(pageable, searchRequest.getSortBy());
 
-        // 배열 파라미터 처리
-        String[] serviceAreas = searchRequest.getServiceAreas();
-        String[] tags = searchRequest.getTags();
+        // 필터 옵션을 카테고리별로 그룹화
+        java.util.Map<Long, List<Long>> filterOptionsByCategory = new java.util.HashMap<>();
+        if (searchRequest.getFilterOptionIds() != null && !searchRequest.getFilterOptionIds().isEmpty()) {
+            // 필터 옵션 조회
+            List<FilterOption> filterOptions = filterOptionRepository.findByIdIn(searchRequest.getFilterOptionIds());
 
-        int serviceAreasSize = (serviceAreas != null) ? serviceAreas.length : 0;
-        int tagsSize = (tags != null) ? tags.length : 0;
+            // 카테고리별로 그룹화 (카테고리 ID -> 옵션 ID 목록)
+            filterOptionsByCategory = filterOptions.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                    option -> option.getCategory().getId(),
+                    java.util.stream.Collectors.mapping(
+                        FilterOption::getId,
+                        java.util.stream.Collectors.toList()
+                    )
+                ));
 
-        // 필터 옵션 처리
-        List<Long> filterOptionIds = searchRequest.getFilterOptionIds();
-        Long[] filterOptionArray = (filterOptionIds != null && !filterOptionIds.isEmpty())
-            ? filterOptionIds.toArray(new Long[0])
-            : new Long[0];
-        int filterCount = (filterOptionIds != null) ? filterOptionIds.size() : 0;
+            log.info("카테고리별 필터 옵션 그룹화: {}", filterOptionsByCategory);
+        }
 
-        log.info("검색 파라미터: filterCount={}, filterOptions={}", filterCount, filterOptionArray);
+        // Specification 조합
+        org.springframework.data.jpa.domain.Specification<Company> spec =
+            com.hip.damoa.domain.company.repository.CompanySpecifications.isNotDeleted()
+                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.isActive())
+                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasKeyword(searchRequest.getKeyword()))
+                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasMinRating(searchRequest.getMinRating()))
+                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasFilterOptions(filterOptionsByCategory))
+                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasServiceAreas(searchRequest.getServiceAreas()))
+                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasTags(searchRequest.getTags()));
 
-        // 검색 실행 (네이티브 쿼리 사용)
-        return companyRepository.searchCompaniesWithFilters(
-            searchRequest.getKeyword(),
-            serviceAreas,
-            serviceAreasSize,
-            tags,
-            tagsSize,
-            searchRequest.getMinRating(),
-            filterOptionArray,
-            filterCount,
-            sortedPageable
-        );
+        // 검색 실행
+        return companyRepository.findAll(spec, sortedPageable);
     }
 
     /**
@@ -567,7 +570,7 @@ public class CompanyService {
     }
 
     /**
-     * 정렬 기준에 따른 Pageable 생성 (Native Query용 - DB 컬럼명 사용)
+     * 정렬 기준에 따른 Pageable 생성 (JPA Specification용 - 엔티티 필드명 사용)
      */
     private Pageable createSortedPageable(Pageable pageable, String sortBy) {
         if (sortBy == null || sortBy.isEmpty()) {
@@ -577,27 +580,27 @@ public class CompanyService {
         Sort sort;
         switch (sortBy.toUpperCase()) {
             case "LATEST":
-                sort = Sort.by(Sort.Direction.DESC, "created_at");
+                sort = Sort.by(Sort.Direction.DESC, "createdAt");
                 break;
             case "POPULAR":
                 // 인기순: 좋아요 + 조회수 복합 (좋아요 우선)
-                sort = Sort.by(Sort.Direction.DESC, "like_count")
-                        .and(Sort.by(Sort.Direction.DESC, "view_count"));
+                sort = Sort.by(Sort.Direction.DESC, "likeCount")
+                        .and(Sort.by(Sort.Direction.DESC, "viewCount"));
                 break;
             case "RATING":
-                sort = Sort.by(Sort.Direction.DESC, "avg_rating")
-                        .and(Sort.by(Sort.Direction.DESC, "review_count"));
+                sort = Sort.by(Sort.Direction.DESC, "avgRating")
+                        .and(Sort.by(Sort.Direction.DESC, "reviewCount"));
                 break;
             case "REVIEW_COUNT":
-                sort = Sort.by(Sort.Direction.DESC, "review_count");
+                sort = Sort.by(Sort.Direction.DESC, "reviewCount");
                 break;
             case "PREMIUM_TIER":
                 // 프리미엄 등급순 (월정액 내림차순 → 프리미엄 등급 내림차순)
-                sort = Sort.by(Sort.Direction.DESC, "premium_monthly_amount")
-                        .and(Sort.by(Sort.Direction.DESC, "premium_tier"));
+                sort = Sort.by(Sort.Direction.DESC, "premiumMonthlyAmount")
+                        .and(Sort.by(Sort.Direction.DESC, "premiumTier"));
                 break;
             default:
-                sort = Sort.by(Sort.Direction.DESC, "created_at");
+                sort = Sort.by(Sort.Direction.DESC, "createdAt");
         }
 
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);

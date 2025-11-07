@@ -46,9 +46,8 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
      * @return 검색 결과
      */
     @Query(value = """
-        SELECT c.* FROM companies c
+        SELECT DISTINCT c.* FROM companies c
         LEFT JOIN company_filter_options cfo ON c.id = cfo.company_id
-            AND (CAST(:filterCount AS INTEGER) = 0 OR cfo.filter_option_id IN (:filterOptionIds))
         WHERE c.is_deleted = false
         AND c.status = 'ACTIVE'
         AND (:keyword IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -56,19 +55,12 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         AND (:minRating IS NULL OR c.avg_rating >= :minRating)
         AND (CAST(:serviceAreasSize AS INTEGER) = 0 OR c.service_areas && CAST(:serviceAreas AS text[]))
         AND (CAST(:tagsSize AS INTEGER) = 0 OR c.tags && CAST(:tags AS text[]))
-        GROUP BY c.id, c.uuid, c.owner_id, c.name, c.slug, c.description, c.detail_content,
-                 c.detail_content_format, c.business_info, c.business_hours, c.business_hours_note,
-                 c.service_areas, c.tags, c.keywords, c.primary_phone, c.secondary_phone,
-                 c.emergency_contact, c.email, c.website_url, c.kakao_chat_url, c.social_links,
-                 c.address, c.postal_code, c.latitude, c.longitude, c.status, c.is_verified,
-                 c.verified_at, c.avg_rating, c.review_count, c.view_count, c.like_count,
-                 c.created_at, c.updated_at, c.is_deleted, c.deleted_at
-        HAVING CAST(:filterCount AS INTEGER) = 0 OR COUNT(DISTINCT cfo.filter_option_id) = CAST(:filterCount AS INTEGER)
+        AND (CAST(:filterCount AS INTEGER) = 0 OR cfo.filter_option_id IN (:filterOptionIds))
+        ORDER BY c.created_at DESC
         """,
         countQuery = """
         SELECT COUNT(DISTINCT c.id) FROM companies c
         LEFT JOIN company_filter_options cfo ON c.id = cfo.company_id
-            AND (CAST(:filterCount AS INTEGER) = 0 OR cfo.filter_option_id IN (:filterOptionIds))
         WHERE c.is_deleted = false
         AND c.status = 'ACTIVE'
         AND (:keyword IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -76,8 +68,7 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         AND (:minRating IS NULL OR c.avg_rating >= :minRating)
         AND (CAST(:serviceAreasSize AS INTEGER) = 0 OR c.service_areas && CAST(:serviceAreas AS text[]))
         AND (CAST(:tagsSize AS INTEGER) = 0 OR c.tags && CAST(:tags AS text[]))
-        GROUP BY c.id
-        HAVING CAST(:filterCount AS INTEGER) = 0 OR COUNT(DISTINCT cfo.filter_option_id) = CAST(:filterCount AS INTEGER)
+        AND (CAST(:filterCount AS INTEGER) = 0 OR cfo.filter_option_id IN (:filterOptionIds))
         """,
         nativeQuery = true)
     Page<Company> searchCompaniesWithFilters(
