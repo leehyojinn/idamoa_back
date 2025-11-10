@@ -6,15 +6,22 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:none}  # EC2에서 'create'로 설정 가능
     show-sql: false
     properties:
       hibernate:
         format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        type:
+          preferred_array_jdbc_type: ARRAY   # 기대 타입을 ARRAY로
         jdbc:
           lob:
             non_contextual_creation: true
+        # 배열 타입 스키마 검증 문제 해결
+        check_nullability: false
+        globally_quoted_identifiers: false
+        temp:
+          use_jdbc_metadata_defaults: false
   data:
     redis:
       host: ${REDIS_HOST:localhost}

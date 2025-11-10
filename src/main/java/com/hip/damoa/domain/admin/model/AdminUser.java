@@ -1,10 +1,10 @@
 package com.hip.damoa.domain.admin.model;
 
 import com.hip.damoa.domain.common.BaseEntity;
-import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -34,8 +34,8 @@ public class AdminUser extends BaseEntity {
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
-    @Type(StringArrayType.class)
     @Column(name = "roles", columnDefinition = "text[]", nullable = false)
+    @JdbcTypeCode(SqlTypes.ARRAY)   // ARRAY로 명시
     private String[] roles; // SUPER_ADMIN, ADMIN, OPERATOR, VIEWER
 
     @Column(name = "status", nullable = false, length = 20)
