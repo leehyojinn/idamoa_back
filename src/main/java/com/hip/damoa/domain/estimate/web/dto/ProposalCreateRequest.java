@@ -7,6 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 @Getter
 @NoArgsConstructor
@@ -14,39 +17,28 @@ import java.math.BigDecimal;
 @Builder
 public class ProposalCreateRequest {
 
-    @NotNull(message = "견적 요청 ID는 필수입니다")
-    private Long estimateRequestId;
+    @NotBlank(message = "제안 제목은 필수입니다")
+    @Size(max = 200, message = "제안 제목은 200자를 초과할 수 없습니다")
+    private String title;
 
-    @NotNull(message = "제안 금액은 필수입니다")
-    @DecimalMin(value = "0.0", inclusive = true, message = "제안 금액은 0 이상이어야 합니다")
-    private BigDecimal proposalAmount;
+    @NotBlank(message = "제안 설명은 필수입니다")
+    private String description;
 
-    @Min(value = 1, message = "예상 기간은 최소 1일 이상이어야 합니다")
-    private Integer estimatedDurationDays;
+    @NotNull(message = "제안 가격은 필수입니다")
+    @DecimalMin(value = "0.0", inclusive = true, message = "제안 가격은 0 이상이어야 합니다")
+    private BigDecimal price;
 
-    @NotBlank(message = "제안 내용은 필수입니다")
-    private String proposalContent;
+    // 선택 필드
+    private LocalDate validUntil;  // 제안 유효기간
 
-    private String coverLetter;
+    // 첨부파일 (V30: 조인 테이블 방식)
+    private List<AttachmentRequest> attachments; // 첨부파일 목록
 
-    // Company info (자동으로 회사 프로필에서 가져올 수도 있지만, 사용자가 직접 입력할 수도 있음)
-    @Size(max = 100, message = "담당자 이름은 100자를 초과할 수 없습니다")
-    private String contactPerson;
+    // JSONB 필드 (선택)
+    private Map<String, Object> pricingDetails;  // 가격 상세 정보
+    private Map<String, Object> timeline;  // 일정 정보
 
-    @Size(max = 20, message = "연락처는 20자를 초과할 수 없습니다")
-    private String contactPhone;
-
-    @Email(message = "유효한 이메일 주소를 입력해주세요")
-    @Size(max = 100, message = "이메일은 100자를 초과할 수 없습니다")
-    private String contactEmail;
-
-    // Portfolio
-    private String portfolioDescription;
-    private String previousProjects;
-
-    private java.util.List<String> portfolioLinks;
-
-    private java.time.LocalDate proposedStartDate;
-
-    private java.time.LocalDate proposedEndDate;
+    // HTML에서 받는 필드 (간단한 일정용)
+    private LocalDate proposedStartDate;
+    private LocalDate proposedEndDate;
 }

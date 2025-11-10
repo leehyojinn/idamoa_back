@@ -7,7 +7,7 @@ import com.hip.damoa.domain.estimate.model.EstimateRequest;
 import com.hip.damoa.domain.estimate.repository.EstimateRequestRepository;
 import com.hip.damoa.domain.estimate.service.EstimateRequestService;
 import com.hip.damoa.domain.estimate.web.dto.EstimateRequestListResponse;
-import com.hip.damoa.domain.estimate.web.dto.EstimateRequestResponse;
+import com.hip.damoa.domain.admin.web.dto.AdminEstimateRequestResponse;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -58,7 +58,12 @@ public class AdminEstimateRequestController {
 
         Page<EstimateRequest> requests;
         if (status != null) {
-            requests = estimateRequestRepository.findByStatus(status, pageable);
+            try {
+                EstimateRequest.EstimateStatus statusEnum = EstimateRequest.EstimateStatus.valueOf(status);
+                requests = estimateRequestRepository.findByStatus(statusEnum, pageable);
+            } catch (IllegalArgumentException e) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            }
         } else {
             requests = estimateRequestRepository.findAll(pageable);
         }
@@ -73,7 +78,7 @@ public class AdminEstimateRequestController {
      */
     @Operation(summary = "견적 요청 상세 조회 (관리자)", description = "견적 요청 상세 정보를 조회합니다 (조회수 증가 없음)")
     @GetMapping("/{requestId}")
-    public ApiResponse<EstimateRequestResponse> getEstimateRequest(
+    public ApiResponse<AdminEstimateRequestResponse> getEstimateRequest(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long requestId) {
 
@@ -88,7 +93,7 @@ public class AdminEstimateRequestController {
         EstimateRequest estimateRequest = estimateRequestRepository.findById(requestId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND));
 
-        return ApiResponse.success(EstimateRequestResponse.from(estimateRequest));
+        return ApiResponse.success(AdminEstimateRequestResponse.from(estimateRequest));
     }
 
     /**
@@ -128,7 +133,7 @@ public class AdminEstimateRequestController {
     @Operation(summary = "견적 요청 상태 변경 (관리자)", description = "견적 요청 상태를 변경합니다")
     @PatchMapping("/{requestId}/status")
     @Transactional
-    public ApiResponse<EstimateRequestResponse> changeStatus(
+    public ApiResponse<AdminEstimateRequestResponse> changeStatus(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long requestId,
             @RequestParam String status) {
@@ -166,6 +171,6 @@ public class AdminEstimateRequestController {
 
         log.info("관리자 견적 요청 상태 변경 완료: id={}, status={}", requestId, status);
 
-        return ApiResponse.success(EstimateRequestResponse.from(estimateRequest));
+        return ApiResponse.success(AdminEstimateRequestResponse.from(estimateRequest));
     }
 }

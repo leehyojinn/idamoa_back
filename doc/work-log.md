@@ -26,13 +26,117 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: 업체 CRUD 및 검색 기능 구현 완료
-**마지막 업데이트**: 2025-11-03
-**다음 우선순위**: 파일 업로드 시스템 구현 (FILE-001) 또는 추가 비즈니스 기능 개발
+**프로젝트 단계**: 견적 요청/제안 API CRUD 구현 완료
+**마지막 업데이트**: 2025-11-07
+**다음 우선순위**: API 통합 테스트 및 프론트엔드 연동
 
 ---
 
 ## 📝 작업 로그
+
+### 2025-11-10
+
+#### ✅ 완료 (Completed)
+
+**[ESTIMATE-002] 견적/제안 첨부파일 조인 테이블 리팩토링** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-10 (약 2시간)
+- **작업 내용**:
+  - 파일 관리 시스템 개선: PostgreSQL 배열 → 조인 테이블로 마이그레이션
+  - 첨부파일 메타데이터 지원 (file_type, file_description, display_order)
+  - Company 패턴과 동일한 구조로 통일
+  - FileCleanupScheduler의 orphaned file 삭제 문제 해결 (entityId NULL 이슈)
+  - V30 마이그레이션 생성 및 레거시 필드 제거
+
+**생성/수정 파일**:
+1. `src/main/resources/db/migration/V30__Create_estimate_attachment_tables.sql` (신규)
+2. `src/main/java/com/hip/damoa/domain/estimate/model/EstimateRequestAttachment.java` (신규)
+3. `src/main/java/com/hip/damoa/domain/estimate/model/EstimateProposalAttachment.java` (신규)
+4. `src/main/java/com/hip/damoa/domain/estimate/repository/EstimateRequestAttachmentRepository.java` (신규)
+5. `src/main/java/com/hip/damoa/domain/estimate/repository/EstimateProposalAttachmentRepository.java` (신규)
+6. `src/main/java/com/hip/damoa/domain/estimate/web/dto/AttachmentRequest.java` (신규)
+7. `src/main/java/com/hip/damoa/domain/estimate/web/dto/AttachmentResponse.java` (신규)
+8. `src/main/java/com/hip/damoa/domain/estimate/model/EstimateRequest.java` (수정)
+9. `src/main/java/com/hip/damoa/domain/estimate/model/EstimateProposal.java` (수정)
+10. `src/main/java/com/hip/damoa/domain/estimate/service/EstimateRequestService.java` (수정)
+11. `src/main/java/com/hip/damoa/domain/estimate/service/ProposalService.java` (수정)
+12. `src/main/java/com/hip/damoa/domain/estimate/web/dto/EstimateRequestCreateRequest.java` (수정)
+13. `src/main/java/com/hip/damoa/domain/estimate/web/dto/EstimateRequestUpdateRequest.java` (수정)
+14. `src/main/java/com/hip/damoa/domain/estimate/web/dto/EstimateRequestResponse.java` (수정)
+15. `src/main/java/com/hip/damoa/domain/estimate/web/dto/ProposalCreateRequest.java` (수정)
+16. `src/main/java/com/hip/damoa/domain/estimate/web/dto/ProposalUpdateRequest.java` (수정)
+17. `src/main/java/com/hip/damoa/domain/estimate/web/dto/ProposalResponse.java` (수정)
+18. `src/main/java/com/hip/damoa/domain/estimate/web/EstimateRequestController.java` (수정)
+19. `src/main/java/com/hip/damoa/domain/estimate/web/ProposalController.java` (수정)
+20. `src/main/java/com/hip/damoa/domain/admin/web/dto/AdminEstimateRequestResponse.java` (수정)
+
+**주요 변경사항**:
+
+1. **조인 테이블 생성 (V30 마이그레이션)**:
+   - `estimate_request_attachments` 테이블 생성
+   - `estimate_proposal_attachments` 테이블 생성
+   - 메타데이터 필드: file_type, file_description, display_order
+   - 레거시 필드 삭제: attachment_file_ids (estimate_requests), attachments, attachment_file_ids (estimate_proposals)
+   - ON DELETE CASCADE 설정
+
+2. **Entity 변경**:
+   - 배열 필드 제거: `@Type(LongArrayType.class) private Long[] attachmentFileIds`
+   - OneToMany 관계 추가: `@OneToMany(mappedBy = "estimateRequest", cascade = CascadeType.ALL, orphanRemoval = true)`
+   - 편의 메서드 추가: `addAttachment()`, `clearAttachments()`
+
+3. **DTO 리팩토링**:
+   - Request DTO: `List<AttachmentRequest>` 사용 (fileUrl, fileType, fileDescription, displayOrder)
+   - Response DTO: `List<AttachmentResponse>` 사용 (id, fileUrl, fileType, fileDescription, displayOrder, createdAt)
+   - File URL ↔ File ID 변환 로직 추가
+
+4. **Service Layer**:
+   - `processAttachments()`: URL을 File ID로 변환하여 조인 테이블에 저장
+   - `getAttachmentResponses()`: Entity → DTO 변환 (File ID → URL)
+   - `convertUrlToFileId()`, `convertFileIdToUrl()`: File 테이블 조회 및 변환
+
+5. **Controller Layer**:
+   - `enrichWithFiles()` 시그니처 변경: Response → Entity 파라미터로 변경
+   - Service의 `getAttachmentResponses()` 호출하여 첨부파일 정보 설정
+
+**문제 해결**:
+- ❌ **기존**: EstimateRequest/Proposal 파일 업로드 시 entityId가 NULL로 저장되어 FileCleanupScheduler가 5분 후 삭제
+- ✅ **해결**: 조인 테이블을 사용하여 파일과 엔티티 관계를 명시적으로 관리
+- ✅ **일관성**: Company 패턴과 동일하게 리팩토링하여 전체 시스템 일관성 확보
+
+**빌드 결과**: ✅ BUILD SUCCESSFUL
+
+### 2025-11-07
+
+#### ✅ 완료 (Completed)
+
+**[ESTIMATE-001] 견적 요청 API CRUD 및 제안 API 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-07 (약 3시간)
+- **작업 내용**:
+  - 범용 견적 시스템 구현 (병원, 카페, 사무실 등 모든 업종 지원)
+  - V26 마이그레이션 파일 생성
+  - EstimateRequest, EstimateProposal 엔티티 필드 확장
+  - 권한별 제안 조회 로직 구현 (요청자/제안자/일반 회원)
+  - 테스트 HTML 페이지 2개 생성
+
+**생성/수정 파일**:
+1. `src/main/resources/db/migration/V26__Add_estimate_request_fields.sql`
+2. `src/main/java/com/hip/damoa/domain/estimate/model/EstimateRequest.java`
+3. `src/main/java/com/hip/damoa/domain/estimate/model/EstimateProposal.java`
+4. `src/main/java/com/hip/damoa/domain/estimate/web/dto/EstimateRequestCreateRequest.java`
+5. `src/main/java/com/hip/damoa/domain/estimate/web/dto/ProposalCreateRequest.java`
+6. `src/main/java/com/hip/damoa/domain/estimate/web/dto/EstimateRequestResponse.java`
+7. `src/main/java/com/hip/damoa/domain/estimate/web/dto/ProposalResponse.java`
+8. `src/main/java/com/hip/damoa/domain/estimate/service/EstimateRequestService.java`
+9. `src/main/java/com/hip/damoa/domain/estimate/service/ProposalService.java`
+10. `src/main/resources/static/estimate-request-test.html`
+11. `src/main/resources/static/proposal-test.html`
+
+**주요 변경사항**:
+- **범용 필드 추가**: `client_name`, `business_type`, `area_pyeong`, `contact_name`, `contact_phone` 등
+- **권한별 조회**: 요청자는 모든 제안, 업체는 자신의 제안만, 일반 회원은 개수만 조회
+- **File ID 배열**: 첨부파일을 Long[] 배열로 관리
+- **테스트 페이지**: 견적 요청 작성 및 제안 제출 테스트 가능
 
 ### 2025-11-03
 
@@ -1924,3 +2028,23 @@ Database
 - 리뷰 이미지 시스템 통합 테스트 (실제 파일 업로드 및 조회)
 - Filter Service/Controller/DTO 재작업 (호환되도록 수정)
 
+
+
+**[ERROR-001] ErrorCode 에러 메시지 한글화** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-10
+- **작업 내용**:
+  - ErrorCode enum의 모든 에러 메시지를 영어에서 한글로 변경 (114개 메시지)
+  - 사용자 친화적인 한글 메시지로 통일
+  - 에러 코드(예: CP001)는 유지, 메시지만 한글로 변경
+
+**수정 파일**:
+- `src/main/java/com/hip/damoa/core/exception/ErrorCode.java`
+
+**주요 변경 사항**:
+- Common: "Invalid Input Value" → "잘못된 입력값입니다"
+- User: "User not found" → "사용자를 찾을 수 없습니다"
+- Company: "Company profile not found" → "업체 프로필을 찾을 수 없습니다"
+- Estimate: "Estimate request not found" → "견적 요청을 찾을 수 없습니다"
+- Payment: "Payment not found" → "결제 정보를 찾을 수 없습니다"
+- 기타 모든 도메인의 에러 메시지 한글화
