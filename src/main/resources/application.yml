@@ -11,6 +11,12 @@ spring:
     properties:
       hibernate:
         format_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          lob:
+            non_contextual_creation: true
+        type:
+          json_format_mapper: io.hypersistence.utils.hibernate.type.json.JsonNodeBinaryType
   data:
     redis:
       host: ${REDIS_HOST:localhost}
