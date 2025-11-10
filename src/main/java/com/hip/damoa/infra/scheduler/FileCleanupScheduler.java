@@ -42,7 +42,7 @@ public class FileCleanupScheduler {
      * Runs every 5 minutes after previous execution completes
      * First execution occurs 1 minute after application startup
      */
-    @Scheduled(fixedDelay = 300000, initialDelay = 60000)  // 5분마다, 시작 후 1분 뒤 첫 실행
+    @Scheduled(fixedDelay = 3600000, initialDelay = 60000)  // 5분마다, 시작 후 1분 뒤 첫 실행
     @Transactional
     public void cleanupOrphanedFiles() {
         try {
