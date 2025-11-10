@@ -4,52 +4,111 @@ import com.hip.damoa.domain.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
 /**
- * 필터 카테고리
+ * 필터 카테고리 엔티티
+ *
+ * 필터의 카테고리를 정의합니다 (지역, 진료과, 전문영역, 가격대, 평점, 작업 평수 등)
  */
 @Entity
+@Table(name = "filter_categories")
 @Getter
-@Builder
-@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "filter_categories", indexes = {
-    @Index(name = "idx_filter_categories_code", columnList = "category_code"),
-    @Index(name = "idx_filter_categories_type", columnList = "filter_type")
-})
 public class FilterCategory extends BaseEntity {
 
-    @Column(name = "category_code", unique = true, nullable = false, length = 50)
-    private String categoryCode;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(name = "category_name", nullable = false, length = 100)
-    private String categoryName;
+    @Column(nullable = false, unique = true)
+    private UUID uuid;
 
-    @Column(name = "filter_type", nullable = false, length = 20)
-    private String filterType; // SINGLE_SELECT, MULTI_SELECT, RANGE, SEARCH
+    @Column(nullable = false, unique = true, length = 100)
+    private String code; // region, department, specialty, price_range, rating, project_size_range
 
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column(nullable = false, length = 200)
+    private String name; // 지역, 진료과, 전문영역, 가격대, 평점, 작업 평수
+
+    @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "display_order")
-    private Integer displayOrder;
+    @Column(name = "entity_type", nullable = false, length = 100)
+    private String entityType; // COMPANY, HOSPITAL, SERVICE
 
-    @Column(name = "is_required", nullable = false)
-    @Builder.Default
-    private Boolean isRequired = false;
+    @Column(name = "filter_type", nullable = false, length = 50)
+    private String filterType; // SINGLE_SELECT, MULTI_SELECT, HIERARCHICAL
+
+    @Column(name = "supports_hierarchy", nullable = false)
+    private Boolean supportsHierarchy = false;
+
+    @Column(name = "max_depth", nullable = false)
+    private Integer maxDepth = 1;
+
+    @Column(name = "display_order", nullable = false)
+    private Integer displayOrder = 0;
+
+    @Column(length = 100)
+    private String icon;
 
     @Column(name = "is_active", nullable = false)
-    @Builder.Default
     private Boolean isActive = true;
 
-    public void activate() {
-        this.isActive = true;
+    @Column(name = "is_required", nullable = false)
+    private Boolean isRequired = false;
+
+    // metadata is inherited from BaseEntity as Map<String, Object>
+
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+    private List<FilterOption> options;
+
+    @Builder
+    public FilterCategory(String code, String name, String description, String entityType,
+                         String filterType, Boolean supportsHierarchy, Integer maxDepth,
+                         Integer displayOrder, String icon, Boolean isActive, Boolean isRequired) {
+        this.uuid = UUID.randomUUID();
+        this.code = code;
+        this.name = name;
+        this.description = description;
+        this.entityType = entityType;
+        this.filterType = filterType;
+        this.supportsHierarchy = supportsHierarchy != null ? supportsHierarchy : false;
+        this.maxDepth = maxDepth != null ? maxDepth : 1;
+        this.displayOrder = displayOrder != null ? displayOrder : 0;
+        this.icon = icon;
+        this.isActive = isActive != null ? isActive : true;
+        this.isRequired = isRequired != null ? isRequired : false;
+        // metadata initialized by BaseEntity
+        this.isDeleted = false;
     }
 
+    /**
+     * Soft Delete
+     */
+    public void softDelete() {
+        this.isDeleted = true;
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 비활성화
+     */
     public void deactivate() {
         this.isActive = false;
     }
 
-    public void updateDisplayOrder(Integer order) {
-        this.displayOrder = order;
+    /**
+     * 활성화
+     */
+    public void activate() {
+        this.isActive = true;
     }
 }

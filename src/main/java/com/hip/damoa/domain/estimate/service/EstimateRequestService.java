@@ -3,9 +3,15 @@ package com.hip.damoa.domain.estimate.service;
 import com.hip.damoa.core.exception.BusinessException;
 import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.domain.estimate.model.EstimateRequest;
+import com.hip.damoa.domain.estimate.model.EstimateRequestAttachment;
+import com.hip.damoa.domain.estimate.repository.EstimateRequestAttachmentRepository;
 import com.hip.damoa.domain.estimate.repository.EstimateRequestRepository;
+import com.hip.damoa.domain.estimate.web.dto.AttachmentRequest;
+import com.hip.damoa.domain.estimate.web.dto.AttachmentResponse;
 import com.hip.damoa.domain.estimate.web.dto.EstimateRequestCreateRequest;
 import com.hip.damoa.domain.estimate.web.dto.EstimateRequestUpdateRequest;
+import com.hip.damoa.domain.file.model.File;
+import com.hip.damoa.domain.file.repository.FileRepository;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +21,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 견적 요청 비즈니스 로직
@@ -27,7 +36,9 @@ import java.util.Map;
 public class EstimateRequestService {
 
     private final EstimateRequestRepository estimateRequestRepository;
+    private final EstimateRequestAttachmentRepository attachmentRepository;
     private final UserRepository userRepository;
+    private final FileRepository fileRepository;
 
     /**
      * 견적 요청 생성
@@ -48,6 +59,9 @@ public class EstimateRequestService {
         if (request.getAreaSqm() != null) {
             requirements.put("areaSqm", request.getAreaSqm());
         }
+        if (request.getAreaPyeong() != null) {
+            requirements.put("areaPyeong", request.getAreaPyeong());
+        }
         if (request.getEstimateType() != null) {
             requirements.put("estimateType", request.getEstimateType());
         }
@@ -57,24 +71,54 @@ public class EstimateRequestService {
         if (request.getDesiredCompletionDate() != null) {
             requirements.put("desiredCompletionDate", request.getDesiredCompletionDate().toString());
         }
+        // 주소 정보를 requirements에도 저장
+        if (request.getSiteAddress() != null) {
+            requirements.put("siteAddress", request.getSiteAddress());
+        }
+        if (request.getSiteCity() != null) {
+            requirements.put("siteCity", request.getSiteCity());
+        }
+        if (request.getSiteState() != null) {
+            requirements.put("siteState", request.getSiteState());
+        }
 
         // 견적 요청 생성
         EstimateRequest estimateRequest = EstimateRequest.builder()
                 .user(user)
                 .title(request.getTitle())
                 .description(request.getDescription())
+                .category(request.getBusinessType()) // 업종을 카테고리로 매핑
                 .requirements(requirements)
                 .budgetMin(request.getBudgetMin())
                 .budgetMax(request.getBudgetMax())
+                .desiredStartDate(request.getDesiredStartDate())
+                .desiredEndDate(request.getDesiredCompletionDate())
                 .location(location)
-                .deadline(request.getSubmissionDeadline())
-                .visibility(Boolean.TRUE.equals(request.getIsPublic()) ? "PUBLIC" : "PRIVATE")
-                .status("DRAFT")
+                .address(request.getSiteAddress())
+                .expiresAt(request.getSubmissionDeadline())
+                .isPublic(Boolean.TRUE.equals(request.getIsPublic()))
+                .status(EstimateRequest.EstimateStatus.DRAFT)
+                // V26 필드 추가
+                .clientName(request.getClientName())
+                .businessType(request.getBusinessType())
+                .areaPyeong(request.getAreaPyeong())
+                .contactName(request.getContactName())
+                .contactPhone(request.getContactPhone())
+                .submissionDeadline(request.getSubmissionDeadline())
                 .build();
 
         estimateRequest = estimateRequestRepository.save(estimateRequest);
 
-        log.info("견적 요청 생성 완료: id={}, title={}", estimateRequest.getId(), estimateRequest.getTitle());
+        // 첨부파일 처리 (조인 테이블)
+        if (request.getAttachments() != null && !request.getAttachments().isEmpty()) {
+            processAttachments(estimateRequest, request.getAttachments());
+            // cascade로 첨부파일 저장을 위해 다시 save
+            estimateRequest = estimateRequestRepository.save(estimateRequest);
+        }
+
+        log.info("견적 요청 생성 완료: id={}, title={}, attachments={}",
+                 estimateRequest.getId(), estimateRequest.getTitle(),
+                 estimateRequest.getAttachments().size());
 
         return estimateRequest;
     }
@@ -104,63 +148,109 @@ public class EstimateRequestService {
         }
 
         // 상태 확인 (DRAFT 상태만 수정 가능)
-        if (!"DRAFT".equals(estimateRequest.getStatus())) {
+        if (estimateRequest.getStatus() != EstimateRequest.EstimateStatus.DRAFT) {
             throw new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_EDITABLE);
         }
 
-        // 위치 정보 업데이트
+        // Requirements JSONB 업데이트
+        Map<String, Object> requirements = estimateRequest.getRequirements() != null
+            ? new HashMap<>(estimateRequest.getRequirements())
+            : new HashMap<>();
+
+        if (request.getAreaSqm() != null) {
+            requirements.put("areaSqm", request.getAreaSqm());
+        }
+        if (request.getAreaPyeong() != null) {
+            requirements.put("areaPyeong", request.getAreaPyeong());
+        }
+        if (request.getEstimateType() != null) {
+            requirements.put("estimateType", request.getEstimateType());
+        }
+        if (request.getDesiredStartDate() != null) {
+            requirements.put("desiredStartDate", request.getDesiredStartDate().toString());
+        }
+        if (request.getDesiredCompletionDate() != null) {
+            requirements.put("desiredCompletionDate", request.getDesiredCompletionDate().toString());
+        }
+        if (request.getSiteAddress() != null) {
+            requirements.put("siteAddress", request.getSiteAddress());
+        }
+        if (request.getSiteCity() != null) {
+            requirements.put("siteCity", request.getSiteCity());
+        }
+        if (request.getSiteState() != null) {
+            requirements.put("siteState", request.getSiteState());
+        }
+
+        // 위치 정보 생성
+        String location = null;
         if (request.getSiteAddress() != null || request.getSiteCity() != null || request.getSiteState() != null) {
-            String location = buildLocation(
-                    request.getSiteAddress() != null ? request.getSiteAddress() : "",
+            location = buildLocation(
+                    request.getSiteAddress() != null ? request.getSiteAddress() : estimateRequest.getAddress(),
                     request.getSiteCity() != null ? request.getSiteCity() : "",
                     request.getSiteState() != null ? request.getSiteState() : ""
             );
-
-            // Entity를 재생성 (Lombok @Builder 사용)
-            Map<String, Object> requirements = estimateRequest.getRequirements() != null
-                ? new HashMap<>(estimateRequest.getRequirements())
-                : new HashMap<>();
-
-            if (request.getAreaSqm() != null) {
-                requirements.put("areaSqm", request.getAreaSqm());
-            }
-            if (request.getEstimateType() != null) {
-                requirements.put("estimateType", request.getEstimateType());
-            }
-            if (request.getDesiredStartDate() != null) {
-                requirements.put("desiredStartDate", request.getDesiredStartDate().toString());
-            }
-            if (request.getDesiredCompletionDate() != null) {
-                requirements.put("desiredCompletionDate", request.getDesiredCompletionDate().toString());
-            }
-
-            estimateRequest = EstimateRequest.builder()
-                    .user(estimateRequest.getUser())
-                    .title(request.getTitle() != null ? request.getTitle() : estimateRequest.getTitle())
-                    .description(request.getDescription() != null ? request.getDescription() : estimateRequest.getDescription())
-                    .requirements(requirements)
-                    .tags(estimateRequest.getTags())
-                    .requiredSkills(estimateRequest.getRequiredSkills())
-                    .budgetMin(request.getBudgetMin() != null ? request.getBudgetMin() : estimateRequest.getBudgetMin())
-                    .budgetMax(request.getBudgetMax() != null ? request.getBudgetMax() : estimateRequest.getBudgetMax())
-                    .budgetType(estimateRequest.getBudgetType())
-                    .preferredStartDate(request.getDesiredStartDate())
-                    .expectedDurationDays(estimateRequest.getExpectedDurationDays())
-                    .location(location)
-                    .postalCode(estimateRequest.getPostalCode())
-                    .status(estimateRequest.getStatus())
-                    .visibility(request.getIsPublic() != null ?
-                        (Boolean.TRUE.equals(request.getIsPublic()) ? "PUBLIC" : "PRIVATE") :
-                        estimateRequest.getVisibility())
-                    .proposalCount(estimateRequest.getProposalCount())
-                    .viewCount(estimateRequest.getViewCount())
-                    .publishedAt(estimateRequest.getPublishedAt())
-                    .deadline(request.getSubmissionDeadline() != null ? request.getSubmissionDeadline() : estimateRequest.getDeadline())
-                    .completedAt(estimateRequest.getCompletedAt())
-                    .build();
-
-            estimateRequest = estimateRequestRepository.save(estimateRequest);
         }
+
+        // Entity 필드 업데이트
+        if (request.getTitle() != null) {
+            estimateRequest.updateTitle(request.getTitle());
+        }
+        if (request.getDescription() != null) {
+            estimateRequest.updateDescription(request.getDescription());
+        }
+        if (request.getBusinessType() != null) {
+            estimateRequest.updateCategory(request.getBusinessType());
+            estimateRequest.updateBusinessType(request.getBusinessType());
+        }
+        if (!requirements.isEmpty()) {
+            estimateRequest.updateRequirements(requirements);
+        }
+        if (request.getBudgetMin() != null) {
+            estimateRequest.updateBudgetMin(request.getBudgetMin());
+        }
+        if (request.getBudgetMax() != null) {
+            estimateRequest.updateBudgetMax(request.getBudgetMax());
+        }
+        if (request.getDesiredStartDate() != null) {
+            estimateRequest.updateDesiredStartDate(request.getDesiredStartDate());
+        }
+        if (request.getDesiredCompletionDate() != null) {
+            estimateRequest.updateDesiredEndDate(request.getDesiredCompletionDate());
+        }
+        if (location != null) {
+            estimateRequest.updateLocation(location);
+        }
+        if (request.getSiteAddress() != null) {
+            estimateRequest.updateAddress(request.getSiteAddress());
+        }
+        if (request.getIsPublic() != null) {
+            estimateRequest.updateIsPublic(request.getIsPublic());
+        }
+        if (request.getSubmissionDeadline() != null) {
+            estimateRequest.updateExpiresAt(request.getSubmissionDeadline());
+            estimateRequest.updateSubmissionDeadline(request.getSubmissionDeadline());
+        }
+
+        // V26 fields update
+        if (request.getClientName() != null) {
+            estimateRequest.updateClientName(request.getClientName());
+        }
+        if (request.getAreaPyeong() != null) {
+            estimateRequest.updateAreaPyeong(request.getAreaPyeong());
+        }
+        if (request.getContactName() != null) {
+            estimateRequest.updateContactName(request.getContactName());
+        }
+        if (request.getContactPhone() != null) {
+            estimateRequest.updateContactPhone(request.getContactPhone());
+        }
+        // 첨부파일 처리 (V30: 조인 테이블)
+        if (request.getAttachments() != null) {
+            processAttachments(estimateRequest, request.getAttachments());
+        }
+
+        estimateRequest = estimateRequestRepository.save(estimateRequest);
 
         log.info("견적 요청 수정 완료: id={}", estimateRequest.getId());
 
@@ -188,7 +278,7 @@ public class EstimateRequestService {
         }
 
         // 상태 확인
-        if (!"DRAFT".equals(estimateRequest.getStatus())) {
+        if (estimateRequest.getStatus() != EstimateRequest.EstimateStatus.DRAFT) {
             throw new BusinessException(ErrorCode.ESTIMATE_REQUEST_ALREADY_PUBLISHED);
         }
 
@@ -237,7 +327,7 @@ public class EstimateRequestService {
     @Transactional(readOnly = true)
     public Page<EstimateRequest> getPublicEstimateRequests(Pageable pageable) {
         log.info("공개 견적 요청 목록 조회");
-        return estimateRequestRepository.findByStatusAndVisibilityAndIsDeletedFalse("PUBLISHED", "PUBLIC", pageable);
+        return estimateRequestRepository.findByStatusAndVisibilityAndIsDeletedFalse(EstimateRequest.EstimateStatus.PUBLISHED, true, pageable);
     }
 
     /**
@@ -265,6 +355,74 @@ public class EstimateRequestService {
         log.info("견적 요청 삭제 완료: id={}", estimateRequest.getId());
     }
 
+    // ========== UUID 기반 메서드 ==========
+
+    /**
+     * 견적 요청 수정 (UUID 사용)
+     */
+    @Transactional
+    public EstimateRequest updateEstimateRequestByUuid(
+            String userEmail,
+            UUID requestUuid,
+            EstimateRequestUpdateRequest request) {
+
+        log.info("견적 요청 수정 시작 (UUID): requestUuid={}, userEmail={}", requestUuid, userEmail);
+
+        // UUID로 견적 요청 조회
+        EstimateRequest estimateRequest = estimateRequestRepository.findByUuidAndIsDeletedFalse(requestUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND));
+
+        // 기존 updateEstimateRequest 메서드 호출
+        return updateEstimateRequest(userEmail, estimateRequest.getId(), request);
+    }
+
+    /**
+     * 견적 요청 발행 (UUID 사용)
+     */
+    @Transactional
+    public EstimateRequest publishEstimateRequestByUuid(String userEmail, UUID requestUuid) {
+        log.info("견적 요청 발행 (UUID): requestUuid={}, userEmail={}", requestUuid, userEmail);
+
+        // UUID로 견적 요청 조회
+        EstimateRequest estimateRequest = estimateRequestRepository.findByUuidAndIsDeletedFalse(requestUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND));
+
+        // 기존 publishEstimateRequest 메서드 호출
+        return publishEstimateRequest(userEmail, estimateRequest.getId());
+    }
+
+    /**
+     * 견적 요청 조회 (UUID 사용)
+     */
+    @Transactional
+    public EstimateRequest getEstimateRequestByUuid(UUID requestUuid) {
+        log.info("견적 요청 조회 (UUID): requestUuid={}", requestUuid);
+
+        EstimateRequest estimateRequest = estimateRequestRepository.findByUuidAndIsDeletedFalse(requestUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND));
+
+        // 조회수 증가
+        estimateRequest.incrementViewCount();
+        estimateRequestRepository.save(estimateRequest);
+
+        return estimateRequest;
+    }
+
+    /**
+     * 견적 요청 삭제 (UUID 사용)
+     */
+    @Transactional
+    public void deleteEstimateRequestByUuid(String userEmail, UUID requestUuid) {
+        log.info("견적 요청 삭제 (UUID): requestUuid={}, userEmail={}", requestUuid, userEmail);
+
+        // UUID로 견적 요청 조회
+        EstimateRequest estimateRequest = estimateRequestRepository.findByUuidAndIsDeletedFalse(requestUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND));
+
+        // 기존 deleteEstimateRequest 메서드 호출
+        deleteEstimateRequest(userEmail, estimateRequest.getId());
+    }
+
     /**
      * 위치 정보 문자열 생성
      */
@@ -282,5 +440,106 @@ public class EstimateRequestService {
             location.append(address);
         }
         return location.toString();
+    }
+
+    // ===== 첨부파일 처리 메서드 (V30 Migration) =====
+
+    /**
+     * 첨부파일 리스트 처리 (URL → File ID 변환 및 조인 테이블 저장)
+     * Company 패턴 참고
+     */
+    private void processAttachments(EstimateRequest estimateRequest, List<AttachmentRequest> attachmentRequests) {
+        log.info("첨부파일 처리 시작: requestId={}, count={}", estimateRequest.getId(), attachmentRequests.size());
+
+        // 기존 첨부파일 제거 (orphanRemoval = true이므로 자동 삭제됨)
+        estimateRequest.clearAttachments();
+
+        // 새로운 첨부파일 추가
+        for (int i = 0; i < attachmentRequests.size(); i++) {
+            AttachmentRequest req = attachmentRequests.get(i);
+
+            // URL → File ID 변환
+            Long fileId = convertUrlToFileId(req.getFileUrl());
+
+            // Files 테이블의 entityId 업데이트 (스케줄러 삭제 방지)
+            File file = fileRepository.findById(fileId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+            file.updateEntityInfo("ESTIMATE_ATTACHMENT", estimateRequest.getId());
+            fileRepository.save(file);
+
+            // displayOrder가 null이면 인덱스 사용
+            Integer displayOrder = req.getDisplayOrder() != null ? req.getDisplayOrder() : i;
+
+            // EstimateRequestAttachment 엔티티 생성
+            EstimateRequestAttachment attachment = EstimateRequestAttachment.builder()
+                    .estimateRequest(estimateRequest)
+                    .fileId(fileId)
+                    .fileType(req.getFileType())
+                    .fileDescription(req.getFileDescription())
+                    .displayOrder(displayOrder)
+                    .build();
+
+            // 부모 엔티티에 추가 (cascade로 자동 저장됨)
+            estimateRequest.addAttachment(attachment);
+
+            log.debug("첨부파일 추가: fileId={}, type={}, order={}", fileId, req.getFileType(), displayOrder);
+        }
+
+        log.info("첨부파일 처리 완료: requestId={}, count={}", estimateRequest.getId(), attachmentRequests.size());
+    }
+
+    /**
+     * EstimateRequest의 첨부파일을 AttachmentResponse 리스트로 변환
+     * (File ID → URL 변환 + File 정보 포함)
+     */
+    public List<AttachmentResponse> getAttachmentResponses(EstimateRequest estimateRequest) {
+        if (estimateRequest.getAttachments() == null || estimateRequest.getAttachments().isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return estimateRequest.getAttachments().stream()
+                .map(attachment -> {
+                    // File 엔티티 조회
+                    File file = fileRepository.findById(attachment.getFileId()).orElse(null);
+                    if (file == null) {
+                        return null;
+                    }
+
+                    return AttachmentResponse.from(
+                        attachment,
+                        file.getFileUrl(),
+                        file.getOriginalFilename(),
+                        file.getMimeType(),
+                        file.getFileSize()
+                    );
+                })
+                .filter(response -> response != null)  // null 제거
+                .toList();
+    }
+
+    /**
+     * URL을 File ID로 변환
+     */
+    private Long convertUrlToFileId(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+
+        return fileRepository.findByFileUrl(url)
+                .map(File::getId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+    }
+
+    /**
+     * File ID를 URL로 변환
+     */
+    private String convertFileIdToUrl(Long fileId) {
+        if (fileId == null) {
+            return null;
+        }
+
+        return fileRepository.findById(fileId)
+                .map(File::getFileUrl)
+                .orElse(null);
     }
 }

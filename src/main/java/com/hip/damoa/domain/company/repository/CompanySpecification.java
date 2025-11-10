@@ -40,10 +40,10 @@ public class CompanySpecification {
             if (request.getServiceAreas() != null && request.getServiceAreas().length > 0) {
                 List<Predicate> areaPredicates = new ArrayList<>();
                 for (String area : request.getServiceAreas()) {
-                    // PostgreSQL array contains 연산
-                    areaPredicates.add(criteriaBuilder.isTrue(
-                            criteriaBuilder.function("array_contains",
-                                    Boolean.class,
+                    // PostgreSQL array_position 사용 (값이 배열에 있으면 위치 반환, 없으면 NULL)
+                    areaPredicates.add(criteriaBuilder.isNotNull(
+                            criteriaBuilder.function("array_position",
+                                    Integer.class,
                                     root.get("serviceAreas"),
                                     criteriaBuilder.literal(area))));
                 }
@@ -54,10 +54,10 @@ public class CompanySpecification {
             if (request.getTags() != null && request.getTags().length > 0) {
                 List<Predicate> tagPredicates = new ArrayList<>();
                 for (String tag : request.getTags()) {
-                    // PostgreSQL array contains 연산
-                    tagPredicates.add(criteriaBuilder.isTrue(
-                            criteriaBuilder.function("array_contains",
-                                    Boolean.class,
+                    // PostgreSQL array_position 사용 (값이 배열에 있으면 위치 반환, 없으면 NULL)
+                    tagPredicates.add(criteriaBuilder.isNotNull(
+                            criteriaBuilder.function("array_position",
+                                    Integer.class,
                                     root.get("tags"),
                                     criteriaBuilder.literal(tag))));
                 }

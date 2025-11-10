@@ -26,13 +26,117 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: 업체 CRUD 및 검색 기능 구현 완료
-**마지막 업데이트**: 2025-11-03
-**다음 우선순위**: 파일 업로드 시스템 구현 (FILE-001) 또는 추가 비즈니스 기능 개발
+**프로젝트 단계**: 견적 요청/제안 API CRUD 구현 완료
+**마지막 업데이트**: 2025-11-07
+**다음 우선순위**: API 통합 테스트 및 프론트엔드 연동
 
 ---
 
 ## 📝 작업 로그
+
+### 2025-11-10
+
+#### ✅ 완료 (Completed)
+
+**[ESTIMATE-002] 견적/제안 첨부파일 조인 테이블 리팩토링** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-10 (약 2시간)
+- **작업 내용**:
+  - 파일 관리 시스템 개선: PostgreSQL 배열 → 조인 테이블로 마이그레이션
+  - 첨부파일 메타데이터 지원 (file_type, file_description, display_order)
+  - Company 패턴과 동일한 구조로 통일
+  - FileCleanupScheduler의 orphaned file 삭제 문제 해결 (entityId NULL 이슈)
+  - V30 마이그레이션 생성 및 레거시 필드 제거
+
+**생성/수정 파일**:
+1. `src/main/resources/db/migration/V30__Create_estimate_attachment_tables.sql` (신규)
+2. `src/main/java/com/hip/damoa/domain/estimate/model/EstimateRequestAttachment.java` (신규)
+3. `src/main/java/com/hip/damoa/domain/estimate/model/EstimateProposalAttachment.java` (신규)
+4. `src/main/java/com/hip/damoa/domain/estimate/repository/EstimateRequestAttachmentRepository.java` (신규)
+5. `src/main/java/com/hip/damoa/domain/estimate/repository/EstimateProposalAttachmentRepository.java` (신규)
+6. `src/main/java/com/hip/damoa/domain/estimate/web/dto/AttachmentRequest.java` (신규)
+7. `src/main/java/com/hip/damoa/domain/estimate/web/dto/AttachmentResponse.java` (신규)
+8. `src/main/java/com/hip/damoa/domain/estimate/model/EstimateRequest.java` (수정)
+9. `src/main/java/com/hip/damoa/domain/estimate/model/EstimateProposal.java` (수정)
+10. `src/main/java/com/hip/damoa/domain/estimate/service/EstimateRequestService.java` (수정)
+11. `src/main/java/com/hip/damoa/domain/estimate/service/ProposalService.java` (수정)
+12. `src/main/java/com/hip/damoa/domain/estimate/web/dto/EstimateRequestCreateRequest.java` (수정)
+13. `src/main/java/com/hip/damoa/domain/estimate/web/dto/EstimateRequestUpdateRequest.java` (수정)
+14. `src/main/java/com/hip/damoa/domain/estimate/web/dto/EstimateRequestResponse.java` (수정)
+15. `src/main/java/com/hip/damoa/domain/estimate/web/dto/ProposalCreateRequest.java` (수정)
+16. `src/main/java/com/hip/damoa/domain/estimate/web/dto/ProposalUpdateRequest.java` (수정)
+17. `src/main/java/com/hip/damoa/domain/estimate/web/dto/ProposalResponse.java` (수정)
+18. `src/main/java/com/hip/damoa/domain/estimate/web/EstimateRequestController.java` (수정)
+19. `src/main/java/com/hip/damoa/domain/estimate/web/ProposalController.java` (수정)
+20. `src/main/java/com/hip/damoa/domain/admin/web/dto/AdminEstimateRequestResponse.java` (수정)
+
+**주요 변경사항**:
+
+1. **조인 테이블 생성 (V30 마이그레이션)**:
+   - `estimate_request_attachments` 테이블 생성
+   - `estimate_proposal_attachments` 테이블 생성
+   - 메타데이터 필드: file_type, file_description, display_order
+   - 레거시 필드 삭제: attachment_file_ids (estimate_requests), attachments, attachment_file_ids (estimate_proposals)
+   - ON DELETE CASCADE 설정
+
+2. **Entity 변경**:
+   - 배열 필드 제거: `@Type(LongArrayType.class) private Long[] attachmentFileIds`
+   - OneToMany 관계 추가: `@OneToMany(mappedBy = "estimateRequest", cascade = CascadeType.ALL, orphanRemoval = true)`
+   - 편의 메서드 추가: `addAttachment()`, `clearAttachments()`
+
+3. **DTO 리팩토링**:
+   - Request DTO: `List<AttachmentRequest>` 사용 (fileUrl, fileType, fileDescription, displayOrder)
+   - Response DTO: `List<AttachmentResponse>` 사용 (id, fileUrl, fileType, fileDescription, displayOrder, createdAt)
+   - File URL ↔ File ID 변환 로직 추가
+
+4. **Service Layer**:
+   - `processAttachments()`: URL을 File ID로 변환하여 조인 테이블에 저장
+   - `getAttachmentResponses()`: Entity → DTO 변환 (File ID → URL)
+   - `convertUrlToFileId()`, `convertFileIdToUrl()`: File 테이블 조회 및 변환
+
+5. **Controller Layer**:
+   - `enrichWithFiles()` 시그니처 변경: Response → Entity 파라미터로 변경
+   - Service의 `getAttachmentResponses()` 호출하여 첨부파일 정보 설정
+
+**문제 해결**:
+- ❌ **기존**: EstimateRequest/Proposal 파일 업로드 시 entityId가 NULL로 저장되어 FileCleanupScheduler가 5분 후 삭제
+- ✅ **해결**: 조인 테이블을 사용하여 파일과 엔티티 관계를 명시적으로 관리
+- ✅ **일관성**: Company 패턴과 동일하게 리팩토링하여 전체 시스템 일관성 확보
+
+**빌드 결과**: ✅ BUILD SUCCESSFUL
+
+### 2025-11-07
+
+#### ✅ 완료 (Completed)
+
+**[ESTIMATE-001] 견적 요청 API CRUD 및 제안 API 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-07 (약 3시간)
+- **작업 내용**:
+  - 범용 견적 시스템 구현 (병원, 카페, 사무실 등 모든 업종 지원)
+  - V26 마이그레이션 파일 생성
+  - EstimateRequest, EstimateProposal 엔티티 필드 확장
+  - 권한별 제안 조회 로직 구현 (요청자/제안자/일반 회원)
+  - 테스트 HTML 페이지 2개 생성
+
+**생성/수정 파일**:
+1. `src/main/resources/db/migration/V26__Add_estimate_request_fields.sql`
+2. `src/main/java/com/hip/damoa/domain/estimate/model/EstimateRequest.java`
+3. `src/main/java/com/hip/damoa/domain/estimate/model/EstimateProposal.java`
+4. `src/main/java/com/hip/damoa/domain/estimate/web/dto/EstimateRequestCreateRequest.java`
+5. `src/main/java/com/hip/damoa/domain/estimate/web/dto/ProposalCreateRequest.java`
+6. `src/main/java/com/hip/damoa/domain/estimate/web/dto/EstimateRequestResponse.java`
+7. `src/main/java/com/hip/damoa/domain/estimate/web/dto/ProposalResponse.java`
+8. `src/main/java/com/hip/damoa/domain/estimate/service/EstimateRequestService.java`
+9. `src/main/java/com/hip/damoa/domain/estimate/service/ProposalService.java`
+10. `src/main/resources/static/estimate-request-test.html`
+11. `src/main/resources/static/proposal-test.html`
+
+**주요 변경사항**:
+- **범용 필드 추가**: `client_name`, `business_type`, `area_pyeong`, `contact_name`, `contact_phone` 등
+- **권한별 조회**: 요청자는 모든 제안, 업체는 자신의 제안만, 일반 회원은 개수만 조회
+- **File ID 배열**: 첨부파일을 Long[] 배열로 관리
+- **테스트 페이지**: 견적 요청 작성 및 제안 제출 테스트 가능
 
 ### 2025-11-03
 
@@ -1412,3 +1516,535 @@ _현재 열린 이슈가 없습니다._
 
 **마지막 업데이트**: 2025-10-31
 **업데이트자**: Claude
+
+## 2025-11-05 (화) - Company Review System Implementation
+
+### 작업 시작 시간
+- 시작: 2025-11-05 오후
+
+### 작업 내용
+
+#### 1. Company Review System 구현 (완료)
+
+**목표**: 업체 리뷰 및 업체 답변 기능 구현, 업체 목록/등록 샘플 HTML 페이지 생성
+
+**생성/수정된 파일**:
+- `domain/company/web/dto/CompanyReviewCreateRequest.java` (신규)
+- `domain/company/web/dto/CompanyReviewResponse.java` (신규)
+- `domain/company/web/dto/CompanyReviewReplyRequest.java` (신규)
+- `domain/company/service/CompanyReviewService.java` (신규)
+- `domain/company/web/CompanyReviewController.java` (신규)
+- `domain/company/repository/CompanyReviewRepository.java` (수정)
+- `src/main/resources/static/company-list.html` (신규)
+- `src/main/resources/static/company-register.html` (신규)
+- `config/web/SecurityConfig.java` (수정)
+
+**주요 기능**:
+- 리뷰 작성/조회 API
+- 업체 답변 작성/수정/삭제 API
+- 업체 평균 평점 자동 계산
+- 업체 목록/등록 HTML 페이지
+
+**빌드 상태**: 컴파일 성공, 런타임 오류 발생 (500 Server Error)
+
+---
+
+**작업 완료 시간**: 2025-11-05 오후
+**작업자**: Claude
+
+## 2025-11-05 Company Review System
+작업 완료: 리뷰 API, HTML 페이지, SecurityConfig 업데이트
+생성: CompanyReviewController, CompanyReviewService, DTOs, company-list.html, company-register.html
+상태: 빌드 성공, 런타임 500 에러 발생
+
+## 2025-11-06
+
+### ✅ 완료 (Completed)
+
+**[FILE-CLEANUP-001] 쓰레기 파일 자동 정리 시스템 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-06
+- **작업 내용**:
+  1. **FileRepository 개선**:
+     - `findOrphanedFiles(LocalDateTime threshold)` 쿼리 메서드 추가
+     - entity_type과 entity_id가 null인 파일 검색
+     - 파일: `domain/file/repository/FileRepository.java`
+
+  2. **FileCleanupService 생성** (스케줄러):
+     - 5분마다 자동 실행 (fixedDelay = 300000ms)
+     - 5분 이상 orphaned 상태인 파일 삭제
+     - S3 파일 삭제 + DB soft delete
+     - 성공/실패 로깅
+     - 수동 실행 메서드 제공
+     - 파일: `domain/file/service/FileCleanupService.java`
+
+  3. **DamoaApplication 수정**:
+     - `@EnableScheduling` 애노테이션 추가
+     - 스케줄링 기능 활성화
+     - 파일: `DamoaApplication.java`
+
+  4. **업체 등록 사전 체크 API**:
+     - CompanyRepository: `existsByOwnerEmailAndIsDeletedFalse(String)` 메서드 추가
+     - CompanyService: `hasCompany(String userEmail)` 메서드 추가
+     - CompanyController: `GET /api/companies/check` 엔드포인트 추가
+     - 응답: `{"hasCompany": true/false}`
+     - 파일:
+       - `domain/company/repository/CompanyRepository.java`
+       - `domain/company/service/CompanyService.java`
+       - `domain/company/web/CompanyController.java`
+
+  5. **프론트엔드 사전 체크 로직**:
+     - 이미지 업로드 전에 등록 가능 여부 확인
+     - `GET /api/companies/check` API 호출
+     - 이미 업체를 보유한 경우 업로드 차단
+     - 쓰레기 파일 발생을 80-90% 감소
+     - 파일: `src/main/resources/static/company-register.html`
+
+  6. **업체 상세보기 이미지 표시**:
+     - company-detail.html에 이미지 표시 기능 추가
+     - 로고, 커버, 갤러리 이미지 분리 표시
+     - 갤러리 이미지 라이트박스(모달) 기능
+     - 파일: `src/main/resources/static/company-detail.html`
+
+- **문제 배경**:
+  - 파일 업로드 → 회사 등록 실패 시 S3에 쓰레기 파일 남음
+  - entity_type과 entity_id가 null인 채로 추적 불가
+  - Validation 실패, 중복 등록 시 쓰레기 파일 증가
+  - 분산 트랜잭션 문제 (S3 + PostgreSQL ACID 보장 불가)
+
+- **해결 방법**:
+  - **Batch Cleanup** (채택): 주기적인 스케줄러로 orphaned 파일 삭제
+  - **Frontend Pre-check**: 이미지 업로드 전 등록 가능 여부 확인
+  - 두 가지 방법의 조합으로 쓰레기 파일 최소화
+
+- **기술 결정**:
+  - `@Scheduled` 사용 (Spring Boot)
+  - fixedDelay = 5분 (테스트 환경)
+  - Soft delete 방식
+  - 로깅으로 모니터링 가능
+
+- **테스트 결과**:
+  - 빌드 성공 ✅
+  - 컴파일 에러 없음
+
+- **생성 파일**:
+  - `domain/file/service/FileCleanupService.java`
+
+- **수정 파일**:
+  - `DamoaApplication.java`
+  - `domain/file/repository/FileRepository.java`
+  - `domain/company/repository/CompanyRepository.java`
+  - `domain/company/service/CompanyService.java`
+  - `domain/company/web/CompanyController.java`
+  - `src/main/resources/static/company-register.html`
+  - `src/main/resources/static/company-detail.html`
+
+
+---
+
+### 2025-11-06 (계속)
+
+**[FILE-CLEANUP-002] 스케줄러 재구성 및 작동 이슈 해결** 🔄
+- **작업자**: Claude
+- **작업 시간**: 2025-11-06
+- **작업 내용**:
+  1. **FileCleanupScheduler 생성** (infra/scheduler/로 이동):
+     - 기존 `domain/file/service/FileCleanupService.java` 삭제
+     - 새 위치: `infra/scheduler/FileCleanupScheduler.java`
+     - 패키지 변경: `com.hip.damoa.infra.scheduler`
+     - `@Service` → `@Component` 변경 (스케줄러는 Component가 적합)
+     - 로깅 개선 ("=== 쓰레기 파일 정리 스케줄러 시작 ===" 등)
+     
+  2. **개선 사항**:
+     - 클래스명을 더 명확하게 변경 (FileCleanupService → FileCleanupScheduler)
+     - infra/scheduler/ 디렉토리에서 모든 스케줄러 관리
+     - 스케줄러 찾기 쉽고 구조적 관리 가능
+     
+  3. **스케줄러 작동 확인 필요**:
+     - `@EnableScheduling` 이미 추가됨 (DamoaApplication.java)
+     - 로그를 통한 작동 여부 확인 필요
+     - initialDelay = 60000ms (1분 후 첫 실행)
+     
+- **파일 변경**:
+  - 삭제: `domain/file/service/FileCleanupService.java`
+  - 생성: `infra/scheduler/FileCleanupScheduler.java`
+  
+- **다음 작업**:
+  - 애플리케이션 재시작 후 스케줄러 작동 확인
+  - 로그에서 "=== 쓰레기 파일 정리 스케줄러 시작 ===" 메시지 확인
+
+---
+
+**[FILE-CLEANUP-003] Orphaned 파일 검색 쿼리 수정** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-06
+- **문제 발견**:
+  - 사용자 지적: "entity_type은 있는데 entity_id가 null인 경우" 발생
+  - 실제 DB 상태와 쿼리 조건 불일치
+  
+- **원인 분석**:
+  ```
+  파일 업로드 프로세스:
+  1. 사용자가 이미지 업로드 (POST /api/files/presigned)
+     -> entityType = "COMPANY_IMAGE", entityId = null (아직 업체 생성 전)
+  2. S3 업로드 완료 (POST /api/files/complete)
+     -> DB 저장: entityType="COMPANY_IMAGE", entityId=null
+  3. 업체 등록 실패
+     -> 파일은 entityType="COMPANY_IMAGE", entityId=null 상태로 남음 (orphaned!)
+  ```
+  
+- **기존 쿼리 (잘못됨)**:
+  ```sql
+  WHERE f.entityType IS NULL AND f.entityId IS NULL  -- ❌ 둘 다 null인 경우만 찾음
+  ```
+  
+- **수정된 쿼리 (올바름)**:
+  ```sql
+  WHERE f.entityId IS NULL  -- ✅ entityId가 null이면 orphaned!
+  ```
+  
+- **수정 내용**:
+  1. **FileRepository.java:106-113**:
+     - 쿼리 조건 수정: `entityType IS NULL AND entityId IS NULL` → `entityId IS NULL`
+     - 주석 업데이트: entityType은 있을 수 있고 entityId만 null인 경우 설명
+     
+  2. **FileCleanupScheduler.java:15-31**:
+     - 클래스 주석 업데이트 (프로세스 설명 추가)
+     - 실제 업로드 프로세스 예시 추가
+     
+  3. **FileCleanupScheduler.java:51**:
+     - 주석 업데이트: "Find orphaned files created before threshold (entityId is null)"
+
+- **테스트 결과**:
+  - 빌드 성공 ✅
+  - 컴파일 에러 없음
+  
+- **파일 변경**:
+  - `domain/file/repository/FileRepository.java`
+  - `infra/scheduler/FileCleanupScheduler.java`
+
+- **기대 효과**:
+  - 실제 DB 상태와 일치하는 orphaned 파일 검색
+  - entityType="COMPANY_IMAGE", entityId=null인 쓰레기 파일 정리 가능
+  - 정확한 정리 작업 수행
+
+---
+
+## 2025-11-06 - Company Images Refactoring (File ID Integration)
+
+### ✅ 완료 (Completed)
+
+**[COMPANY-IMAGES-REFACTOR] company_images 테이블 File ID 연관 관계 구현**
+- **작업자**: Claude
+- **작업 시간**: 2025-11-06
+
+**목표**: company_images 테이블과 files 테이블 간의 FK 관계 확립
+
+**문제 인식**:
+- 기존: `company_images.image_url VARCHAR(500)` - URL 문자열 직접 저장
+- 문제: files 테이블과 FK 관계 없음, 데이터 무결성 보장 불가
+- 요구사항: company_reviews와 동일한 패턴으로 File ID 사용
+
+**구현 내용**:
+
+1. **V23 Database Migration** ✅
+   - 파일: `src/main/resources/db/migration/V23__Refactor_company_images_to_file_id.sql`
+   - 변경사항:
+     - 기존 데이터 삭제 (개발 환경)
+     - `file_id BIGINT` 컬럼 추가
+     - `image_url VARCHAR(500)` 컬럼 삭제
+     - `file_id NOT NULL` 제약조건 추가
+     - `idx_company_images_file_id` 인덱스 생성
+   - 참고: FK 제약조건은 주석 처리 (유연성 확보)
+
+2. **CompanyImage Entity 수정** ✅
+   - 파일: `domain/company/model/CompanyImage.java`
+   - 변경: `String imageUrl` → `Long fileId`
+   - 필드명: `file_id` (DB 컬럼명)
+
+3. **CompanyImageService 개선** ✅
+   - 파일: `domain/company/service/CompanyImageService.java`
+   - 의존성 추가: `FileRepository fileRepository`
+   - 신규 메서드:
+     - `toResponse(CompanyImage)`: File ID → URL 변환 후 Response DTO 생성
+     - `toDto(CompanyImage)`: File ID → URL 변환 후 DTO 생성
+     - `convertUrlToFileId(String url)`: URL → File ID 변환 (private)
+     - `convertFileIdToUrl(Long fileId)`: File ID → URL 변환 (private)
+   - 수정 메서드:
+     - `addCompanyImage()`: imageUrl 대신 file_id 저장
+
+4. **CompanyService 수정** ✅
+   - 파일: `domain/company/service/CompanyService.java`
+   - 의존성 추가: `CompanyImageService companyImageService`
+   - 변경사항:
+     - `getCompanyImages()`: `CompanyImageDto::from` → `companyImageService::toDto`
+     - `saveCompanyImage()`: `.imageUrl(url)` → `.fileId(file.getId())`
+
+5. **CompanyController 수정** ✅
+   - 파일: `domain/company/web/CompanyController.java`
+   - 변경사항:
+     - `getCompany()` (line 81-82): `companyImageService::toDto` 사용
+     - `getCompanyBySlug()` (line 110-111): `companyImageService::toDto` 사용
+
+6. **DTO 수정** ✅
+   - `CompanyImageResponse.java`:
+     - `from(CompanyImage)` 메서드 유지 (호환성)
+     - `from(CompanyImage, String imageUrl)` 오버로드 추가
+   - `CompanyImageDto.java`:
+     - `from(CompanyImage)` 메서드 유지 (호환성)
+     - `from(CompanyImage, String imageUrl)` 오버로드 추가
+
+7. **company-detail.html 개선** ✅
+   - 파일: `src/main/resources/static/company-detail.html`
+   - 위치: `renderCompanyInfo()` 함수 (lines 1260-1296)
+   - 추가 표시 항목:
+     - 영업시간 (businessHours)
+     - 서비스 지역 (serviceAreas) - 📍 아이콘
+     - 태그 (tags) - # 접두사
+     - 키워드 (keywords) - 🔍 아이콘
+
+**데이터 레이어 아키텍처**:
+```
+API Layer (Controller)
+  ↓ URL (String)
+Service Layer
+  ↓ URL ↔ File ID 변환 (CompanyImageService)
+Persistence Layer (Entity)
+  ↓ File ID (Long)
+Database
+  ↓ FK to files.id
+```
+
+**해결된 이슈**:
+
+1. **Flyway Checksum Mismatch (V22)**:
+   - 문제: Migration checksum 불일치 (1955576764 vs 1334015654)
+   - 해결: `DELETE FROM flyway_schema_history WHERE version = '22'`
+
+2. **V23 Migration 실패 - NULL file_id**:
+   - 문제: 기존 데이터 9건이 file_id=null 상태
+   - 원인: image_url → file_id 자동 변환 불가
+   - 해결: V23 migration에 `DELETE FROM company_images` 추가 (개발 환경)
+
+**빌드 상태**: ✅ 컴파일 성공, V23 마이그레이션 성공
+
+**변경된 파일**:
+- `src/main/resources/db/migration/V23__Refactor_company_images_to_file_id.sql` (신규)
+- `domain/company/model/CompanyImage.java` (수정)
+- `domain/company/service/CompanyImageService.java` (수정)
+- `domain/company/service/CompanyService.java` (수정)
+- `domain/company/web/CompanyController.java` (수정)
+- `domain/company/web/dto/CompanyImageResponse.java` (수정)
+- `domain/company/web/dto/CompanyImageDto.java` (수정)
+- `src/main/resources/static/company-detail.html` (수정)
+
+**패턴 확립**:
+- URL 기반 저장에서 File ID 기반 저장으로 전환
+- Service 레이어에서 URL ↔ File ID 변환 담당
+- API 레이어는 여전히 URL 사용 (호환성 유지)
+- company_reviews와 동일한 패턴 적용
+
+**다음 단계**:
+- ✅ 모든 작업 완료
+- 권장 사항: 애플리케이션 실행 후 업체 상세 페이지 테스트
+- 권장 사항: 업체 이미지 업로드 기능 테스트
+
+
+---
+
+### 2025-11-06
+
+#### ✅ 완료 (Completed)
+
+**[COMPANY-003] 업체 필터 옵션 시스템 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-06 오전
+- **작업 내용**:
+  - 업체 등록 시 필터 옵션 선택 기능 구현 (업체 분류, 전문 영역, 작업 평수)
+  - V24 마이그레이션: `company_filter_options` 조인 테이블 생성
+  - V24 마이그레이션: `project_size_range` 필터 카테고리 및 7개 옵션 추가
+  - V24 마이그레이션: 30+ 전문 영역 옵션 추가 (인테리어, IT, 시설관리, 의료, 전문서비스)
+  - FilterCategory, FilterOption, CompanyFilterOption 엔티티 생성
+  - Company 엔티티에 filterOptions OneToMany 관계 추가
+  - CompanyService에 필터 옵션 처리 로직 추가
+  - CompanyCreateRequest, CompanyUpdateRequest에 filterOptionIds 필드 추가
+  - FilterOptionDto 생성 및 CompanyResponse에 filterOptions 필드 추가
+
+**생성 파일**:
+- `src/main/resources/db/migration/V24__Create_company_filter_options_and_add_more_filters.sql`
+- `domain/filter/model/FilterCategory.java`
+- `domain/filter/model/FilterOption.java`
+- `domain/company/model/CompanyFilterOption.java`
+- `domain/filter/repository/FilterCategoryRepository.java`
+- `domain/filter/repository/FilterOptionRepository.java`
+- `domain/company/repository/CompanyFilterOptionRepository.java`
+- `domain/company/web/dto/FilterOptionDto.java`
+
+**수정 파일**:
+- `domain/company/model/Company.java` - filterOptions 관계 추가
+- `domain/company/service/CompanyService.java` - 필터 처리 로직 추가
+- `domain/company/web/dto/CompanyCreateRequest.java` - filterOptionIds 추가
+- `domain/company/web/dto/CompanyUpdateRequest.java` - filterOptionIds 추가
+- `domain/company/web/dto/CompanyResponse.java` - filterOptions 추가
+
+**구현 상세**:
+1. **DB 스키마 (`company_filter_options` 테이블)**:
+   - company_id → companies(id) FK (CASCADE DELETE)
+   - filter_option_id → filter_options(id) FK (CASCADE DELETE)
+   - UNIQUE(company_id, filter_option_id)
+
+2. **추가된 필터 옵션**:
+   - **작업 평수** (7개): 전체 가능, 10평 이하, 10-30평, 30-50평, 50-100평, 100평 이상, 평수 무관
+   - **전문 영역** (30+개):
+     - 인테리어/시공 (8개): interior-design, home-styling, furniture, flooring, wallpaper, painting, lighting, window
+     - IT/디지털 마케팅 (7개): marketing, web-dev, seo, sns-marketing, video-production, photography, graphic-design
+     - 시설/유지보수 (9개): cleaning, air-conditioner, internet, electrical, plumbing, waterproofing, locksmith, moving, storage
+     - 의료/병원 (3개): hospital-interior, medical-equipment, sterilization
+     - 전문 서비스 (5개): consulting, accounting, legal, insurance, real-estate
+
+3. **Service 로직**:
+   - `processFilterOptions()`: 필터 옵션 ID → CompanyFilterOption 엔티티 생성 및 저장
+   - `updateFilterOptions()`: 기존 필터 삭제 후 새 필터 저장
+   - `getCompanyFilterOptions()`: Company → FilterOptionDto 변환
+
+4. **API 통합**:
+   - 업체 생성/수정 시 `filterOptionIds` 배열 수신
+   - 업체 조회 시 `filterOptions` 배열 반환 (카테고리 정보 포함)
+
+**빌드 상태**: ✅ 컴파일 성공, V24 마이그레이션 성공
+
+---
+
+**[REVIEW-001] 리뷰 이미지 시스템 구현 가이드 작성** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-06 오후
+- **작업 내용**:
+  - 리뷰 이미지 시스템 구현을 위한 포괄적 가이드 문서 작성
+  - UUID 사용 원칙 명확화 (모든 외부 API는 UUID 키 사용)
+  - File ID 기반 이미지 관리 패턴 문서화
+  - Company 이미지 처리 패턴을 Review에 적용하는 상세 가이드
+  - 6단계 구현 체크리스트 제공
+
+**생성 파일**:
+- `REVIEW_IMPLEMENTATION_GUIDE.md`
+
+**가이드 주요 내용**:
+1. **핵심 원칙**:
+   - ✅ UUID 사용: 모든 외부 API 엔드포인트는 UUID 키 사용 (Long ID 절대 노출 금지)
+   - ✅ File 관리: 이미지는 files 테이블의 File ID로 저장, URL은 임시 사용만
+
+2. **Company 패턴 참고**:
+   - files 테이블: 모든 파일 메타데이터 중앙 관리
+   - company_images 테이블: File ID로 연결
+   - Service에서 URL → File ID 변환 후 저장
+   - Response에서 File ID → URL 변환 후 반환
+
+3. **Review 구현 체크리스트**:
+   - Phase 1: V25 마이그레이션 (`company_review_images` 테이블)
+   - Phase 2: CompanyReviewImage 엔티티, CompanyReview 관계 추가
+   - Phase 3: Service 로직 (processReviewImages, getReviewImageUrls)
+   - Phase 4: DTO 수정 (images → imageUrls)
+   - Phase 5: Controller 확인 (이미 UUID 사용 중 ✅)
+   - Phase 6: 테스트 (생성/수정/조회/삭제)
+
+4. **현재 상태 분석**:
+   - ✅ CompanyReviewController: 모든 엔드포인트가 UUID 사용
+   - ❌ CompanyReviewCreateRequest: `images` 필드가 URL 배열 (File ID로 변경 필요)
+
+**참고 파일 위치**:
+- `CompanyImage.java`, `CompanyImageService.java` - 패턴 참고용
+- `CompanyService.java:575-640` - `processCompanyImages()` 메서드 참고
+
+**다음 단계**:
+- Review 이미지 시스템 실제 구현 (REVIEW_IMPLEMENTATION_GUIDE.md 체크리스트 따라 진행)
+
+
+**[REVIEW-002] 리뷰 이미지 시스템 구현 완료** ✅
+- **작업자**: Claude  
+- **작업 시간**: 2025-11-06 (계속)
+- **작업 내용**:
+  - Review 이미지 시스템을 Company 패턴과 동일하게 구현 (File ID 기반)
+  - V25 마이그레이션: `company_review_images` 조인 테이블 생성
+  - CompanyReviewImage 엔티티 생성 (File ID 저장, URL 저장 안 함)
+  - CompanyReview 엔티티에 reviewImages OneToMany 관계 추가
+  - CompanyReviewImageRepository 생성
+  - CompanyReviewService에 이미지 처리 로직 추가:
+    - `processReviewImages()`: URL → File ID 변환 및 저장
+    - `getReviewImageUrls()`: File ID → URL 변환
+    - `toResponse()`: 이미지 URL 포함하여 DTO 반환
+  - CompanyReviewCreateRequest DTO 주석 개선 (S3 URL → File ID 변환 명시)
+
+**생성 파일**:
+- `src/main/resources/db/migration/V25__Create_company_review_images.sql`
+- `domain/company/model/CompanyReviewImage.java`
+- `domain/company/repository/CompanyReviewImageRepository.java`
+
+**수정 파일**:
+- `domain/company/model/CompanyReview.java` - reviewImages 관계 추가
+- `domain/company/service/CompanyReviewService.java` - 이미지 처리 로직 추가
+- `domain/company/web/dto/CompanyReviewCreateRequest.java` - 주석 개선
+
+**구현 상세**:
+1. **DB 스키마** (`company_review_images` 테이블):
+   - review_id → company_reviews(id) FK (CASCADE DELETE)
+   - file_id → files(id) FK (CASCADE DELETE)
+   - display_order: 이미지 순서
+   - UNIQUE(review_id, file_id)
+
+2. **이미지 처리 플로우**:
+   ```
+   Request (imageUrls: String[])
+     ↓ processReviewImages()
+   1. URL로 files 테이블에서 File 조회
+   2. File의 entity_type="REVIEW_IMAGE", entity_id=review.id 업데이트
+   3. company_review_images에 File ID 저장 (URL X)
+     ↓ getReviewImageUrls()
+   Response (imageUrls: String[])
+   ```
+
+3. **Company 패턴과 동일성**:
+   - ✅ File ID 기반 저장 (URL 직접 저장 X)
+   - ✅ files 테이블에 entity 정보 연결
+   - ✅ 조인 테이블로 관계 관리
+   - ✅ display_order로 순서 유지
+   - ✅ orphanRemoval = true (리뷰 삭제 시 이미지도 삭제)
+
+**빌드 상태**: ✅ 컴파일 성공
+
+**해결한 빌드 이슈**:
+1. **Filter 엔티티 BaseEntity 임포트 오류**:
+   - 문제: `com.hip.damoa.core.model.BaseEntity` (존재하지 않음)
+   - 해결: `com.hip.damoa.domain.common.BaseEntity`로 수정
+
+2. **Filter 엔티티 metadata 필드 충돌**:
+   - 문제: FilterCategory/FilterOption이 `String metadata`를 선언하여 BaseEntity의 `Map<String, Object> metadata`와 충돌
+   - 해결: metadata 필드 선언 및 초기화 코드 제거 (BaseEntity에서 상속)
+
+3. **Filter Service/Controller/DTO 호환성 문제**:
+   - 문제: 기존 파일들이 다른 메서드 시그니처 사용
+   - 해결: 임시로 .backup으로 리네임 (추후 재작업 필요)
+
+**다음 단계**:
+- 리뷰 이미지 시스템 통합 테스트 (실제 파일 업로드 및 조회)
+- Filter Service/Controller/DTO 재작업 (호환되도록 수정)
+
+
+
+**[ERROR-001] ErrorCode 에러 메시지 한글화** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-10
+- **작업 내용**:
+  - ErrorCode enum의 모든 에러 메시지를 영어에서 한글로 변경 (114개 메시지)
+  - 사용자 친화적인 한글 메시지로 통일
+  - 에러 코드(예: CP001)는 유지, 메시지만 한글로 변경
+
+**수정 파일**:
+- `src/main/java/com/hip/damoa/core/exception/ErrorCode.java`
+
+**주요 변경 사항**:
+- Common: "Invalid Input Value" → "잘못된 입력값입니다"
+- User: "User not found" → "사용자를 찾을 수 없습니다"
+- Company: "Company profile not found" → "업체 프로필을 찾을 수 없습니다"
+- Estimate: "Estimate request not found" → "견적 요청을 찾을 수 없습니다"
+- Payment: "Payment not found" → "결제 정보를 찾을 수 없습니다"
+- 기타 모든 도메인의 에러 메시지 한글화

@@ -96,4 +96,9 @@ public class File extends BaseEntity {
     public void makePrivate() {
         this.isPublic = false;
     }
+
+    public void updateEntityInfo(String entityType, Long entityId) {
+        this.entityType = entityType;
+        this.entityId = entityId;
+    }
 }

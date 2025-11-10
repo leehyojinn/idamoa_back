@@ -1,25 +1,26 @@
 package com.hip.damoa.domain.company.web.dto;
 
 import com.hip.damoa.domain.company.model.Company;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 업체 조회 응답 DTO
  */
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class CompanyResponse {
 
-    private Long id;
+    private Long id;  // 내부 ID (선택적으로 포함)
+    private UUID uuid;  // 외부 노출용 UUID
     private Long ownerId;
     private String ownerEmail;
     private String name;
@@ -56,8 +57,11 @@ public class CompanyResponse {
     private LocalDateTime verifiedAt;
     private LocalDateTime premiumUntil;
     private Boolean isPremium;
+    private Boolean isLiked; // 현재 사용자의 좋아요 여부
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<CompanyImageDto> images;
+    private List<FilterOptionDto> filterOptions; // 업체 분류/전문 영역/작업 평수 등
 
     /**
      * Entity → DTO 변환
@@ -65,6 +69,7 @@ public class CompanyResponse {
     public static CompanyResponse from(Company company) {
         return CompanyResponse.builder()
                 .id(company.getId())
+                .uuid(company.getUuid())
                 .ownerId(company.getOwner().getId())
                 .ownerEmail(company.getOwner().getEmail())
                 .name(company.getName())

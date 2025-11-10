@@ -8,9 +8,12 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface CompanyImageRepository extends JpaRepository<CompanyImage, Long> {
+
+    Optional<CompanyImage> findByUuidAndIsDeletedFalse(UUID uuid);
 
     List<CompanyImage> findByCompanyAndIsDeletedFalseOrderByDisplayOrder(Company company);
 
@@ -21,4 +24,6 @@ public interface CompanyImageRepository extends JpaRepository<CompanyImage, Long
     Optional<CompanyImage> findByCompanyAndImageTypeAndIsPrimaryTrue(Company company, String imageType);
 
     long countByCompanyAndIsDeletedFalse(Company company);
+
+    List<CompanyImage> findByCompany_IdAndIsDeletedFalse(Long companyId);
 }

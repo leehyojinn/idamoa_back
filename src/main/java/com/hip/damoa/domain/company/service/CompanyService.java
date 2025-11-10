@@ -3,14 +3,21 @@ package com.hip.damoa.domain.company.service;
 import com.hip.damoa.core.exception.BusinessException;
 import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.domain.company.model.Company;
+import com.hip.damoa.domain.company.model.CompanyFilterOption;
 import com.hip.damoa.domain.company.model.CompanyImage;
+import com.hip.damoa.domain.company.model.CompanyLike;
+import com.hip.damoa.domain.company.repository.CompanyFilterOptionRepository;
 import com.hip.damoa.domain.company.repository.CompanyImageRepository;
+import com.hip.damoa.domain.company.repository.CompanyLikeRepository;
 import com.hip.damoa.domain.company.repository.CompanyRepository;
-import com.hip.damoa.domain.company.repository.CompanySpecification;
 import com.hip.damoa.domain.company.web.dto.CompanyCreateRequest;
 import com.hip.damoa.domain.company.web.dto.CompanyImageDto;
 import com.hip.damoa.domain.company.web.dto.CompanySearchRequest;
 import com.hip.damoa.domain.company.web.dto.CompanyUpdateRequest;
+import com.hip.damoa.domain.file.model.File;
+import com.hip.damoa.domain.file.repository.FileRepository;
+import com.hip.damoa.domain.filter.model.FilterOption;
+import com.hip.damoa.domain.filter.repository.FilterOptionRepository;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,11 +26,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -36,7 +43,12 @@ public class CompanyService {
 
     private final CompanyRepository companyRepository;
     private final CompanyImageRepository companyImageRepository;
+    private final CompanyLikeRepository companyLikeRepository;
+    private final CompanyFilterOptionRepository companyFilterOptionRepository;
+    private final FilterOptionRepository filterOptionRepository;
     private final UserRepository userRepository;
+    private final FileRepository fileRepository;
+    private final CompanyImageService companyImageService;
 
     /**
      * 업체 등록 (업체 소유자용)
@@ -94,7 +106,18 @@ public class CompanyService {
 
         company = companyRepository.save(company);
 
-        log.info("업체 등록 완료: id={}, name={}", company.getId(), company.getName());
+        // 필터 옵션 처리
+        processFilterOptions(company, request.getFilterOptionIds());
+
+        // 이미지 처리
+        processCompanyImages(company, request.getLogoImageUrl(),
+                request.getCoverImageUrl(), request.getGalleryImageUrls());
+
+        log.info("업체 등록 완료: id={}, name={}, logo={}, cover={}, gallery={}",
+                company.getId(), company.getName(),
+                request.getLogoImageUrl() != null,
+                request.getCoverImageUrl() != null,
+                request.getGalleryImageUrls() != null ? request.getGalleryImageUrls().length : 0);
 
         return company;
     }
@@ -154,19 +177,30 @@ public class CompanyService {
 
         company = companyRepository.save(company);
 
-        log.info("업체 등록 완료 (관리자): id={}, name={}", company.getId(), company.getName());
+        // 필터 옵션 처리
+        processFilterOptions(company, request.getFilterOptionIds());
+
+        // 이미지 처리
+        processCompanyImages(company, request.getLogoImageUrl(),
+                request.getCoverImageUrl(), request.getGalleryImageUrls());
+
+        log.info("업체 등록 완료 (관리자): id={}, name={}, logo={}, cover={}, gallery={}",
+                company.getId(), company.getName(),
+                request.getLogoImageUrl() != null,
+                request.getCoverImageUrl() != null,
+                request.getGalleryImageUrls() != null ? request.getGalleryImageUrls().length : 0);
 
         return company;
     }
 
     /**
-     * 업체 조회 (ID)
+     * 업체 조회 (UUID)
      */
     @Transactional
-    public Company getCompany(Long companyId) {
-        log.info("업체 조회: companyId={}", companyId);
+    public Company getCompany(UUID companyUuid) {
+        log.info("업체 조회: companyUuid={}", companyUuid);
 
-        Company company = companyRepository.findByIdAndIsDeletedFalse(companyId)
+        Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
 
         // 조회수 증가
@@ -234,15 +268,15 @@ public class CompanyService {
      * 업체 수정 (업체 소유자용)
      */
     @Transactional
-    public Company updateCompany(String userEmail, Long companyId, CompanyUpdateRequest request) {
-        log.info("업체 수정: companyId={}, userEmail={}", companyId, userEmail);
+    public Company updateCompany(String userEmail, UUID companyUuid, CompanyUpdateRequest request) {
+        log.info("업체 수정: companyUuid={}, userEmail={}", companyUuid, userEmail);
 
         // 사용자 조회
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 업체 조회
-        Company company = companyRepository.findByIdAndIsDeletedFalse(companyId)
+        Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
 
         // 권한 확인 (소유자만)
@@ -261,6 +295,21 @@ public class CompanyService {
         company = updateCompanyFields(company, request);
         company = companyRepository.save(company);
 
+        // 필터 옵션 업데이트 (filterOptionIds가 제공된 경우에만)
+        if (request.getFilterOptionIds() != null) {
+            updateFilterOptions(company, request.getFilterOptionIds());
+        }
+
+        // 이미지 업데이트 (새로운 이미지가 있는 경우에만 처리)
+        if (request.getLogoImageUrl() != null || request.getCoverImageUrl() != null ||
+                (request.getGalleryImageUrls() != null && request.getGalleryImageUrls().length > 0)) {
+            // 기존 이미지 삭제 (soft delete)
+            deleteCompanyImages(company.getId());
+            // 새 이미지 저장
+            processCompanyImages(company, request.getLogoImageUrl(),
+                    request.getCoverImageUrl(), request.getGalleryImageUrls());
+        }
+
         log.info("업체 수정 완료: id={}", company.getId());
 
         return company;
@@ -270,8 +319,8 @@ public class CompanyService {
      * 업체 수정 (관리자용)
      */
     @Transactional
-    public Company updateCompanyByAdmin(String adminEmail, Long companyId, CompanyUpdateRequest request) {
-        log.info("업체 수정 (관리자): companyId={}, adminEmail={}", companyId, adminEmail);
+    public Company updateCompanyByAdmin(String adminEmail, UUID companyUuid, CompanyUpdateRequest request) {
+        log.info("업체 수정 (관리자): companyUuid={}, adminEmail={}", companyUuid, adminEmail);
 
         // 관리자 확인
         User admin = userRepository.findByEmail(adminEmail)
@@ -282,7 +331,7 @@ public class CompanyService {
         }
 
         // 업체 조회
-        Company company = companyRepository.findByIdAndIsDeletedFalse(companyId)
+        Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
 
         // Slug 변경 시 중복 확인
@@ -296,6 +345,21 @@ public class CompanyService {
         company = updateCompanyFields(company, request);
         company = companyRepository.save(company);
 
+        // 필터 옵션 업데이트 (filterOptionIds가 제공된 경우에만)
+        if (request.getFilterOptionIds() != null) {
+            updateFilterOptions(company, request.getFilterOptionIds());
+        }
+
+        // 이미지 업데이트 (새로운 이미지가 있는 경우에만 처리)
+        if (request.getLogoImageUrl() != null || request.getCoverImageUrl() != null ||
+                (request.getGalleryImageUrls() != null && request.getGalleryImageUrls().length > 0)) {
+            // 기존 이미지 삭제 (soft delete)
+            deleteCompanyImages(company.getId());
+            // 새 이미지 저장
+            processCompanyImages(company, request.getLogoImageUrl(),
+                    request.getCoverImageUrl(), request.getGalleryImageUrls());
+        }
+
         log.info("업체 수정 완료 (관리자): id={}", company.getId());
 
         return company;
@@ -305,13 +369,13 @@ public class CompanyService {
      * 업체 삭제 (업체 소유자용) - Soft Delete
      */
     @Transactional
-    public void deleteCompany(String userEmail, Long companyId) {
-        log.info("업체 삭제: companyId={}, userEmail={}", companyId, userEmail);
+    public void deleteCompany(String userEmail, UUID companyUuid) {
+        log.info("업체 삭제: companyUuid={}, userEmail={}", companyUuid, userEmail);
 
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        Company company = companyRepository.findByIdAndIsDeletedFalse(companyId)
+        Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
 
         // 권한 확인
@@ -330,8 +394,8 @@ public class CompanyService {
      * 업체 삭제 (관리자용) - Soft Delete
      */
     @Transactional
-    public void deleteCompanyByAdmin(String adminEmail, Long companyId) {
-        log.info("업체 삭제 (관리자): companyId={}, adminEmail={}", companyId, adminEmail);
+    public void deleteCompanyByAdmin(String adminEmail, UUID companyUuid) {
+        log.info("업체 삭제 (관리자): companyUuid={}, adminEmail={}", companyUuid, adminEmail);
 
         User admin = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -340,7 +404,7 @@ public class CompanyService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        Company company = companyRepository.findByIdAndIsDeletedFalse(companyId)
+        Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
 
         // Soft Delete
@@ -354,8 +418,8 @@ public class CompanyService {
      * 업체 상태 변경 (관리자용)
      */
     @Transactional
-    public Company changeCompanyStatus(String adminEmail, Long companyId, String status) {
-        log.info("업체 상태 변경 (관리자): companyId={}, status={}", companyId, status);
+    public Company changeCompanyStatus(String adminEmail, UUID companyUuid, String status) {
+        log.info("업체 상태 변경 (관리자): companyUuid={}, status={}", companyUuid, status);
 
         User admin = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -364,7 +428,7 @@ public class CompanyService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        Company company = companyRepository.findByIdAndIsDeletedFalse(companyId)
+        Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
 
         company.changeStatus(status);
@@ -379,8 +443,8 @@ public class CompanyService {
      * 업체 인증 (관리자용)
      */
     @Transactional
-    public Company verifyCompany(String adminEmail, Long companyId) {
-        log.info("업체 인증 (관리자): companyId={}", companyId);
+    public Company verifyCompany(String adminEmail, UUID companyUuid) {
+        log.info("업체 인증 (관리자): companyUuid={}", companyUuid);
 
         User admin = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -389,7 +453,7 @@ public class CompanyService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        Company company = companyRepository.findByIdAndIsDeletedFalse(companyId)
+        Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
 
         company.verify();
@@ -405,13 +469,42 @@ public class CompanyService {
      */
     @Transactional(readOnly = true)
     public Page<Company> searchCompanies(CompanySearchRequest searchRequest, Pageable pageable) {
-        log.info("업체 검색: keyword={}, sortBy={}", searchRequest.getKeyword(), searchRequest.getSortBy());
-
-        // Specification 생성
-        Specification<Company> spec = CompanySpecification.search(searchRequest);
+        log.info("업체 검색: keyword={}, filterOptions={}, sortBy={}",
+            searchRequest.getKeyword(),
+            searchRequest.getFilterOptionIds(),
+            searchRequest.getSortBy());
 
         // 정렬 기준 결정
         Pageable sortedPageable = createSortedPageable(pageable, searchRequest.getSortBy());
+
+        // 필터 옵션을 카테고리별로 그룹화
+        java.util.Map<Long, List<Long>> filterOptionsByCategory = new java.util.HashMap<>();
+        if (searchRequest.getFilterOptionIds() != null && !searchRequest.getFilterOptionIds().isEmpty()) {
+            // 필터 옵션 조회
+            List<FilterOption> filterOptions = filterOptionRepository.findByIdIn(searchRequest.getFilterOptionIds());
+
+            // 카테고리별로 그룹화 (카테고리 ID -> 옵션 ID 목록)
+            filterOptionsByCategory = filterOptions.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                    option -> option.getCategory().getId(),
+                    java.util.stream.Collectors.mapping(
+                        FilterOption::getId,
+                        java.util.stream.Collectors.toList()
+                    )
+                ));
+
+            log.info("카테고리별 필터 옵션 그룹화: {}", filterOptionsByCategory);
+        }
+
+        // Specification 조합
+        org.springframework.data.jpa.domain.Specification<Company> spec =
+            com.hip.damoa.domain.company.repository.CompanySpecifications.isNotDeleted()
+                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.isActive())
+                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasKeyword(searchRequest.getKeyword()))
+                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasMinRating(searchRequest.getMinRating()))
+                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasFilterOptions(filterOptionsByCategory))
+                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasServiceAreas(searchRequest.getServiceAreas()))
+                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasTags(searchRequest.getTags()));
 
         // 검색 실행
         return companyRepository.findAll(spec, sortedPageable);
@@ -426,8 +519,9 @@ public class CompanyService {
         List<CompanyImage> images = companyImageRepository
                 .findByCompanyAndIsDeletedFalseOrderByDisplayOrder(company, pageRequest);
 
+        // CompanyImageService를 사용하여 File ID → URL 변환
         return images.stream()
-                .map(CompanyImageDto::from)
+                .map(companyImageService::toDto)
                 .collect(Collectors.toList());
     }
 
@@ -476,7 +570,7 @@ public class CompanyService {
     }
 
     /**
-     * 정렬 기준에 따른 Pageable 생성
+     * 정렬 기준에 따른 Pageable 생성 (JPA Specification용 - 엔티티 필드명 사용)
      */
     private Pageable createSortedPageable(Pageable pageable, String sortBy) {
         if (sortBy == null || sortBy.isEmpty()) {
@@ -510,5 +604,222 @@ public class CompanyService {
         }
 
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+    }
+
+    /**
+     * 업체 이미지 처리
+     * - files 테이블의 entity 정보 업데이트
+     * - company_images 테이블에 이미지 정보 저장
+     */
+    private void processCompanyImages(Company company, String logoImageUrl,
+                                      String coverImageUrl, String[] galleryImageUrls) {
+        log.info("업체 이미지 처리 시작: companyId={}, logo={}, cover={}, gallery={}",
+                company.getId(),
+                logoImageUrl != null,
+                coverImageUrl != null,
+                galleryImageUrls != null ? galleryImageUrls.length : 0);
+
+        int displayOrder = 0;
+        int savedCount = 0;
+
+        // 로고 이미지 처리
+        if (logoImageUrl != null && !logoImageUrl.isEmpty()) {
+            saveCompanyImage(company, logoImageUrl, "LOGO", true, displayOrder++);
+            savedCount++;
+        }
+
+        // 커버 이미지 처리
+        if (coverImageUrl != null && !coverImageUrl.isEmpty()) {
+            saveCompanyImage(company, coverImageUrl, "COVER", false, displayOrder++);
+            savedCount++;
+        }
+
+        // 갤러리 이미지 처리
+        if (galleryImageUrls != null && galleryImageUrls.length > 0) {
+            for (String galleryImageUrl : galleryImageUrls) {
+                if (galleryImageUrl != null && !galleryImageUrl.isEmpty()) {
+                    saveCompanyImage(company, galleryImageUrl, "GALLERY", false, displayOrder++);
+                    savedCount++;
+                }
+            }
+        }
+
+        log.info("업체 이미지 처리 완료: companyId={}, 저장된 이미지 수={}", company.getId(), savedCount);
+    }
+
+    /**
+     * 단일 업체 이미지 저장
+     */
+    private void saveCompanyImage(Company company, String imageUrl, String imageType,
+                                  boolean isPrimary, int displayOrder) {
+        // files 테이블에서 URL로 파일 조회
+        File file = fileRepository.findByFileUrl(imageUrl)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+
+        // files 테이블의 entity 정보 업데이트
+        file.updateEntityInfo("COMPANY_IMAGE", company.getId());
+        fileRepository.save(file);
+
+        // company_images 테이블에 저장
+        CompanyImage companyImage = CompanyImage.builder()
+                .company(company)
+                .fileId(file.getId())  // URL → File ID 변환
+                .imageType(imageType)
+                .isPrimary(isPrimary)
+                .displayOrder(displayOrder)
+                .width(file.getImageMetadata() != null ? (Integer) file.getImageMetadata().get("width") : null)
+                .height(file.getImageMetadata() != null ? (Integer) file.getImageMetadata().get("height") : null)
+                .fileSize(file.getFileSize())
+                .build();
+
+        companyImageRepository.save(companyImage);
+
+        log.info("이미지 저장 완료: companyId={}, imageType={}, displayOrder={}, url={}",
+                company.getId(), imageType, displayOrder, imageUrl);
+    }
+
+    /**
+     * 업체 이미지 삭제 (Soft Delete)
+     */
+    private void deleteCompanyImages(Long companyId) {
+        log.info("기존 업체 이미지 삭제 시작: companyId={}", companyId);
+
+        List<CompanyImage> images = companyImageRepository.findByCompany_IdAndIsDeletedFalse(companyId);
+
+        for (CompanyImage image : images) {
+            image.softDelete();
+            companyImageRepository.save(image);
+        }
+
+        log.info("기존 업체 이미지 삭제 완료: companyId={}, 삭제된 이미지 수={}", companyId, images.size());
+    }
+
+    /**
+     * 사용자가 이미 업체를 보유하고 있는지 확인
+     */
+    @Transactional(readOnly = true)
+    public boolean hasCompany(String userEmail) {
+        return companyRepository.existsByOwnerEmailAndIsDeletedFalse(userEmail);
+    }
+
+    /**
+     * 업체 좋아요 토글 (좋아요 추가 or 취소)
+     */
+    @Transactional
+    public boolean toggleLike(String userEmail, UUID companyUuid) {
+        log.info("업체 좋아요 토글: userEmail={}, companyUuid={}", userEmail, companyUuid);
+
+        // 사용자 조회
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 업체 조회
+        Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
+
+        // 이미 좋아요를 눌렀는지 확인
+        boolean alreadyLiked = companyLikeRepository.existsByCompanyAndUser(company, user);
+
+        if (alreadyLiked) {
+            // 좋아요 취소
+            companyLikeRepository.deleteByCompanyAndUser(company, user);
+            company.decrementLikeCount();
+            companyRepository.save(company);
+            log.info("업체 좋아요 취소: companyUuid={}, userId={}, likeCount={}",
+                    companyUuid, user.getId(), company.getLikeCount());
+            return false;
+        } else {
+            // 좋아요 추가
+            CompanyLike like = CompanyLike.builder()
+                    .company(company)
+                    .user(user)
+                    .build();
+            companyLikeRepository.save(like);
+            company.incrementLikeCount();
+            companyRepository.save(company);
+            log.info("업체 좋아요 추가: companyUuid={}, userId={}, likeCount={}",
+                    companyUuid, user.getId(), company.getLikeCount());
+            return true;
+        }
+    }
+
+    /**
+     * 사용자가 업체에 좋아요를 눌렀는지 확인
+     */
+    @Transactional(readOnly = true)
+    public boolean isLiked(String userEmail, UUID companyUuid) {
+        if (userEmail == null) {
+            return false;
+        }
+
+        User user = userRepository.findByEmail(userEmail).orElse(null);
+        if (user == null) {
+            return false;
+        }
+
+        Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid).orElse(null);
+        if (company == null) {
+            return false;
+        }
+
+        return companyLikeRepository.existsByCompanyAndUser(company, user);
+    }
+
+    /**
+     * 업체의 필터 옵션 조회
+     */
+    @Transactional(readOnly = true)
+    public List<com.hip.damoa.domain.company.web.dto.FilterOptionDto> getCompanyFilterOptions(Company company) {
+        List<CompanyFilterOption> companyFilterOptions = companyFilterOptionRepository.findByCompany(company);
+
+        return companyFilterOptions.stream()
+                .map(cfo -> com.hip.damoa.domain.company.web.dto.FilterOptionDto.from(cfo.getFilterOption()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 필터 옵션 처리 (저장)
+     */
+    private void processFilterOptions(Company company, List<Long> filterOptionIds) {
+        if (filterOptionIds == null || filterOptionIds.isEmpty()) {
+            log.info("필터 옵션 없음: companyId={}", company.getId());
+            return;
+        }
+
+        log.info("필터 옵션 처리 시작: companyId={}, filterOptionCount={}",
+                company.getId(), filterOptionIds.size());
+
+        // 필터 옵션 조회
+        List<FilterOption> filterOptions = filterOptionRepository.findByIdIn(filterOptionIds);
+
+        if (filterOptions.size() != filterOptionIds.size()) {
+            log.warn("일부 필터 옵션을 찾을 수 없음: 요청={}, 조회={}",
+                    filterOptionIds.size(), filterOptions.size());
+        }
+
+        // CompanyFilterOption 엔티티 생성 및 저장
+        List<CompanyFilterOption> companyFilterOptions = filterOptions.stream()
+                .map(filterOption -> CompanyFilterOption.builder()
+                        .company(company)
+                        .filterOption(filterOption)
+                        .build())
+                .collect(Collectors.toList());
+
+        companyFilterOptionRepository.saveAll(companyFilterOptions);
+
+        log.info("필터 옵션 저장 완료: companyId={}, 저장된 옵션 수={}",
+                company.getId(), companyFilterOptions.size());
+    }
+
+    /**
+     * 필터 옵션 업데이트 (기존 것 삭제 후 새로 저장)
+     */
+    private void updateFilterOptions(Company company, List<Long> filterOptionIds) {
+        // 기존 필터 옵션 삭제
+        companyFilterOptionRepository.deleteByCompany(company);
+        log.info("기존 필터 옵션 삭제 완료: companyId={}", company.getId());
+
+        // 새 필터 옵션 저장
+        processFilterOptions(company, filterOptionIds);
     }
 }

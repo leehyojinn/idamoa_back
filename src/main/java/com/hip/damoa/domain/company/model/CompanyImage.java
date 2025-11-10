@@ -22,8 +22,8 @@ public class CompanyImage extends BaseEntity {
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
 
-    @Column(name = "image_url", nullable = false, length = 500)
-    private String imageUrl;
+    @Column(name = "file_id", nullable = false)
+    private Long fileId;  // File ID (FK to files.id)
 
     @Column(name = "image_type", nullable = false, length = 20)
     private String imageType; // LOGO, COVER, GALLERY, INTERIOR, EXTERIOR, PORTFOLIO

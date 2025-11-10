@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -48,6 +49,9 @@ public class CompanyCreateRequest {
 
     private String[] keywords;
 
+    // 필터 옵션 ID 목록 (업체 분류, 전문 영역, 작업 평수 등)
+    private List<Long> filterOptionIds;
+
     @NotBlank(message = "대표 전화번호는 필수입니다")
     @Pattern(regexp = "^\\d{2,3}-\\d{3,4}-\\d{4}$", message = "올바른 전화번호 형식이 아닙니다 (예: 02-1234-5678)")
     private String primaryPhone;
@@ -78,4 +82,13 @@ public class CompanyCreateRequest {
     private BigDecimal latitude;
 
     private BigDecimal longitude;
+
+    // 이미지 URL (S3 presigned URL로 업로드 후 받은 URL)
+    @Size(max = 1000, message = "로고 이미지 URL은 1000자를 초과할 수 없습니다")
+    private String logoImageUrl;
+
+    @Size(max = 1000, message = "커버 이미지 URL은 1000자를 초과할 수 없습니다")
+    private String coverImageUrl;
+
+    private String[] galleryImageUrls;
 }

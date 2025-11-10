@@ -12,9 +12,12 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface FileRepository extends JpaRepository<File, Long> {
+
+    Optional<File> findByUuidAndIsDeletedFalse(UUID uuid);
 
     // Find by uploader
     List<File> findByUploader(User uploader);
@@ -45,6 +48,9 @@ public interface FileRepository extends JpaRepository<File, Long> {
 
     // Find by original filename
     List<File> findByOriginalFilename(String originalFilename);
+
+    // Find by file URL
+    Optional<File> findByFileUrl(String fileUrl);
 
     // Find public files
     @Query("SELECT f FROM File f WHERE f.isPublic = true " +
@@ -99,4 +105,13 @@ public interface FileRepository extends JpaRepository<File, Long> {
 
     // Count public files
     long countByIsPublicTrue();
+
+    // Find orphaned files (entity_id is null = not connected to any entity)
+    // entityType can be set (e.g., "COMPANY_IMAGE") but entityId is null when upload succeeds but entity creation fails
+    @Query("SELECT f FROM File f WHERE " +
+           "f.entityId IS NULL AND " +
+           "f.createdAt < :threshold AND " +
+           "f.isDeleted = false " +
+           "ORDER BY f.createdAt ASC")
+    List<File> findOrphanedFiles(@Param("threshold") LocalDateTime threshold);
 }

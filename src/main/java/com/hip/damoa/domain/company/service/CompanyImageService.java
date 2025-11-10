@@ -7,6 +7,8 @@ import com.hip.damoa.domain.company.model.CompanyImage;
 import com.hip.damoa.domain.company.repository.CompanyImageRepository;
 import com.hip.damoa.domain.company.repository.CompanyRepository;
 import com.hip.damoa.domain.company.web.dto.CompanyImageRequest;
+import com.hip.damoa.domain.file.model.File;
+import com.hip.damoa.domain.file.repository.FileRepository;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * 업체 이미지 관리 서비스
@@ -27,19 +31,20 @@ public class CompanyImageService {
     private final CompanyImageRepository companyImageRepository;
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
+    private final FileRepository fileRepository;
 
     /**
      * 업체 이미지 추가
      */
     @Transactional
-    public CompanyImage addCompanyImage(String userEmail, Long companyId, CompanyImageRequest request) {
-        log.info("업체 이미지 추가: companyId={}, imageType={}", companyId, request.getImageType());
+    public CompanyImage addCompanyImage(String userEmail, UUID companyUuid, CompanyImageRequest request) {
+        log.info("업체 이미지 추가: companyUuid={}, imageType={}", companyUuid, request.getImageType());
 
         // 사용자 및 권한 확인
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        Company company = companyRepository.findByIdAndIsDeletedFalse(companyId)
+        Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
 
         // 소유자 또는 관리자만 가능
@@ -52,10 +57,13 @@ public class CompanyImageService {
             unsetPrimaryImages(company, request.getImageType());
         }
 
+        // URL → File ID 변환
+        Long fileId = convertUrlToFileId(request.getImageUrl());
+
         // 이미지 생성
         CompanyImage image = CompanyImage.builder()
                 .company(company)
-                .imageUrl(request.getImageUrl())
+                .fileId(fileId)
                 .imageType(request.getImageType())
                 .isPrimary(request.getIsPrimary())
                 .displayOrder(request.getDisplayOrder())
@@ -68,7 +76,7 @@ public class CompanyImageService {
 
         image = companyImageRepository.save(image);
 
-        log.info("업체 이미지 추가 완료: id={}", image.getId());
+        log.info("업체 이미지 추가 완료: id={}, fileId={}", image.getId(), fileId);
 
         return image;
     }
@@ -77,8 +85,8 @@ public class CompanyImageService {
      * 업체 이미지 목록 조회
      */
     @Transactional(readOnly = true)
-    public List<CompanyImage> getCompanyImages(Long companyId) {
-        Company company = companyRepository.findByIdAndIsDeletedFalse(companyId)
+    public List<CompanyImage> getCompanyImages(UUID companyUuid) {
+        Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
 
         return companyImageRepository.findByCompanyAndIsDeletedFalseOrderByDisplayOrder(company);
@@ -88,8 +96,8 @@ public class CompanyImageService {
      * 업체 이미지 타입별 조회
      */
     @Transactional(readOnly = true)
-    public List<CompanyImage> getCompanyImagesByType(Long companyId, String imageType) {
-        Company company = companyRepository.findByIdAndIsDeletedFalse(companyId)
+    public List<CompanyImage> getCompanyImagesByType(UUID companyUuid, String imageType) {
+        Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
 
         return companyImageRepository.findByCompanyAndImageTypeAndIsDeletedFalse(company, imageType);
@@ -99,13 +107,13 @@ public class CompanyImageService {
      * 업체 이미지 삭제
      */
     @Transactional
-    public void deleteCompanyImage(String userEmail, Long imageId) {
-        log.info("업체 이미지 삭제: imageId={}", imageId);
+    public void deleteCompanyImage(String userEmail, UUID imageUuid) {
+        log.info("업체 이미지 삭제: imageUuid={}", imageUuid);
 
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        CompanyImage image = companyImageRepository.findById(imageId)
+        CompanyImage image = companyImageRepository.findByUuidAndIsDeletedFalse(imageUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
 
         Company company = image.getCompany();
@@ -119,20 +127,20 @@ public class CompanyImageService {
         image.softDelete();
         companyImageRepository.save(image);
 
-        log.info("업체 이미지 삭제 완료: id={}", imageId);
+        log.info("업체 이미지 삭제 완료: id={}", imageUuid);
     }
 
     /**
      * 대표 이미지 설정
      */
     @Transactional
-    public CompanyImage setPrimaryImage(String userEmail, Long imageId) {
-        log.info("대표 이미지 설정: imageId={}", imageId);
+    public CompanyImage setPrimaryImage(String userEmail, UUID imageUuid) {
+        log.info("대표 이미지 설정: imageUuid={}", imageUuid);
 
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        CompanyImage image = companyImageRepository.findById(imageId)
+        CompanyImage image = companyImageRepository.findByUuidAndIsDeletedFalse(imageUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
 
         Company company = image.getCompany();
@@ -149,7 +157,7 @@ public class CompanyImageService {
         image.setPrimary();
         image = companyImageRepository.save(image);
 
-        log.info("대표 이미지 설정 완료: id={}", imageId);
+        log.info("대표 이미지 설정 완료: id={}", imageUuid);
 
         return image;
     }
@@ -167,5 +175,47 @@ public class CompanyImageService {
                 companyImageRepository.save(img);
             }
         }
+    }
+
+    /**
+     * CompanyImage 엔티티를 Response DTO로 변환 (File ID → URL 변환 포함)
+     */
+    public com.hip.damoa.domain.company.web.dto.CompanyImageResponse toResponse(CompanyImage image) {
+        String imageUrl = convertFileIdToUrl(image.getFileId());
+        return com.hip.damoa.domain.company.web.dto.CompanyImageResponse.from(image, imageUrl);
+    }
+
+    /**
+     * CompanyImage 엔티티를 DTO로 변환 (File ID → URL 변환 포함)
+     */
+    public com.hip.damoa.domain.company.web.dto.CompanyImageDto toDto(CompanyImage image) {
+        String imageUrl = convertFileIdToUrl(image.getFileId());
+        return com.hip.damoa.domain.company.web.dto.CompanyImageDto.from(image, imageUrl);
+    }
+
+    /**
+     * URL을 File ID로 변환
+     */
+    private Long convertUrlToFileId(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+
+        return fileRepository.findByFileUrl(url)
+                .map(File::getId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+    }
+
+    /**
+     * File ID를 URL로 변환
+     */
+    private String convertFileIdToUrl(Long fileId) {
+        if (fileId == null) {
+            return null;
+        }
+
+        return fileRepository.findById(fileId)
+                .map(File::getFileUrl)
+                .orElse(null);
     }
 }

@@ -5,21 +5,25 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 업체 목록 조회 응답 DTO (간단한 정보만)
  */
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class CompanyListResponse {
 
-    private Long id;
+    private Long id;  // 내부 ID (선택적으로 포함)
+    private UUID uuid;  // 외부 노출용 UUID
     private String name;
     private String slug;
     private String description;
@@ -36,6 +40,7 @@ public class CompanyListResponse {
     private Boolean isPremium;
     private String premiumTier;
     private List<CompanyImageDto> images;
+    private Boolean isLiked; // 현재 사용자의 좋아요 여부
     private LocalDateTime createdAt;
 
     /**
@@ -44,6 +49,7 @@ public class CompanyListResponse {
     public static CompanyListResponse from(Company company) {
         return CompanyListResponse.builder()
                 .id(company.getId())
+                .uuid(company.getUuid())
                 .name(company.getName())
                 .slug(company.getSlug())
                 .description(company.getDescription())
@@ -69,6 +75,7 @@ public class CompanyListResponse {
     public static CompanyListResponse from(Company company, List<CompanyImageDto> images) {
         return CompanyListResponse.builder()
                 .id(company.getId())
+                .uuid(company.getUuid())
                 .name(company.getName())
                 .slug(company.getSlug())
                 .description(company.getDescription())

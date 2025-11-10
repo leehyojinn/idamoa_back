@@ -18,7 +18,7 @@ public class CompanyImageRequest {
 
     @NotBlank(message = "이미지 URL은 필수입니다")
     @Size(max = 500, message = "이미지 URL은 500자를 초과할 수 없습니다")
-    private String imageUrl;
+    private String imageUrl;  // API에서 URL 받음 → Service에서 File ID로 변환
 
     @NotBlank(message = "이미지 타입은 필수입니다")
     private String imageType; // LOGO, COVER, GALLERY, INTERIOR, EXTERIOR, PORTFOLIO

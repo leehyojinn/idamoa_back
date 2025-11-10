@@ -26,9 +26,13 @@ public class CompanyImageDto {
      * Entity → DTO 변환
      */
     public static CompanyImageDto from(CompanyImage image) {
+        return from(image, null);
+    }
+
+    public static CompanyImageDto from(CompanyImage image, String imageUrl) {
         return CompanyImageDto.builder()
                 .id(image.getId())
-                .imageUrl(image.getImageUrl())
+                .imageUrl(imageUrl)  // File ID → URL 변환된 값 사용
                 .imageType(image.getImageType())
                 .isPrimary(image.getIsPrimary())
                 .displayOrder(image.getDisplayOrder())

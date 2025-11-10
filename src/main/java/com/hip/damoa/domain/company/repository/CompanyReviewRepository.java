@@ -10,10 +10,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface CompanyReviewRepository extends JpaRepository<CompanyReview, Long> {
+
+    Optional<CompanyReview> findByUuidAndIsDeletedFalse(UUID uuid);
 
     Page<CompanyReview> findByCompanyAndIsDeletedFalse(Company company, Pageable pageable);
 
@@ -25,4 +29,9 @@ public interface CompanyReviewRepository extends JpaRepository<CompanyReview, Lo
 
     @Query("SELECT AVG(r.rating) FROM CompanyReview r WHERE r.company = :company AND r.isDeleted = false")
     Double getAverageRatingByCompany(@Param("company") Company company);
+
+    // 리뷰 조회 (status 필터링)
+    Page<CompanyReview> findByCompanyAndStatusOrderByCreatedAtDesc(Company company, String status, Pageable pageable);
+
+    List<CompanyReview> findByCompanyAndStatus(Company company, String status);
 }

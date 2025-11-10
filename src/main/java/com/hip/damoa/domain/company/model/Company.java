@@ -2,6 +2,7 @@ package com.hip.damoa.domain.company.model;
 
 import com.hip.damoa.domain.common.BaseEntity;
 import com.hip.damoa.domain.user.model.User;
+import io.hypersistence.utils.hibernate.type.array.LongArrayType;
 import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
@@ -10,6 +11,8 @@ import org.hibernate.annotations.Type;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -154,6 +157,14 @@ public class Company extends BaseEntity {
     @Builder.Default
     private BigDecimal premiumMonthlyAmount = BigDecimal.ZERO;
 
+    @Type(LongArrayType.class)
+    @Column(name = "images", columnDefinition = "bigint[]")
+    private Long[] images;  // File ID 배열
+
+    @OneToMany(mappedBy = "company", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<CompanyFilterOption> filterOptions = new ArrayList<>();
+
     // ===== Business Methods =====
 
     /**
@@ -264,5 +275,29 @@ public class Company extends BaseEntity {
      */
     public boolean hasPremiumTier() {
         return !"NONE".equals(this.premiumTier);
+    }
+
+    /**
+     * 이미지 업데이트
+     */
+    public void updateImages(Long[] images) {
+        this.images = images;
+    }
+
+    /**
+     * 필터 옵션 업데이트 (기존 것을 모두 제거하고 새로 추가)
+     */
+    public void updateFilterOptions(List<CompanyFilterOption> newFilterOptions) {
+        this.filterOptions.clear();
+        if (newFilterOptions != null) {
+            this.filterOptions.addAll(newFilterOptions);
+        }
+    }
+
+    /**
+     * 필터 옵션 추가
+     */
+    public void addFilterOption(CompanyFilterOption filterOption) {
+        this.filterOptions.add(filterOption);
     }
 }

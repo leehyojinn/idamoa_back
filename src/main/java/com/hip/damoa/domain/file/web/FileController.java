@@ -18,6 +18,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -89,12 +90,12 @@ public class FileController {
      * 파일 삭제
      */
     @Operation(summary = "파일 삭제", description = "파일을 삭제합니다 (Soft Delete)")
-    @DeleteMapping("/{fileId}")
+    @DeleteMapping("/{fileUuid}")
     public ApiResponse<Void> deleteFile(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long fileId) {
+            @PathVariable UUID fileUuid) {
 
-        fileUploadService.deleteFile(userDetails.getUsername(), fileId);
+        fileUploadService.deleteFile(userDetails.getUsername(), fileUuid);
         return ApiResponse.success();
     }
 }

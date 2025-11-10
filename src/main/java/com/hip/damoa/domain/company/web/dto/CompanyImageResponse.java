@@ -31,10 +31,14 @@ public class CompanyImageResponse {
     private LocalDateTime createdAt;
 
     public static CompanyImageResponse from(CompanyImage image) {
+        return from(image, null);
+    }
+
+    public static CompanyImageResponse from(CompanyImage image, String imageUrl) {
         return CompanyImageResponse.builder()
                 .id(image.getId())
                 .companyId(image.getCompany().getId())
-                .imageUrl(image.getImageUrl())
+                .imageUrl(imageUrl)  // File ID → URL 변환된 값 사용
                 .imageType(image.getImageType())
                 .isPrimary(image.getIsPrimary())
                 .displayOrder(image.getDisplayOrder())
