@@ -59,7 +59,7 @@ jobs:
       - name: Extract metadata
         id: meta
         run: |
-          VERSION=$(grep "^version" build.gradle | cut -d "'" -f 2 | cut -d '"' -f 2)
+          VERSION=$(grep "version = " build.gradle.kts | head -n 1 | cut -d '"' -f 2)
           TIMESTAMP=$(date +%Y%m%d.%H%M%S)
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
