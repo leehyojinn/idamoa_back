@@ -12,6 +12,8 @@ spring:
       hibernate:
         format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        type:
+          preferred_array_jdbc_type: ARRAY   # 기대 타입을 ARRAY로
         jdbc:
           lob:
             non_contextual_creation: true
