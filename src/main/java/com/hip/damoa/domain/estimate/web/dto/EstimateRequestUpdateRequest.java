@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -54,4 +55,23 @@ public class EstimateRequestUpdateRequest {
 
     // Visibility
     private Boolean isPublic;
+
+    // ===== V26 fields (범용 필드) =====
+    @Size(max = 200, message = "사업장명은 200자를 초과할 수 없습니다")
+    private String clientName;
+
+    @Size(max = 100, message = "업종은 100자를 초과할 수 없습니다")
+    private String businessType;
+
+    @DecimalMin(value = "0.0", inclusive = false, message = "평수는 0보다 커야 합니다")
+    private BigDecimal areaPyeong;
+
+    @Size(max = 100, message = "담당자 이름은 100자를 초과할 수 없습니다")
+    private String contactName;
+
+    @Size(max = 20, message = "연락처는 20자를 초과할 수 없습니다")
+    private String contactPhone;
+
+    // 첨부파일 (V30: 조인 테이블)
+    private List<AttachmentRequest> attachments;
 }

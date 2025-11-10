@@ -1,15 +1,15 @@
 package com.hip.damoa.domain.estimate.web.dto;
 
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 @Getter
 @NoArgsConstructor
@@ -17,34 +17,25 @@ import java.math.BigDecimal;
 @Builder
 public class ProposalUpdateRequest {
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "제안 금액은 0 이상이어야 합니다")
-    private BigDecimal proposalAmount;
+    @Size(max = 200, message = "제안 제목은 200자를 초과할 수 없습니다")
+    private String title;
 
-    @Min(value = 1, message = "예상 기간은 최소 1일 이상이어야 합니다")
-    private Integer estimatedDurationDays;
+    private String description;
 
-    private String proposalContent;
+    @DecimalMin(value = "0.0", inclusive = true, message = "제안 가격은 0 이상이어야 합니다")
+    private BigDecimal price;
 
-    private String coverLetter;
+    // 선택 필드
+    private LocalDate validUntil;  // 제안 유효기간
 
-    // Company info
-    @Size(max = 100, message = "담당자 이름은 100자를 초과할 수 없습니다")
-    private String contactPerson;
+    // 첨부파일 (V30: 조인 테이블)
+    private List<AttachmentRequest> attachments; // 첨부파일 목록
 
-    @Size(max = 20, message = "연락처는 20자를 초과할 수 없습니다")
-    private String contactPhone;
+    // JSONB 필드 (선택)
+    private Map<String, Object> pricingDetails;  // 가격 상세 정보
+    private Map<String, Object> timeline;  // 일정 정보
 
-    @Email(message = "유효한 이메일 주소를 입력해주세요")
-    @Size(max = 100, message = "이메일은 100자를 초과할 수 없습니다")
-    private String contactEmail;
-
-    // Portfolio
-    private String portfolioDescription;
-    private String previousProjects;
-
-    private java.util.List<String> portfolioLinks;
-
-    private java.time.LocalDate proposedStartDate;
-
-    private java.time.LocalDate proposedEndDate;
+    // HTML에서 받는 필드 (간단한 일정용)
+    private LocalDate proposedStartDate;
+    private LocalDate proposedEndDate;
 }

@@ -13,12 +13,16 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface EstimateProposalRepository extends JpaRepository<EstimateProposal, Long> {
 
     // Find by ID (not deleted)
     Optional<EstimateProposal> findByIdAndIsDeletedFalse(Long id);
+
+    // Find by UUID (not deleted)
+    Optional<EstimateProposal> findByUuidAndIsDeletedFalse(UUID uuid);
 
     // Find by estimate request
     List<EstimateProposal> findByRequestAndIsDeletedFalse(EstimateRequest request);
@@ -74,4 +78,18 @@ public interface EstimateProposalRepository extends JpaRepository<EstimatePropos
     Page<EstimateProposal> findByCompany(Company company, Pageable pageable);
 
     List<EstimateProposal> findByRequest(EstimateRequest request);
+
+    // WITHDRAWN 상태를 제외한 제안 체크 및 조회
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM EstimateProposal p " +
+           "WHERE p.request = :request AND p.company = :company " +
+           "AND p.isDeleted = false AND p.status != 'WITHDRAWN'")
+    boolean existsByRequestAndCompanyAndStatusNotWithdrawn(
+        @Param("request") EstimateRequest request,
+        @Param("company") Company company
+    );
+
+    @Query("SELECT p FROM EstimateProposal p WHERE p.request = :request " +
+           "AND p.isDeleted = false AND p.status != 'WITHDRAWN' " +
+           "ORDER BY p.createdAt DESC")
+    List<EstimateProposal> findByRequestAndStatusNotWithdrawn(@Param("request") EstimateRequest request);
 }

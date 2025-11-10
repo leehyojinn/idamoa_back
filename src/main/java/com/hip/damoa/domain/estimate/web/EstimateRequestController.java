@@ -8,6 +8,9 @@ import com.hip.damoa.domain.estimate.web.dto.EstimateRequestListResponse;
 import com.hip.damoa.domain.estimate.web.dto.EstimateRequestResponse;
 import com.hip.damoa.domain.estimate.web.dto.EstimateRequestUpdateRequest;
 import com.hip.damoa.domain.estimate.web.dto.*;
+import com.hip.damoa.domain.file.model.File;
+import com.hip.damoa.domain.file.repository.FileRepository;
+import com.hip.damoa.domain.file.web.dto.FileUploadResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -22,6 +25,11 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 /**
  * 견적 요청 REST API (사용자용)
  */
@@ -29,10 +37,22 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "EstimateRequest", description = "견적 요청 API")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/estimate-requests")
+@RequestMapping("/api/estimates/requests")
 public class EstimateRequestController {
 
     private final EstimateRequestService estimateRequestService;
+    private final FileRepository fileRepository;
+
+    /**
+     * 견적 요청에 첨부파일 정보 추가 (V30: 조인 테이블 방식)
+     */
+    private EstimateRequestResponse enrichWithFiles(EstimateRequest estimateRequest) {
+        EstimateRequestResponse response = EstimateRequestResponse.from(estimateRequest);
+        // Service의 getAttachmentResponses 호출하여 첨부파일 목록 설정
+        List<AttachmentResponse> attachments = estimateRequestService.getAttachmentResponses(estimateRequest);
+        response.setAttachments(attachments);
+        return response;
+    }
 
     /**
      * 견적 요청 작성
@@ -47,51 +67,51 @@ public class EstimateRequestController {
         EstimateRequest estimateRequest = estimateRequestService.createEstimateRequest(
                 userDetails.getUsername(), request);
 
-        return ApiResponse.success(EstimateRequestResponse.from(estimateRequest));
+        return ApiResponse.success(enrichWithFiles(estimateRequest));
     }
 
     /**
      * 견적 요청 수정
      */
     @Operation(summary = "견적 요청 수정", description = "내 견적 요청을 수정합니다 (DRAFT 상태만)")
-    @PutMapping("/{requestId}")
+    @PutMapping("/{requestUuid}")
     public ApiResponse<EstimateRequestResponse> updateEstimateRequest(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long requestId,
+            @PathVariable UUID requestUuid,
             @Valid @RequestBody EstimateRequestUpdateRequest request) {
 
-        EstimateRequest estimateRequest = estimateRequestService.updateEstimateRequest(
-                userDetails.getUsername(), requestId, request);
+        EstimateRequest estimateRequest = estimateRequestService.updateEstimateRequestByUuid(
+                userDetails.getUsername(), requestUuid, request);
 
-        return ApiResponse.success(EstimateRequestResponse.from(estimateRequest));
+        return ApiResponse.success(enrichWithFiles(estimateRequest));
     }
 
     /**
      * 견적 요청 발행 (DRAFT → PUBLISHED)
      */
     @Operation(summary = "견적 요청 발행", description = "견적 요청을 발행하여 업체들이 볼 수 있게 합니다")
-    @PostMapping("/{requestId}/publish")
+    @PostMapping("/{requestUuid}/publish")
     public ApiResponse<EstimateRequestResponse> publishEstimateRequest(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long requestId) {
+            @PathVariable UUID requestUuid) {
 
-        EstimateRequest estimateRequest = estimateRequestService.publishEstimateRequest(
-                userDetails.getUsername(), requestId);
+        EstimateRequest estimateRequest = estimateRequestService.publishEstimateRequestByUuid(
+                userDetails.getUsername(), requestUuid);
 
-        return ApiResponse.success(EstimateRequestResponse.from(estimateRequest));
+        return ApiResponse.success(enrichWithFiles(estimateRequest));
     }
 
     /**
      * 견적 요청 상세 조회
      */
     @Operation(summary = "견적 요청 상세 조회", description = "견적 요청 상세 정보를 조회합니다 (조회수 증가)")
-    @GetMapping("/{requestId}")
+    @GetMapping("/{requestUuid}")
     public ApiResponse<EstimateRequestResponse> getEstimateRequest(
-            @PathVariable Long requestId) {
+            @PathVariable UUID requestUuid) {
 
-        EstimateRequest estimateRequest = estimateRequestService.getEstimateRequest(requestId);
+        EstimateRequest estimateRequest = estimateRequestService.getEstimateRequestByUuid(requestUuid);
 
-        return ApiResponse.success(EstimateRequestResponse.from(estimateRequest));
+        return ApiResponse.success(enrichWithFiles(estimateRequest));
     }
 
     /**
@@ -118,7 +138,7 @@ public class EstimateRequestController {
     @Operation(summary = "공개 견적 요청 목록", description = "공개된 견적 요청 목록을 조회합니다")
     @GetMapping
     public ApiResponse<Page<EstimateRequestListResponse>> getPublicEstimateRequests(
-            @PageableDefault(size = 20, sort = "publishedAt", direction = Sort.Direction.DESC)
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
 
         Page<EstimateRequest> requests = estimateRequestService.getPublicEstimateRequests(pageable);
@@ -132,12 +152,12 @@ public class EstimateRequestController {
      * 견적 요청 삭제
      */
     @Operation(summary = "견적 요청 삭제", description = "내 견적 요청을 삭제합니다 (Soft Delete)")
-    @DeleteMapping("/{requestId}")
+    @DeleteMapping("/{requestUuid}")
     public ApiResponse<Void> deleteEstimateRequest(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long requestId) {
+            @PathVariable UUID requestUuid) {
 
-        estimateRequestService.deleteEstimateRequest(userDetails.getUsername(), requestId);
+        estimateRequestService.deleteEstimateRequestByUuid(userDetails.getUsername(), requestUuid);
 
         return ApiResponse.success();
     }
