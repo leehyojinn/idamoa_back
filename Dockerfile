@@ -4,7 +4,7 @@ FROM gradle:8.5-jdk17-alpine AS builder
 WORKDIR /app
 
 # Gradle 캐시 최적화를 위해 의존성 먼저 다운로드
-COPY build.gradle settings.gradle gradlew gradlew.bat ./
+COPY build.gradle.kts settings.gradle.kts gradlew gradlew.bat ./
 COPY gradle ./gradle
 RUN gradle dependencies --no-daemon || true
 
