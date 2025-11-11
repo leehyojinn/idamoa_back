@@ -26,13 +26,85 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: 견적 요청/제안 API CRUD 구현 완료
-**마지막 업데이트**: 2025-11-07
-**다음 우선순위**: API 통합 테스트 및 프론트엔드 연동
+**프로젝트 단계**: 사용자 상태 관리 구현 완료
+**마지막 업데이트**: 2025-11-11
+**다음 우선순위**: 사용자 프로필 완성 및 활성화 테스트
 
 ---
 
 ## 📝 작업 로그
+
+### 2025-11-11
+
+#### ✅ 완료 (Completed)
+
+**[USER-001] 사용자 상태(status) 필드 추가 및 활성화 로직 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-11 (약 1시간)
+- **작업 내용**:
+  - User 엔티티에 status 필드 매핑 추가
+  - UserStatus enum 생성 (타입 안정성 및 코드 가독성 향상)
+  - 사용자 활성화/비활성화/정지 비즈니스 메서드 구현
+  - 프로필 완성 시 자동 활성화 로직 추가
+  - PostgreSQL 배열 타입 어노테이션 표준화 (Hypersistence Utils → Hibernate 6.x)
+
+**생성/수정 파일**:
+1. `src/main/java/com/hip/damoa/domain/user/model/UserStatus.java` (신규)
+2. `src/main/java/com/hip/damoa/domain/user/model/User.java` (수정)
+3. `src/main/java/com/hip/damoa/domain/user/service/ProfileService.java` (수정)
+
+**주요 변경사항**:
+
+1. **UserStatus.java (신규 생성)**:
+   ```java
+   public enum UserStatus {
+       PENDING,    // 대기 중 (프로필 미완성)
+       ACTIVE,     // 활성화 (정상 사용)
+       INACTIVE,   // 비활성화 (탈퇴 등)
+       SUSPENDED,  // 정지 (이용 제한)
+       DELETED     // 삭제 (완전 삭제)
+   }
+   ```
+   - 타입 안정성 (Type Safety) 보장
+   - 컴파일 타임 체크
+   - IDE 자동완성 지원
+
+2. **User.java 변경사항**:
+   - 임포트 변경: `io.hypersistence.utils.hibernate.type.array.StringArrayType` → `org.hibernate.annotations.JdbcTypeCode` + `org.hibernate.type.SqlTypes`
+   - roles 필드 어노테이션: `@Type(StringArrayType.class)` → `@JdbcTypeCode(SqlTypes.ARRAY)`
+   - status 필드를 String → UserStatus enum으로 변경:
+     ```java
+     @Enumerated(EnumType.STRING)
+     @Column(name = "status", length = 50, nullable = false)
+     @Builder.Default
+     private UserStatus status = UserStatus.PENDING;
+     ```
+   - 비즈니스 메서드 추가:
+     - `activate()`: 사용자 활성화 (UserStatus.ACTIVE 설정)
+     - `deactivate()`: 사용자 비활성화 (UserStatus.INACTIVE)
+     - `suspend()`: 사용자 정지 (UserStatus.SUSPENDED)
+     - `isActive()`, `isPending()`, `isSuspended()`: enum 비교로 상태 확인
+
+3. **ProfileService.java 변경사항**:
+   - `createUserProfile()` 메서드:
+     - `user.completeProfile()` 후 `user.activate()` 호출 추가
+     - 로그 메시지에 status 추가
+   - `createCompanyProfile()` 메서드:
+     - `user.completeProfile()` 후 `user.activate()` 호출 추가
+     - 로그 메시지에 status 추가
+
+**문제 해결**:
+- ❌ **기존 문제**: 소셜 로그인/회원가입 시 users 테이블에 status가 'PENDING'으로 저장되고, 프로필 완성 후에도 'PENDING' 상태 유지
+- ✅ **해결**: User 엔티티에 status 필드 매핑 추가 및 프로필 완성 시 자동 활성화 로직 구현
+- ✅ **표준화**: Hypersistence Utils 대신 Hibernate 6.x 표준 어노테이션 사용 (`@JdbcTypeCode(SqlTypes.ARRAY)`)
+
+**DB 스키마 (기존 V1 마이그레이션)**:
+```sql
+status VARCHAR(50) DEFAULT 'PENDING' NOT NULL
+CHECK (status IN ('PENDING', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'DELETED'))
+```
+
+**빌드 결과**: ✅ BUILD SUCCESSFUL
 
 ### 2025-11-10
 
@@ -2048,3 +2120,97 @@ Database
 - Estimate: "Estimate request not found" → "견적 요청을 찾을 수 없습니다"
 - Payment: "Payment not found" → "결제 정보를 찾을 수 없습니다"
 - 기타 모든 도메인의 에러 메시지 한글화
+
+---
+
+**[EMAIL-001] Gmail API 기반 이메일 인증 시스템 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-11 (약 2시간)
+- **작업 내용**:
+  - Gmail API (Service Account + Domain-wide Delegation) 방식으로 이메일 발송 구현
+  - DB 템플릿 시스템 기반 이메일 내용 관리 (notification_templates 테이블)
+  - Redis + PostgreSQL 이중 저장 전략 (OTP는 Redis, 이력은 PostgreSQL)
+  - 비동기 로깅 시스템 구현 (notification_logs 테이블)
+  - SMTP 방식 제거 (Gmail API로 완전 전환)
+
+**생성/수정 파일**:
+1. `build.gradle.kts` (Gmail API 의존성 추가)
+2. `src/main/resources/application.yml` (Gmail API 설정, SMTP 제거)
+3. `src/main/java/com/hip/damoa/config/notification/GmailConfig.java` (신규)
+4. `src/main/java/com/hip/damoa/config/notification/EmailConfig.java` (SMTP 제거)
+5. `src/main/java/com/hip/damoa/infra/notification/GmailService.java` (신규)
+6. `src/main/java/com/hip/damoa/domain/notification/service/TemplateService.java` (신규)
+7. `src/main/java/com/hip/damoa/domain/notification/service/NotificationLogService.java` (신규)
+8. `src/main/java/com/hip/damoa/domain/notification/service/EmailVerificationService.java` (신규)
+9. `src/main/java/com/hip/damoa/domain/user/service/VerificationService.java` (수정)
+10. `src/main/resources/db/migration/V2__Add_email_verification_template.sql` (신규)
+11. Entity 수정:
+    - `EmailVerification.java` (verificationCode, requestIp, verifiedIp 필드 추가)
+    - `Notification.java` (userId, notificationType, templateId, templateData, isSent, errorMessage 필드 추가)
+    - `NotificationTemplate.java` (필드명 수정: templateCode→code, subject→titleTemplate, content→contentTemplate)
+    - `NotificationLog.java` (channel, recipient, providerMessageId, errorCode 필드 추가)
+12. Repository 수정:
+    - `EmailVerificationRepository.java` (findByEmailAndVerificationCodeAndStatus, deleteByExpiresAtBefore 추가)
+    - `NotificationTemplateRepository.java` (findByCodeAndChannel 추가)
+13. `ErrorCode.java` (TEMPLATE_NOT_FOUND 추가)
+14. `VerificationConfirmRequest.java` (email 필드 추가)
+15. `AuthController.java` (verifyEmailCode 호출 시 email 파라미터 추가)
+
+**주요 변경사항**:
+
+1. **Gmail API 통합**:
+   - Service Account + Domain-wide Delegation 방식
+   - HTML 이메일 발송 지원
+   - application.yml에서 enable/disable 가능
+   - 조건부 Bean 등록 (@ConditionalOnProperty)
+
+2. **DB 템플릿 시스템**:
+   - notification_templates 테이블에서 템플릿 조회
+   - {{variable}} 패턴으로 변수 치환
+   - 템플릿 캐싱 적용 (@Cacheable)
+   - V2 마이그레이션으로 2개 템플릿 추가:
+     - EMAIL_VERIFICATION_SIGNUP (회원가입 인증)
+     - EMAIL_VERIFICATION_PASSWORD_RESET (비밀번호 재설정)
+
+3. **이중 저장 전략**:
+   - **Redis**: OTP 임시 저장 (TTL 15분)
+   - **PostgreSQL**: 인증 이력 영구 보관 (감사 로그)
+   - 비동기 DB 저장으로 성능 최적화
+
+4. **로깅 시스템**:
+   - 모든 이메일 발송을 notification_logs에 기록
+   - 발송 성공/실패 상태 추적
+   - provider_message_id로 Gmail API 메시지 추적 가능
+
+5. **엔티티 필드 표준화**:
+   - NotificationTemplate: DB 스키마에 맞춰 필드명 수정 (code, titleTemplate, contentTemplate)
+   - 모든 엔티티에 필요한 필드 추가 (userId, channel, errorCode 등)
+
+**빌드 상태**: ✅ 컴파일 성공
+
+**해결한 빌드 이슈**:
+1. **Entity 필드 누락**:
+   - EmailVerification에 verificationCode, requestIp, verifiedIp 추가
+   - Notification에 userId, notificationType, templateId, templateData, isSent 추가
+   - NotificationLog에 channel, recipient, providerMessageId, errorCode 추가
+
+2. **Repository 메서드 누락**:
+   - EmailVerificationRepository: findByEmailAndVerificationCodeAndStatus 추가
+   - NotificationTemplateRepository: findByCodeAndChannel 추가
+
+3. **Logger 변수명 충돌**:
+   - NotificationLogService에서 엔티티 변수명을 `log` → `logEntry`로 변경 (@Slf4j의 log와 충돌 방지)
+
+4. **GmailService 의존성 주입 문제**:
+   - @RequiredArgsConstructor → 수동 생성자 + @Autowired(required = false)
+   - Gmail API 비활성화 상태에서도 컴파일 가능
+
+5. **ErrorCode 누락**: TEMPLATE_NOT_FOUND 추가
+
+6. **DTO 필드 누락**: VerificationConfirmRequest에 email 필드 추가
+
+**다음 단계**:
+- Gmail Service Account 키 파일 생성 및 설정
+- Domain-wide Delegation 설정
+- 실제 이메일 발송 테스트
+- 프론트엔드 연동 (이메일 인증 UI)

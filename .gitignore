@@ -54,3 +54,9 @@ nul
 
 ### Build Output ###
 *.log
+# Gmail Service Account 키 파일
+secrets/
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json

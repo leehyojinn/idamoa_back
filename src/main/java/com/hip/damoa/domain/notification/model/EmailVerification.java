@@ -28,6 +28,9 @@ public class EmailVerification extends BaseEntity {
     @Column(name = "verification_token", unique = true, nullable = false)
     private String verificationToken;
 
+    @Column(name = "verification_code", length = 10)
+    private String verificationCode;
+
     @Column(name = "purpose", nullable = false, length = 50)
     private String purpose; // SIGNUP, FIND_PASSWORD, CHANGE_EMAIL
 
@@ -40,6 +43,12 @@ public class EmailVerification extends BaseEntity {
 
     @Column(name = "verified_at")
     private LocalDateTime verifiedAt;
+
+    @Column(name = "request_ip", length = 45)
+    private String requestIp;
+
+    @Column(name = "verified_ip", length = 45)
+    private String verifiedIp;
 
     @PrePersist
     protected void generateToken() {
@@ -74,5 +83,11 @@ public class EmailVerification extends BaseEntity {
         this.verificationToken = UUID.randomUUID().toString();
         this.expiresAt = LocalDateTime.now().plusHours(24);
         this.status = "PENDING";
+    }
+
+    public void markAsVerified(String verifiedIp) {
+        this.status = "VERIFIED";
+        this.verifiedAt = LocalDateTime.now();
+        this.verifiedIp = verifiedIp;
     }
 }

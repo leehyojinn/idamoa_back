@@ -1,12 +1,12 @@
 package com.hip.damoa.domain.notification.model;
 
-import com.hip.damoa.domain.common.BaseEntity;
+import com.hip.damoa.domain.common.BaseTimeEntity;
 import com.hip.damoa.domain.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 
 /**
- * 알림 설정
+ * 알림 설정 (업데이트만 수행, 삭제하지 않음)
  */
 @Entity
 @Getter
@@ -16,7 +16,7 @@ import lombok.*;
 @Table(name = "notification_settings", indexes = {
     @Index(name = "idx_notification_settings_user_id", columnList = "user_id")
 })
-public class NotificationSettings extends BaseEntity {
+public class NotificationSettings extends BaseTimeEntity {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)

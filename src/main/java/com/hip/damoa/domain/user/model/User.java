@@ -1,10 +1,10 @@
 package com.hip.damoa.domain.user.model;
 
 import com.hip.damoa.domain.common.BaseEntity;
-import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -32,10 +32,15 @@ User extends BaseEntity implements UserDetails {
     @Column(name = "password", length = 255)
     private String password; // nullable for social login only users
 
-    @Type(StringArrayType.class)
     @Column(name = "roles", columnDefinition = "text[]", nullable = false)
+    @JdbcTypeCode(SqlTypes.ARRAY)
     @Builder.Default
     private String[] roles = new String[]{"USER"};
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 50, nullable = false)
+    @Builder.Default
+    private UserStatus status = UserStatus.PENDING;
 
     // 인증 상태
     @Column(name = "email_verified", nullable = false)
@@ -272,5 +277,41 @@ User extends BaseEntity implements UserDetails {
      */
     public void setRoles(String[] roles) {
         this.roles = roles;
+    }
+
+    /**
+     * 사용자 활성화 (PENDING → ACTIVE)
+     */
+    public void activate() {
+        this.status = UserStatus.ACTIVE;
+    }
+
+    /**
+     * 사용자 비활성화 (탈퇴 등)
+     */
+    public void deactivate() {
+        this.status = UserStatus.INACTIVE;
+    }
+
+    /**
+     * 사용자 정지 (이용 제한)
+     */
+    public void suspend() {
+        this.status = UserStatus.SUSPENDED;
+    }
+
+    /**
+     * 사용자 상태 확인
+     */
+    public boolean isActive() {
+        return UserStatus.ACTIVE == this.status;
+    }
+
+    public boolean isPending() {
+        return UserStatus.PENDING == this.status;
+    }
+
+    public boolean isSuspended() {
+        return UserStatus.SUSPENDED == this.status;
     }
 }

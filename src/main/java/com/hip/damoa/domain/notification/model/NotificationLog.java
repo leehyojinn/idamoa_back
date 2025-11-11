@@ -1,6 +1,6 @@
 package com.hip.damoa.domain.notification.model;
 
-import com.hip.damoa.domain.common.BaseEntity;
+import com.hip.damoa.domain.common.BaseTimeEntity;
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * 알림 발송 로그
+ * 알림 발송 로그 (감사 로그 - 절대 삭제하면 안됨)
  */
 @Entity
 @Getter
@@ -22,17 +22,29 @@ import java.util.Map;
     @Index(name = "idx_notification_logs_status", columnList = "status"),
     @Index(name = "idx_notification_logs_created_at", columnList = "created_at")
 })
-public class NotificationLog extends BaseEntity {
+public class NotificationLog extends BaseTimeEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "notification_id", nullable = false)
     private Notification notification;
 
+    @Column(name = "channel", length = 20)
+    private String channel; // EMAIL, SMS, PUSH, KAKAO
+
+    @Column(name = "recipient", length = 255)
+    private String recipient;
+
     @Column(name = "provider", length = 50)
-    private String provider; // AWS_SES, SENS, FCM, KAKAO
+    private String provider; // GMAIL_API, AWS_SES, SENS, FCM, KAKAO
+
+    @Column(name = "provider_message_id", length = 255)
+    private String providerMessageId;
 
     @Column(name = "status", nullable = false, length = 20)
     private String status; // PENDING, SENT, FAILED, DELIVERED
+
+    @Column(name = "error_code", length = 50)
+    private String errorCode;
 
     @Type(JsonBinaryType.class)
     @Column(name = "request_data", columnDefinition = "jsonb")

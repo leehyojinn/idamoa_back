@@ -14,11 +14,14 @@ import java.util.Optional;
 @Repository
 public interface NotificationTemplateRepository extends JpaRepository<NotificationTemplate, Long> {
 
-    // Find by template code
-    Optional<NotificationTemplate> findByTemplateCode(String templateCode);
+    // Find by code
+    Optional<NotificationTemplate> findByCode(String code);
 
-    // Find by template name
-    Optional<NotificationTemplate> findByTemplateName(String templateName);
+    // Find by code and channel
+    Optional<NotificationTemplate> findByCodeAndChannel(String code, String channel);
+
+    // Find by name
+    Optional<NotificationTemplate> findByName(String name);
 
     // Find by channel
     List<NotificationTemplate> findByChannel(String channel);
@@ -27,11 +30,11 @@ public interface NotificationTemplateRepository extends JpaRepository<Notificati
 
     // Find active templates
     @Query("SELECT t FROM NotificationTemplate t WHERE t.isActive = true " +
-           "ORDER BY t.templateName ASC")
+           "ORDER BY t.name ASC")
     List<NotificationTemplate> findActiveTemplates();
 
     @Query("SELECT t FROM NotificationTemplate t WHERE t.isActive = true " +
-           "ORDER BY t.templateName ASC")
+           "ORDER BY t.name ASC")
     Page<NotificationTemplate> findActiveTemplates(Pageable pageable);
 
     // Find by channel and active status
@@ -45,6 +48,4 @@ public interface NotificationTemplateRepository extends JpaRepository<Notificati
     // Count active templates
     long countByIsActiveTrue();
 
-    // Check if template code exists
-    boolean existsByTemplateCode(String templateCode);
 }

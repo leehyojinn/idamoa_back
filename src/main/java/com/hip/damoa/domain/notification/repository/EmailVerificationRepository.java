@@ -77,4 +77,10 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
     // Delete old verifications
     @Query("DELETE FROM EmailVerification v WHERE v.createdAt < :beforeDate")
     void deleteOldVerifications(@Param("beforeDate") LocalDateTime beforeDate);
+
+    // Find by email and verification code (for verification)
+    Optional<EmailVerification> findByEmailAndVerificationCodeAndStatus(String email, String verificationCode, String status);
+
+    // Delete by expires at before (for cleanup)
+    long deleteByExpiresAtBefore(LocalDateTime expiresAt);
 }
