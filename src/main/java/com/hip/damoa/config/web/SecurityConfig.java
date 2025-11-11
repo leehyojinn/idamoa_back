@@ -91,6 +91,7 @@ public class SecurityConfig {
                                 "/js/**",  // JavaScript files
                                 "/css/**",  // CSS files
                                 "/images/**",  // Image files
+                                "/favicon.ico",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"

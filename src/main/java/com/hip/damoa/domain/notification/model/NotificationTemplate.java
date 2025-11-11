@@ -28,8 +28,9 @@ public class NotificationTemplate extends BaseEntity {
     @Column(name = "name", nullable = false, length = 200)
     private String name;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "channel", nullable = false, length = 20)
-    private String channel; // EMAIL, SMS, PUSH, KAKAO
+    private NotificationChannel channel; // EMAIL, SMS, KAKAO, FCM
 
     @Column(name = "title_template", length = 500)
     private String titleTemplate;

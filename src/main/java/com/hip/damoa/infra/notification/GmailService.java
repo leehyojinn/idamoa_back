@@ -1,5 +1,6 @@
 package com.hip.damoa.infra.notification;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import jakarta.mail.Session;
@@ -48,9 +49,14 @@ public class GmailService {
 
             log.info("Gmail API 이메일 발송 완료: to={}, messageId={}", to, sent.getId());
             return sent.getId();
+        } catch (GoogleJsonResponseException e) {
+            // Gmail API 에러 메시지 파싱 (핵심 메시지만 추출)
+            String errorMessage = extractGmailErrorMessage(e);
+            log.error("Gmail API 이메일 발송 실패: to={}, subject={}, error={}", to, subject, errorMessage, e);
+            throw new RuntimeException(errorMessage, e);
         } catch (Exception e) {
             log.error("Gmail API 이메일 발송 실패: to={}, subject={}", to, subject, e);
-            throw new RuntimeException("Gmail API 이메일 발송 실패: " + e.getMessage(), e);
+            throw new RuntimeException("이메일 발송 실패: " + e.getMessage(), e);
         }
     }
 
@@ -72,9 +78,14 @@ public class GmailService {
 
             log.info("Gmail API 텍스트 이메일 발송 완료: to={}, messageId={}", to, sent.getId());
             return sent.getId();
+        } catch (GoogleJsonResponseException e) {
+            // Gmail API 에러 메시지 파싱 (핵심 메시지만 추출)
+            String errorMessage = extractGmailErrorMessage(e);
+            log.error("Gmail API 텍스트 이메일 발송 실패: to={}, subject={}, error={}", to, subject, errorMessage, e);
+            throw new RuntimeException(errorMessage, e);
         } catch (Exception e) {
             log.error("Gmail API 텍스트 이메일 발송 실패: to={}, subject={}", to, subject, e);
-            throw new RuntimeException("Gmail API 이메일 발송 실패: " + e.getMessage(), e);
+            throw new RuntimeException("이메일 발송 실패: " + e.getMessage(), e);
         }
     }
 
@@ -114,5 +125,27 @@ public class GmailService {
         mimeMessage.writeTo(buffer);
         String encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(buffer.toByteArray());
         return new Message().setRaw(encoded);
+    }
+
+    /**
+     * Gmail API 에러 메시지에서 핵심 메시지만 추출
+     *
+     * 예: "400 Bad Request\n{...JSON...}" → "Invalid To header"
+     */
+    private String extractGmailErrorMessage(GoogleJsonResponseException e) {
+        try {
+            // Gmail API 에러 구조: { "error": { "errors": [ { "message": "..." } ], "message": "..." } }
+            if (e.getDetails() != null && e.getDetails().getMessage() != null) {
+                return "Gmail API 오류: " + e.getDetails().getMessage();
+            }
+
+            // 상세 에러가 없으면 HTTP 상태 코드와 기본 메시지 사용
+            return String.format("Gmail API 오류 (HTTP %d): %s",
+                    e.getStatusCode(),
+                    e.getStatusMessage() != null ? e.getStatusMessage() : "알 수 없는 오류");
+        } catch (Exception ex) {
+            // 파싱 실패 시 원본 메시지 반환
+            return "Gmail API 오류: " + e.getMessage();
+        }
     }
 }

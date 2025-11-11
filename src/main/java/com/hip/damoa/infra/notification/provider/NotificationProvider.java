@@ -1,5 +1,7 @@
 package com.hip.damoa.infra.notification.provider;
 
+import com.hip.damoa.domain.notification.model.NotificationChannel;
+
 import java.util.Map;
 
 /**
@@ -27,9 +29,9 @@ public interface NotificationProvider {
     /**
      * Provider가 지원하는 채널 타입
      *
-     * @return EMAIL, SMS, KAKAO, FCM 등
+     * @return NotificationChannel enum (EMAIL, SMS, KAKAO, FCM)
      */
-    String getChannelType();
+    NotificationChannel getChannelType();
 
     /**
      * Provider 활성화 여부

@@ -2214,3 +2214,92 @@ Database
 - Domain-wide Delegation 설정
 - 실제 이메일 발송 테스트
 - 프론트엔드 연동 (이메일 인증 UI)
+
+---
+
+**[UMS-001] UMS 통합 및 NotificationChannel Enum 전환** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-11
+- **작업 내용**:
+  - GmailService 독립 작동 → UnifiedMessagingService로 완전 통합
+  - NotificationChannel Enum 생성 및 전체 시스템 적용 (String → Enum)
+  - 알림 발송 실패 케이스 로깅 보완
+  - Provider 인터페이스 타입 안전성 강화
+
+**생성/수정 파일**:
+1. **신규 생성**:
+   - `src/main/java/com/hip/damoa/domain/notification/model/NotificationChannel.java` (Enum)
+   - `src/main/resources/db/migration/V30__Add_notification_channel_constraints.sql`
+
+2. **Entity 수정**:
+   - `Notification.java`: String channel → NotificationChannel channel
+   - `NotificationLog.java`: String channel → NotificationChannel channel
+   - `NotificationTemplate.java`: String channel → NotificationChannel channel
+
+3. **Provider 수정**:
+   - `NotificationProvider.java`: String getChannelType() → NotificationChannel getChannelType()
+   - `EmailNotificationProvider.java`: return NotificationChannel.EMAIL
+   - `SmsNotificationProvider.java`: return NotificationChannel.SMS
+   - `KakaoNotificationProvider.java`: return NotificationChannel.KAKAO
+   - `FcmNotificationProvider.java`: return NotificationChannel.FCM
+
+4. **서비스 수정**:
+   - `UnifiedMessagingService.java`:
+     - NotificationChannel enum 적용
+     - @Async 제거 (동기 발송 + 비동기 로깅 패턴)
+     - 포괄적 로깅 추가 (logSuccess/logFailure 헬퍼 메서드)
+     - Provider not found/disabled 케이스 로그 기록
+     - 예외 발생 시 Notification 실패 처리 및 로그 기록
+   - `VerificationService.java`:
+     - GmailService 의존성 제거
+     - UnifiedMessagingService 의존성 추가
+     - sendVerificationEmail() 메서드 간소화 (50+ lines → 15 lines)
+   - `TemplateService.java`: NotificationChannel enum 적용
+   - `NotificationLogService.java`: NotificationChannel enum 적용
+
+5. **Repository 수정**:
+   - `NotificationTemplateRepository.java`: 모든 메서드에 NotificationChannel enum 적용
+
+**주요 변경사항**:
+
+1. **NotificationChannel Enum**:
+   - 4개 채널 정의: EMAIL, SMS, KAKAO, FCM
+   - @Enumerated(EnumType.STRING)으로 DB에 문자열 저장
+   - CHECK 제약조건 추가 (V30 migration)
+   - 타입 안전성 보장 (컴파일 시점 오류 검출)
+
+2. **UMS 완전 통합**:
+   - VerificationService가 GmailService 대신 UnifiedMessagingService 사용
+   - 모든 알림 발송이 UMS를 통해 일원화
+   - 템플릿 처리, Notification 생성, 로깅이 자동으로 처리됨
+
+3. **로깅 보완**:
+   - Provider not found 케이스: 로그 기록 추가
+   - Provider disabled 케이스: 로그 기록 추가
+   - 발송 성공: 채널별 적절한 로그 메서드 호출
+   - 발송 실패: 채널별 적절한 로그 메서드 호출
+   - 예외 발생: Notification 실패 상태 업데이트 + 로그 기록
+
+4. **동기/비동기 패턴 정립**:
+   - 알림 발송: 동기 (sendNotification 메서드)
+   - 로그 기록: 비동기 (NotificationLogService의 @Async 메서드)
+   - 이유: Spring @Async는 void/Future/CompletableFuture만 반환 가능, Long 반환 불가
+
+**빌드 상태**: ✅ 컴파일 성공
+
+**해결한 이슈**:
+1. **타입 불일치**: String → NotificationChannel enum 전환으로 모든 사용처 수정
+2. **누락된 로그**: 실패 케이스(Provider not found/disabled/exception)에 로그 기록 추가
+3. **@Async 오류**: `Invalid return type for async method (only Future and void supported)`
+   - 해결: @Async 제거, 동기 발송 + 비동기 로깅 패턴 유지
+
+**아키텍처 개선**:
+- ✅ 단일 책임: 모든 알림 발송이 UMS를 통해 일원화
+- ✅ 타입 안전성: Enum으로 컴파일 시점 오류 검출
+- ✅ 일관성: Provider 인터페이스 통일
+- ✅ 추적성: 모든 발송에 대한 로그 보장
+
+**다음 단계**:
+- V30 migration 실행 확인 (CHECK constraint 적용)
+- 이메일 발송 테스트 (UMS 통합 검증)
+- 알림 로그 조회 기능 구현 (관리자용)

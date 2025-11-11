@@ -1,5 +1,6 @@
 package com.hip.damoa.domain.notification.repository;
 
+import com.hip.damoa.domain.notification.model.NotificationChannel;
 import com.hip.damoa.domain.notification.model.NotificationTemplate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,15 +19,15 @@ public interface NotificationTemplateRepository extends JpaRepository<Notificati
     Optional<NotificationTemplate> findByCode(String code);
 
     // Find by code and channel
-    Optional<NotificationTemplate> findByCodeAndChannel(String code, String channel);
+    Optional<NotificationTemplate> findByCodeAndChannel(String code, NotificationChannel channel);
 
     // Find by name
     Optional<NotificationTemplate> findByName(String name);
 
     // Find by channel
-    List<NotificationTemplate> findByChannel(String channel);
+    List<NotificationTemplate> findByChannel(NotificationChannel channel);
 
-    Page<NotificationTemplate> findByChannel(String channel, Pageable pageable);
+    Page<NotificationTemplate> findByChannel(NotificationChannel channel, Pageable pageable);
 
     // Find active templates
     @Query("SELECT t FROM NotificationTemplate t WHERE t.isActive = true " +
@@ -40,10 +41,10 @@ public interface NotificationTemplateRepository extends JpaRepository<Notificati
     // Find by channel and active status
     @Query("SELECT t FROM NotificationTemplate t WHERE t.channel = :channel " +
            "AND t.isActive = true")
-    List<NotificationTemplate> findActiveByChannel(@Param("channel") String channel);
+    List<NotificationTemplate> findActiveByChannel(@Param("channel") NotificationChannel channel);
 
     // Count by channel
-    long countByChannel(String channel);
+    long countByChannel(NotificationChannel channel);
 
     // Count active templates
     long countByIsActiveTrue();

@@ -32,8 +32,9 @@ public class Notification extends BaseEntity {
     @Column(name = "notification_type", length = 50)
     private String notificationType; // EMAIL_VERIFICATION, PASSWORD_RESET, etc.
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "channel", nullable = false, length = 20)
-    private String channel; // EMAIL, SMS, PUSH, KAKAO
+    private NotificationChannel channel; // EMAIL, SMS, KAKAO, FCM
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipient_id")

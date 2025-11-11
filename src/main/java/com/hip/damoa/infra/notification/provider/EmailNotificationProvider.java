@@ -1,5 +1,6 @@
 package com.hip.damoa.infra.notification.provider;
 
+import com.hip.damoa.domain.notification.model.NotificationChannel;
 import com.hip.damoa.infra.notification.GmailService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,8 +51,8 @@ public class EmailNotificationProvider implements NotificationProvider {
     }
 
     @Override
-    public String getChannelType() {
-        return "EMAIL";
+    public NotificationChannel getChannelType() {
+        return NotificationChannel.EMAIL;
     }
 
     @Override

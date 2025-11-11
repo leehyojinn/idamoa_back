@@ -2,6 +2,7 @@ package com.hip.damoa.domain.notification.service;
 
 import com.hip.damoa.core.exception.BusinessException;
 import com.hip.damoa.core.exception.ErrorCode;
+import com.hip.damoa.domain.notification.model.NotificationChannel;
 import com.hip.damoa.domain.notification.model.NotificationTemplate;
 import com.hip.damoa.domain.notification.repository.NotificationTemplateRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,12 +32,12 @@ public class TemplateService {
      * 템플릿 조회 (캐싱 적용)
      *
      * @param code    템플릿 코드
-     * @param channel 채널 (EMAIL, SMS, PUSH, KAKAO, IN_APP)
+     * @param channel 채널 (EMAIL, SMS, KAKAO, FCM)
      * @return 템플릿
      */
     @Cacheable(value = "notificationTemplates", key = "#code + '_' + #channel")
     @Transactional(readOnly = true)
-    public NotificationTemplate getTemplate(String code, String channel) {
+    public NotificationTemplate getTemplate(String code, NotificationChannel channel) {
         log.debug("템플릿 조회: code={}, channel={}", code, channel);
 
         return templateRepository.findByCodeAndChannel(code, channel)

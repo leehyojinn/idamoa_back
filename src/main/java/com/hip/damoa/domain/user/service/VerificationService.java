@@ -1,18 +1,14 @@
 package com.hip.damoa.domain.user.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hip.damoa.core.exception.BusinessException;
 import com.hip.damoa.core.exception.ErrorCode;
-import com.hip.damoa.domain.notification.model.Notification;
-import com.hip.damoa.domain.notification.model.NotificationTemplate;
-import com.hip.damoa.domain.notification.repository.NotificationRepository;
 import com.hip.damoa.domain.notification.service.EmailVerificationService;
-import com.hip.damoa.domain.notification.service.NotificationLogService;
-import com.hip.damoa.domain.notification.service.TemplateService;
-import com.hip.damoa.domain.notification.service.TemplateService.RenderedTemplate;
-import com.hip.damoa.infra.notification.GmailService;
+import com.hip.damoa.domain.user.web.dto.SignupStartRequest;
+import com.hip.damoa.infra.notification.UnifiedMessagingService;
 import com.hip.damoa.infra.redis.RedisService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -20,43 +16,24 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class VerificationService {
 
     private final RedisService redisService;
-    private final TemplateService templateService;
-    private final NotificationLogService notificationLogService;
+    private final UnifiedMessagingService unifiedMessagingService;
     private final EmailVerificationService emailVerificationService;
-    private final NotificationRepository notificationRepository;
+    private final ObjectMapper objectMapper;
 
-    // Gmail API 서비스 (선택적)
-    private GmailService gmailService;
-
-    @Value("${notification.email.gmail-api.enabled:false}")
-    private boolean gmailApiEnabled;
-
-    public VerificationService(
-            RedisService redisService,
-            TemplateService templateService,
-            NotificationLogService notificationLogService,
-            EmailVerificationService emailVerificationService,
-            NotificationRepository notificationRepository) {
-        this.redisService = redisService;
-        this.templateService = templateService;
-        this.notificationLogService = notificationLogService;
-        this.emailVerificationService = emailVerificationService;
-        this.notificationRepository = notificationRepository;
-    }
-
-    @Autowired(required = false)
-    public void setGmailService(GmailService gmailService) {
-        this.gmailService = gmailService;
-    }
+    @Value("${notification.email.enabled:true}")
+    private boolean emailEnabled;
 
     private static final String EMAIL_OTP_PREFIX = "otp:email:";
     private static final String SMS_OTP_PREFIX = "otp:sms:";
+    private static final String SIGNUP_PREFIX = "signup:";
     private static final String EMAIL_VERIFIED_PREFIX = "signup:";
     private static final String SMS_VERIFIED_PREFIX = "signup:";
     private static final String EMAIL_VERIFIED_SUFFIX = ":email_verified";
@@ -72,92 +49,76 @@ public class VerificationService {
 
     private static final SecureRandom random = new SecureRandom();
 
+    // 이메일 정규식 (RFC 5322 간소화 버전)
+    private static final Pattern EMAIL_PATTERN = Pattern.compile(
+            "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$"
+    );
+
     /**
      * 이메일 인증 코드 생성 및 발송 (토큰 기반)
      */
     public String sendEmailVerificationCode(String signupToken, String email) {
-        // 시도 횟수 체크
+        // 1. 이메일 형식 검증
+        validateEmailFormat(email);
+
+        // 2. 토큰-이메일 매칭 검증
+        validateTokenAndEmail(signupToken, email);
+
+        // 3. 시도 횟수 체크
         checkAttempts(EMAIL_ATTEMPT_PREFIX + signupToken);
 
-        // 6자리 숫자 코드 생성
+        // 4. 6자리 숫자 코드 생성
         String code = generateNumericCode(6);
         String key = EMAIL_OTP_PREFIX + signupToken;
 
-        // Redis에 저장
+        // 5. Redis에 저장
         redisService.setValues(key, code, EMAIL_OTP_TTL);
 
-        // 시도 횟수 증가
+        // 6. 시도 횟수 증가
         incrementAttempts(EMAIL_ATTEMPT_PREFIX + signupToken);
 
         log.info("이메일 인증 코드 생성: token={}, email={} (TTL: {}분)", signupToken, email, EMAIL_OTP_TTL.toMinutes());
 
-        // 실제 이메일 발송
-        try {
-            sendVerificationEmail(signupToken, email, code);
-        } catch (Exception e) {
-            log.error("이메일 발송 실패: email={}, error={}", email, e.getMessage(), e);
-            // 발송 실패해도 코드는 Redis에 저장되어 있으므로 예외를 던지지 않음
-        }
+        // 7. 실제 이메일 발송 (실패 시 예외 던짐)
+        log.warn("Email DEV 활성화 상태 - 개발 모드: code={}", code);
+
+        sendVerificationEmail(signupToken, email, code);
 
         // 개발 모드에서는 코드 반환 (운영 환경에서는 제거 권장)
-        if (!gmailApiEnabled) {
-            log.warn("Gmail API 비활성화 상태 - 개발 모드: code={}", code);
+        if (!emailEnabled) {
+            log.warn("Email 비활성화 상태 - 개발 모드: code={}", code);
         }
 
         return code;
     }
 
     /**
-     * 인증 이메일 발송 (템플릿 기반)
+     * 인증 이메일 발송 (UMS 사용)
      */
     private void sendVerificationEmail(String signupToken, String email, String code) {
-        // 1. 템플릿 조회
-        NotificationTemplate template = templateService.getTemplate("EMAIL_VERIFICATION_SIGNUP", "EMAIL");
-
-        // 2. 템플릿 변수 치환
+        // 1. 템플릿 변수 준비
         Map<String, String> variables = Map.of(
                 "verificationCode", code,
                 "expiryMinutes", String.valueOf(EMAIL_OTP_TTL.toMinutes())
         );
-        RenderedTemplate rendered = templateService.renderTemplate(template, variables);
 
-        // 3. Notification 엔티티 생성 (로그용)
-        Notification notification = Notification.builder()
-                .userId(null)  // 회원가입 전이므로 userId 없음
-                .notificationType("EMAIL_VERIFICATION")
-                .channel("EMAIL")
-                .title(rendered.title())
-                .content(rendered.content())
-                .templateId(template.getId())
-                .templateData(variables)
-                .isSent(false)
-                .build();
-        notification = notificationRepository.save(notification);
-
-        // 4. Gmail API로 이메일 발송
+        // 2. UMS를 통한 이메일 발송 (템플릿 처리, Notification 생성, 로깅 모두 자동 처리)
         try {
-            if (gmailService == null) {
-                throw new IllegalStateException("Gmail API가 활성화되지 않았습니다. application.yml에서 notification.email.gmail-api.enabled=true로 설정하세요.");
-            }
+            unifiedMessagingService.sendEmail(
+                    email,
+                    "EMAIL_VERIFICATION_SIGNUP",
+                    variables,
+                    null,  // 회원가입 전이므로 userId 없음
+                    "EMAIL_VERIFICATION"
+            );
 
-            String messageId = gmailService.sendHtmlEmail(email, rendered.title(), rendered.content());
-
-            // 발송 성공 - Notification 및 로그 업데이트
-            notification.markAsSent();
-            notificationRepository.save(notification);
-            notificationLogService.logEmailSent(notification, email, "GMAIL_API", messageId, null);
-
-            log.info("이메일 인증 코드 발송 완료: email={}, messageId={}", email, messageId);
+            log.info("이메일 인증 코드 발송 완료: email={}", email);
         } catch (Exception e) {
-            // 발송 실패 - 로그 기록
-            notification.markAsFailed(e.getMessage());
-            notificationRepository.save(notification);
-            notificationLogService.logEmailFailed(notification, email, "GMAIL_API", "SEND_FAILED", e.getMessage());
-
+            // UMS에서 이미 상세 로그를 남겼으므로 여기서는 로그 없이 재던지기만
             throw e;
         }
 
-        // 5. DB에 인증 레코드 생성 (비동기)
+        // 3. DB에 인증 레코드 생성 (비동기)
         LocalDateTime expiresAt = LocalDateTime.now().plus(EMAIL_OTP_TTL);
         emailVerificationService.createVerification(email, signupToken, code, "SIGNUP", expiresAt, null);
     }
@@ -294,5 +255,55 @@ public class VerificationService {
             code.append(random.nextInt(10));
         }
         return code.toString();
+    }
+
+    /**
+     * 이메일 형식 검증
+     */
+    private void validateEmailFormat(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            log.warn("이메일 형식 검증 실패: 빈 값");
+            throw new BusinessException(ErrorCode.INVALID_EMAIL_FORMAT);
+        }
+
+        if (!EMAIL_PATTERN.matcher(email).matches()) {
+            log.warn("이메일 형식 검증 실패: {}", email);
+            throw new BusinessException(ErrorCode.INVALID_EMAIL_FORMAT);
+        }
+    }
+
+    /**
+     * 토큰과 이메일 매칭 검증
+     */
+    private void validateTokenAndEmail(String signupToken, String email) {
+        // Redis에서 회원가입 정보 조회
+        String redisKey = SIGNUP_PREFIX + signupToken;
+        String jsonData = redisService.getValues(redisKey);
+
+        if (jsonData == null) {
+            log.warn("회원가입 토큰을 찾을 수 없음: token={}", signupToken);
+            throw new BusinessException(ErrorCode.SIGNUP_TOKEN_NOT_FOUND);
+        }
+
+        try {
+            // JSON 역직렬화
+            SignupStartRequest signupData = objectMapper.readValue(jsonData, SignupStartRequest.class);
+
+            // 이메일 매칭 확인
+            if (!signupData.getEmail().equals(email)) {
+                log.warn("토큰-이메일 불일치: token={}, expected={}, actual={}",
+                        signupToken, signupData.getEmail(), email);
+                throw new BusinessException(ErrorCode.TOKEN_EMAIL_MISMATCH);
+            }
+
+            log.info("토큰-이메일 검증 성공: token={}, email={}", signupToken, email);
+        } catch (BusinessException e) {
+            // BusinessException은 그대로 재던지기
+            throw e;
+        } catch (Exception e) {
+            // 기타 예외는 내부 서버 오류로 변환
+            log.error("회원가입 데이터 역직렬화 실패: token={}", signupToken, e);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
     }
 }

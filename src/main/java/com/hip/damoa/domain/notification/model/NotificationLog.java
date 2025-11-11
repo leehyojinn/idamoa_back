@@ -28,8 +28,9 @@ public class NotificationLog extends BaseTimeEntity {
     @JoinColumn(name = "notification_id", nullable = false)
     private Notification notification;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "channel", length = 20)
-    private String channel; // EMAIL, SMS, PUSH, KAKAO
+    private NotificationChannel channel; // EMAIL, SMS, KAKAO, FCM
 
     @Column(name = "recipient", length = 255)
     private String recipient;

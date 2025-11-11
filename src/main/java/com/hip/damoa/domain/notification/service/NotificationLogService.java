@@ -1,6 +1,7 @@
 package com.hip.damoa.domain.notification.service;
 
 import com.hip.damoa.domain.notification.model.Notification;
+import com.hip.damoa.domain.notification.model.NotificationChannel;
 import com.hip.damoa.domain.notification.model.NotificationLog;
 import com.hip.damoa.domain.notification.repository.NotificationLogRepository;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +39,7 @@ public class NotificationLogService {
         try {
             NotificationLog logEntry = NotificationLog.builder()
                     .notification(notification)
-                    .channel("EMAIL")
+                    .channel(NotificationChannel.EMAIL)
                     .recipient(recipient)
                     .status("SENT")
                     .provider(provider)
@@ -72,7 +73,7 @@ public class NotificationLogService {
         try {
             NotificationLog logEntry = NotificationLog.builder()
                     .notification(notification)
-                    .channel("EMAIL")
+                    .channel(NotificationChannel.EMAIL)
                     .recipient(recipient)
                     .status("FAILED")
                     .provider(provider)
@@ -107,7 +108,7 @@ public class NotificationLogService {
         try {
             NotificationLog logEntry = NotificationLog.builder()
                     .notification(notification)
-                    .channel("SMS")
+                    .channel(NotificationChannel.SMS)
                     .recipient(recipient)
                     .status("SENT")
                     .provider(provider)
@@ -141,7 +142,7 @@ public class NotificationLogService {
         try {
             NotificationLog logEntry = NotificationLog.builder()
                     .notification(notification)
-                    .channel("SMS")
+                    .channel(NotificationChannel.SMS)
                     .recipient(recipient)
                     .status("FAILED")
                     .provider(provider)

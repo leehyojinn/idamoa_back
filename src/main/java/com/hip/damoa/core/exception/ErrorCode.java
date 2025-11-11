@@ -31,6 +31,8 @@ public enum ErrorCode {
     PHONE_NOT_VERIFIED(HttpStatus.FORBIDDEN, "V005", "전화번호 인증이 완료되지 않았습니다"),
     EMAIL_VERIFICATION_REQUIRED(HttpStatus.BAD_REQUEST, "V006", "이메일 인증이 필요합니다"),
     SMS_VERIFICATION_REQUIRED(HttpStatus.BAD_REQUEST, "V007", "SMS 인증이 필요합니다"),
+    INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "V008", "올바른 이메일 형식이 아닙니다"),
+    TOKEN_EMAIL_MISMATCH(HttpStatus.BAD_REQUEST, "V009", "토큰과 이메일이 일치하지 않습니다"),
 
     // JWT
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "J001", "유효하지 않은 토큰입니다"),
