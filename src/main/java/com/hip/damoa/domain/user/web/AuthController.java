@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
  * 인증 관련 REST API
  */
 @Slf4j
-@Tag(name = "Auth", description = "인증 관련 API")
+@Tag(name = "01. Auth", description = "인증 관련 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")

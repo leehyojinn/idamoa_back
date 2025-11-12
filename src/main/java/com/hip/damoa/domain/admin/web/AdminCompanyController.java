@@ -27,7 +27,7 @@ import java.util.UUID;
  * 업체 관리 REST API (관리자용)
  */
 @Slf4j
-@Tag(name = "Admin - Company", description = "업체 관리 API (관리자용)")
+@Tag(name = "14. Admin - Company", description = "업체 관리 API (관리자용)")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/companies")

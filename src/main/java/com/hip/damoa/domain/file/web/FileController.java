@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
  * 파일 업로드 REST API (Presigned URL 방식)
  */
 @Slf4j
-@Tag(name = "File", description = "파일 업로드 API (Presigned URL)")
+@Tag(name = "04. File", description = "파일 업로드 API (Presigned URL)")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/files")

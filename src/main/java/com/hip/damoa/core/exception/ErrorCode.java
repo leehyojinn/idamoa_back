@@ -119,6 +119,8 @@ public enum ErrorCode {
     PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "PY003", "결제에 실패했습니다"),
     INVALID_PAYMENT_AMOUNT(HttpStatus.BAD_REQUEST, "PY004", "유효하지 않은 결제 금액입니다"),
     IDEMPOTENCY_KEY_ALREADY_EXISTS(HttpStatus.CONFLICT, "PY005", "이미 존재하는 멱등성 키입니다"),
+    PAYMENT_REQUIRED(HttpStatus.PAYMENT_REQUIRED, "PY006", "결제가 필요합니다"),
+    PAYMENT_NOT_COMPLETED(HttpStatus.BAD_REQUEST, "PY007", "완료되지 않은 결제입니다"),
 
     // Invoice
     INVOICE_NOT_FOUND(HttpStatus.NOT_FOUND, "IV001", "청구서를 찾을 수 없습니다"),
@@ -136,6 +138,8 @@ public enum ErrorCode {
     FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "F003", "파일 크기가 최대 허용 크기(10MB)를 초과했습니다"),
     FILE_TYPE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "F004", "허용되지 않는 파일 형식입니다"),
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "F005", "파일 업로드에 실패했습니다"),
+    FILE_PRICING_NOT_FOUND(HttpStatus.NOT_FOUND, "F006", "파일 가격 정보를 찾을 수 없습니다"),
+    DOWNLOAD_LIMIT_EXCEEDED(HttpStatus.FORBIDDEN, "F007", "다운로드 제한을 초과했습니다"),
 
     // Profile
     INVALID_PROFILE_TYPE(HttpStatus.BAD_REQUEST, "PR001", "유효하지 않은 프로필 타입입니다"),
@@ -147,9 +151,15 @@ public enum ErrorCode {
     BOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "BD001", "게시글을 찾을 수 없습니다"),
     BOARD_CANNOT_BE_EDITED(HttpStatus.BAD_REQUEST, "BD002", "게시글을 수정할 수 없습니다"),
     BOARD_CANNOT_BE_DELETED(HttpStatus.BAD_REQUEST, "BD003", "게시글을 삭제할 수 없습니다"),
+    BOARD_TYPE_MISMATCH(HttpStatus.BAD_REQUEST, "BD004", "게시판 타입이 일치하지 않습니다"),
+    INVALID_BOARD_TYPE(HttpStatus.BAD_REQUEST, "BD005", "유효하지 않은 게시판 타입입니다"),
+    BOARD_TYPE_NOT_SUPPORT_FILTER(HttpStatus.BAD_REQUEST, "BD006", "이 게시판 타입은 필터를 지원하지 않습니다"),
+    BOARD_TYPE_NOT_SUPPORT_BOOKMARK(HttpStatus.BAD_REQUEST, "BD007", "이 게시판 타입은 북마크를 지원하지 않습니다"),
+    CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "BD008", "카테고리를 찾을 수 없습니다"),
 
     // Filter
     FILTER_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "FC001", "필터 카테고리를 찾을 수 없습니다"),
+    FILTER_OPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "FC002", "필터 옵션을 찾을 수 없습니다"),
 
     // Notification
     TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "NT001", "알림 템플릿을 찾을 수 없습니다");

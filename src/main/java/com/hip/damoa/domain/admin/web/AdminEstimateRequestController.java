@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.*;
  * 견적 요청 관리 REST API (관리자용)
  */
 @Slf4j
-@Tag(name = "Admin - EstimateRequest", description = "견적 요청 관리 API (관리자)")
+@Tag(name = "15. Admin - EstimateRequest", description = "견적 요청 관리 API (관리자)")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/estimate-requests")

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
  * OAuth 소셜 로그인 REST API
  */
 @Slf4j
-@Tag(name = "OAuth", description = "소셜 로그인 관련 API (카카오, 네이버, 구글)")
+@Tag(name = "02. OAuth", description = "소셜 로그인 관련 API (카카오, 네이버, 구글)")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/oauth")

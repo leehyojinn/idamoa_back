@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
  * 프로필 관리 API
  */
 @Slf4j
-@Tag(name = "Profile", description = "프로필 관리 API")
+@Tag(name = "03. Profile", description = "프로필 관리 API")
 @RestController
 @RequiredArgsConstructor
 public class ProfileController {

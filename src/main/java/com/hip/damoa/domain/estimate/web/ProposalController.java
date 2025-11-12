@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
  * 견적 제안 REST API
  */
 @Slf4j
-@Tag(name = "Proposal", description = "견적 제안 API")
+@Tag(name = "09. Proposal", description = "견적 제안 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/proposals")
