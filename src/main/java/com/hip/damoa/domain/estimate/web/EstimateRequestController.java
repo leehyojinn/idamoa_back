@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
  * 견적 요청 REST API (사용자용)
  */
 @Slf4j
-@Tag(name = "EstimateRequest", description = "견적 요청 API")
+@Tag(name = "08. EstimateRequest", description = "견적 요청 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/estimates/requests")

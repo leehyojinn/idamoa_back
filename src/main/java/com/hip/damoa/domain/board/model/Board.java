@@ -1,87 +1,212 @@
 package com.hip.damoa.domain.board.model;
 
 import com.hip.damoa.domain.common.BaseEntity;
+import com.hip.damoa.domain.user.model.User;
 import io.hypersistence.utils.hibernate.type.array.StringArrayType;
+import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Type;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
- * 게시판
+ * 게시글 엔티티 (통합 게시판)
+ *
+ * GALLERY, DOCUMENT, NOTICE, EVENT, FAQ 타입의 게시글을 통합 관리
  */
 @Entity
 @Getter
-@Builder
-@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "boards", indexes = {
-    @Index(name = "idx_boards_code", columnList = "board_code"),
-    @Index(name = "idx_boards_type", columnList = "board_type")
+    @Index(name = "idx_boards_type", columnList = "board_type"),
+    @Index(name = "idx_boards_user_id", columnList = "user_id"),
+    @Index(name = "idx_boards_category_id", columnList = "category_id"),
+    @Index(name = "idx_boards_published", columnList = "is_published, published_at"),
+    @Index(name = "idx_boards_featured", columnList = "is_featured")
 })
 public class Board extends BaseEntity {
 
-    @Column(name = "board_code", unique = true, nullable = false, length = 50)
-    private String boardCode;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
-    @Column(name = "board_name", nullable = false, length = 100)
-    private String boardName;
+    @Column(name = "board_type", nullable = false, length = 50)
+    private String boardType; // NOTICE, EVENT, FAQ, GALLERY, DOCUMENT
 
-    @Column(name = "board_type", nullable = false, length = 20)
-    private String boardType; // NOTICE, FAQ, QNA, COMMUNITY, REVIEW
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private BoardCategory category;
 
-    @Column(name = "description", columnDefinition = "TEXT")
-    private String description;
+    @Column(name = "title", nullable = false, length = 200)
+    private String title;
+
+    @Column(name = "content", columnDefinition = "TEXT")
+    private String content;
+
+    @Type(JsonBinaryType.class)
+    @Column(name = "type_data", columnDefinition = "jsonb")
+    private Map<String, Object> typeData = new HashMap<>();
+
+    @Column(name = "view_count", nullable = false)
+    private Integer viewCount = 0;
+
+    @Column(name = "like_count", nullable = false)
+    private Integer likeCount = 0;
+
+    @Column(name = "comment_count", nullable = false)
+    private Integer commentCount = 0;
+
+    @Column(name = "is_pinned", nullable = false)
+    private Boolean isPinned = false;
+
+    @Column(name = "is_featured", nullable = false)
+    private Boolean isFeatured = false;
+
+    @Column(name = "is_published", nullable = false)
+    private Boolean isPublished = true;
+
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
 
     @Type(StringArrayType.class)
-    @Column(name = "allowed_roles", columnDefinition = "text[]")
-    private String[] allowedRoles;
+    @Column(name = "tags", columnDefinition = "text[]")
+    private String[] tags;
 
-    @Column(name = "is_comment_enabled", nullable = false)
-    @Builder.Default
-    private Boolean isCommentEnabled = true;
+    @Column(name = "is_private", nullable = false)
+    private Boolean isPrivate = false;
 
-    @Column(name = "is_attachment_enabled", nullable = false)
-    @Builder.Default
-    private Boolean isAttachmentEnabled = true;
+    @Column(name = "password", length = 255)
+    private String password;
 
-    @Column(name = "is_anonymous_enabled", nullable = false)
-    @Builder.Default
-    private Boolean isAnonymousEnabled = false;
+    @Column(name = "created_by")
+    private Long createdBy;
 
-    @Column(name = "requires_approval", nullable = false)
-    @Builder.Default
-    private Boolean requiresApproval = false;
+    @Column(name = "updated_by")
+    private Long updatedBy;
 
-    @Column(name = "display_order")
-    private Integer displayOrder;
+    // 연관관계
+    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BoardFilterOption> filterOptions = new ArrayList<>();
 
-    @Column(name = "is_active", nullable = false)
-    @Builder.Default
-    private Boolean isActive = true;
+    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BoardBookmark> bookmarks = new ArrayList<>();
 
-    @Column(name = "post_count", nullable = false)
-    @Builder.Default
-    private Long postCount = 0L;
+    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BoardAttachment> attachments = new ArrayList<>();
 
-    public void incrementPostCount() {
-        this.postCount++;
+    @Builder
+    public Board(User user, String boardType, BoardCategory category, String title, String content,
+                 Map<String, Object> typeData, Boolean isPublished, LocalDateTime publishedAt,
+                 String[] tags, Boolean isPrivate, String password, Long createdBy) {
+        this.user = user;
+        this.boardType = boardType;
+        this.category = category;
+        this.title = title;
+        this.content = content;
+        this.typeData = typeData != null ? typeData : new HashMap<>();
+        this.viewCount = 0;
+        this.likeCount = 0;
+        this.commentCount = 0;
+        this.isPinned = false;
+        this.isFeatured = false;
+        this.isPublished = isPublished != null ? isPublished : true;
+        this.publishedAt = publishedAt != null ? publishedAt : LocalDateTime.now();
+        this.tags = tags;
+        this.isPrivate = isPrivate != null ? isPrivate : false;
+        this.password = password;
+        this.createdBy = createdBy;
     }
 
-    public void decrementPostCount() {
-        if (this.postCount > 0) {
-            this.postCount--;
+    // 비즈니스 메서드
+    public void updateTitle(String title) {
+        this.title = title;
+    }
+
+    public void updateContent(String content) {
+        this.content = content;
+    }
+
+    public void updateTypeData(Map<String, Object> typeData) {
+        this.typeData = typeData;
+    }
+
+    public void updateTags(String[] tags) {
+        this.tags = tags;
+    }
+
+    public void incrementViewCount() {
+        this.viewCount++;
+    }
+
+    public void incrementLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decrementLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
         }
     }
 
-    public void activate() {
-        this.isActive = true;
+    public void incrementCommentCount() {
+        this.commentCount++;
     }
 
-    public void deactivate() {
-        this.isActive = false;
+    public void decrementCommentCount() {
+        if (this.commentCount > 0) {
+            this.commentCount--;
+        }
     }
 
-    public void updateDisplayOrder(Integer order) {
-        this.displayOrder = order;
+    public void pin() {
+        this.isPinned = true;
+    }
+
+    public void unpin() {
+        this.isPinned = false;
+    }
+
+    public void feature() {
+        this.isFeatured = true;
+    }
+
+    public void unfeature() {
+        this.isFeatured = false;
+    }
+
+    public void publish() {
+        this.isPublished = true;
+        if (this.publishedAt == null) {
+            this.publishedAt = LocalDateTime.now();
+        }
+    }
+
+    public void unpublish() {
+        this.isPublished = false;
+    }
+
+    public void addFilterOption(BoardFilterOption filterOption) {
+        this.filterOptions.add(filterOption);
+    }
+
+    public void removeFilterOption(BoardFilterOption filterOption) {
+        this.filterOptions.remove(filterOption);
+    }
+
+    public void addAttachment(BoardAttachment attachment) {
+        this.attachments.add(attachment);
+    }
+
+    public void removeAttachment(BoardAttachment attachment) {
+        this.attachments.remove(attachment);
+    }
+
+    public void setUpdatedBy(Long userId) {
+        this.updatedBy = userId;
     }
 }

@@ -1,0 +1,328 @@
+package com.hip.damoa.domain.board.service;
+
+import com.hip.damoa.core.exception.BusinessException;
+import com.hip.damoa.core.exception.ErrorCode;
+import com.hip.damoa.domain.board.model.Board;
+import com.hip.damoa.domain.board.model.BoardAttachment;
+import com.hip.damoa.domain.board.model.BoardType;
+import com.hip.damoa.domain.board.model.EventStatus;
+import com.hip.damoa.domain.board.repository.BoardAttachmentRepository;
+import com.hip.damoa.domain.board.repository.BoardRepository;
+import com.hip.damoa.domain.board.web.dto.FileInfo;
+import com.hip.damoa.domain.board.web.dto.NoticeBoardRequest;
+import com.hip.damoa.domain.board.web.dto.NoticeBoardResponse;
+import com.hip.damoa.domain.file.model.File;
+import com.hip.damoa.domain.file.repository.FileRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+/**
+ * Notice/Event 게시판 Service
+ *
+ * 공지사항 및 이벤트 게시판 비즈니스 로직
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class NoticeBoardService {
+
+    private final BoardService boardService;
+    private final BoardRepository boardRepository;
+    private final BoardAttachmentRepository boardAttachmentRepository;
+    private final FileRepository fileRepository;
+
+    // 공지사항 관련 타입 (NOTICE, EVENT, FAQ)
+    private static final List<String> NOTICE_BOARD_TYPES = Arrays.asList("NOTICE", "EVENT", "FAQ");
+
+    /**
+     * 공지사항/이벤트 게시글 생성
+     */
+    @Transactional
+    public NoticeBoardResponse createNotice(String userEmail, String boardType, NoticeBoardRequest request) {
+        log.info("{} 게시글 생성 시작: userEmail={}, title={}", boardType, userEmail, request.getTitle());
+
+        // BoardType 검증
+        BoardType type = BoardType.fromString(boardType);
+        if (!type.isNotice() && !type.isEvent()) {
+            throw new BusinessException(ErrorCode.INVALID_BOARD_TYPE);
+        }
+
+        // typeData 구성 (이벤트 날짜 저장)
+        Map<String, Object> typeData = new HashMap<>();
+        if (request.getEventStartDate() != null) {
+            typeData.put("eventStartDate", request.getEventStartDate().toString());
+        }
+        if (request.getEventEndDate() != null) {
+            typeData.put("eventEndDate", request.getEventEndDate().toString());
+        }
+
+        // Board 생성
+        Board board = boardService.createBoard(
+                userEmail,
+                boardType,
+                request.getCategoryId(),
+                request.getTitle(),
+                request.getContent(),
+                typeData,
+                request.getTags(),
+                request.getIsPublished(),
+                false,
+                null
+        );
+
+        // 고정 여부 설정
+        if (request.getIsPinned() != null && request.getIsPinned()) {
+            board.pin();
+        }
+
+        // 썸네일 저장
+        if (request.getThumbnailUuid() != null) {
+            File thumbnailFile = fileRepository.findByUuidAndIsDeletedFalse(request.getThumbnailUuid())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+
+            BoardAttachment attachment = BoardAttachment.builder()
+                    .board(board)
+                    .fileId(thumbnailFile.getId())
+                    .attachmentType(BoardAttachment.AttachmentType.THUMBNAIL)
+                    .displayOrder(0)
+                    .description("썸네일")
+                    .build();
+
+            boardAttachmentRepository.save(attachment);
+            log.info("썸네일 첨부파일 저장 완료: fileId={}", thumbnailFile.getId());
+        }
+
+        log.info("{} 게시글 생성 완료: uuid={}", boardType, board.getUuid());
+
+        // 썸네일과 함께 응답 생성
+        FileInfo thumbnail = loadThumbnail(board);
+        return NoticeBoardResponse.from(board, thumbnail);
+    }
+
+    /**
+     * 공지사항/이벤트 게시글 조회
+     */
+    @Transactional
+    public NoticeBoardResponse getNotice(UUID uuid, String expectedBoardType) {
+        log.info("게시글 조회: uuid={}", uuid);
+
+        Board board = boardService.getBoard(uuid);
+
+        // BoardType 검증 (expectedBoardType이 null이면 검증 생략 - 통합 조회)
+        if (expectedBoardType != null && !board.getBoardType().equals(expectedBoardType)) {
+            throw new BusinessException(ErrorCode.BOARD_TYPE_MISMATCH);
+        }
+
+        // 조회수 증가
+        boardService.incrementViewCount(uuid);
+
+        // 썸네일과 함께 응답
+        FileInfo thumbnail = loadThumbnail(board);
+        return NoticeBoardResponse.from(board, thumbnail);
+    }
+
+    /**
+     * 공지사항/이벤트 게시글 목록 조회
+     */
+    @Transactional(readOnly = true)
+    public Page<NoticeBoardResponse> getNoticeList(String boardType, EventStatus eventStatus, Pageable pageable) {
+        Page<Board> boards;
+
+        if (boardType == null) {
+            // boardType이 null이면 NOTICE, EVENT, FAQ 모두 조회
+            boards = boardRepository.findByBoardTypeInAndIsDeletedFalseAndIsPublishedTrue(
+                    NOTICE_BOARD_TYPES, pageable);
+        } else {
+            boards = boardService.getBoardsByType(boardType, pageable);
+        }
+
+        // 각 게시글의 썸네일 로드
+        Page<NoticeBoardResponse> responses = boards.map(board -> {
+            FileInfo thumbnail = loadThumbnail(board);
+            return NoticeBoardResponse.from(board, thumbnail);
+        });
+
+        // EventStatus 필터링
+        if (eventStatus != null) {
+            List<NoticeBoardResponse> filteredList = responses.getContent().stream()
+                    .filter(response -> filterByEventStatus(response, eventStatus))
+                    .collect(Collectors.toList());
+            return new PageImpl<>(filteredList, pageable, filteredList.size());
+        }
+
+        return responses;
+    }
+
+    /**
+     * 공지사항/이벤트 게시글 검색
+     */
+    @Transactional(readOnly = true)
+    public Page<NoticeBoardResponse> searchNotice(String boardType, String keyword, EventStatus eventStatus, Pageable pageable) {
+        Page<Board> boards;
+
+        if (boardType == null) {
+            // boardType이 null이면 NOTICE, EVENT, FAQ 모두 검색
+            boards = boardRepository.searchByKeywordAndBoardTypes(
+                    NOTICE_BOARD_TYPES, keyword, pageable);
+        } else {
+            boards = boardService.searchBoards(boardType, keyword, pageable);
+        }
+
+        // 각 게시글의 썸네일 로드
+        Page<NoticeBoardResponse> responses = boards.map(board -> {
+            FileInfo thumbnail = loadThumbnail(board);
+            return NoticeBoardResponse.from(board, thumbnail);
+        });
+
+        // EventStatus 필터링
+        if (eventStatus != null) {
+            List<NoticeBoardResponse> filteredList = responses.getContent().stream()
+                    .filter(response -> filterByEventStatus(response, eventStatus))
+                    .collect(Collectors.toList());
+            return new PageImpl<>(filteredList, pageable, filteredList.size());
+        }
+
+        return responses;
+    }
+
+    /**
+     * EventStatus에 따라 필터링
+     */
+    private boolean filterByEventStatus(NoticeBoardResponse response, EventStatus eventStatus) {
+        if (response.getIsEventEnded() == null) {
+            // 이벤트가 아니면 필터링 제외
+            return true;
+        }
+
+        return switch (eventStatus) {
+            case ACTIVE -> !response.getIsEventEnded();  // 진행 중
+            case ENDED -> response.getIsEventEnded();     // 종료
+        };
+    }
+
+    /**
+     * 게시글의 썸네일 조회
+     */
+    private FileInfo loadThumbnail(Board board) {
+        return boardAttachmentRepository.findByBoardAndTypeOrderByDisplayOrder(
+                        board, BoardAttachment.AttachmentType.THUMBNAIL)
+                .stream()
+                .findFirst()
+                .flatMap(attachment -> fileRepository.findById(attachment.getFileId()))
+                .filter(file -> !file.getIsDeleted())
+                .map(FileInfo::from)
+                .orElse(null);
+    }
+
+    /**
+     * 공지사항/이벤트 게시글 수정
+     */
+    @Transactional
+    public NoticeBoardResponse updateNotice(UUID uuid, String userEmail, NoticeBoardRequest request) {
+        log.info("게시글 수정 시작: uuid={}, userEmail={}", uuid, userEmail);
+
+        // 이벤트 날짜 업데이트
+        Map<String, Object> typeData = new HashMap<>();
+        if (request.getEventStartDate() != null) {
+            typeData.put("eventStartDate", request.getEventStartDate().toString());
+        }
+        if (request.getEventEndDate() != null) {
+            typeData.put("eventEndDate", request.getEventEndDate().toString());
+        }
+
+        Board board = boardService.updateBoard(
+                uuid,
+                userEmail,
+                request.getTitle(),
+                request.getContent(),
+                typeData.isEmpty() ? null : typeData,
+                request.getTags()
+        );
+
+        // 고정 여부 업데이트
+        if (request.getIsPinned() != null) {
+            if (request.getIsPinned()) {
+                board.pin();
+            } else {
+                board.unpin();
+            }
+        }
+
+        // 썸네일 업데이트
+        if (request.getThumbnailUuid() != null) {
+            // 기존 썸네일 삭제
+            List<BoardAttachment> existingThumbnails = boardAttachmentRepository.findByBoardAndTypeOrderByDisplayOrder(
+                    board, BoardAttachment.AttachmentType.THUMBNAIL);
+            existingThumbnails.forEach(attachment -> {
+                attachment.softDelete();
+                log.info("기존 썸네일 삭제: attachmentId={}", attachment.getId());
+            });
+
+            // 새 썸네일 추가
+            File thumbnailFile = fileRepository.findByUuidAndIsDeletedFalse(request.getThumbnailUuid())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+
+            BoardAttachment newAttachment = BoardAttachment.builder()
+                    .board(board)
+                    .fileId(thumbnailFile.getId())
+                    .attachmentType(BoardAttachment.AttachmentType.THUMBNAIL)
+                    .displayOrder(0)
+                    .description("썸네일")
+                    .build();
+
+            boardAttachmentRepository.save(newAttachment);
+            log.info("새 썸네일 저장 완료: fileId={}", thumbnailFile.getId());
+        }
+
+        log.info("게시글 수정 완료: uuid={}", uuid);
+
+        // 썸네일과 함께 응답
+        FileInfo thumbnail = loadThumbnail(board);
+        return NoticeBoardResponse.from(board, thumbnail);
+    }
+
+    /**
+     * 공지사항/이벤트 게시글 삭제
+     */
+    @Transactional
+    public void deleteNotice(UUID uuid, String userEmail) {
+        log.info("게시글 삭제: uuid={}, userEmail={}", uuid, userEmail);
+        boardService.deleteBoard(uuid, userEmail);
+    }
+
+    /**
+     * Pinned 게시글 목록
+     */
+    @Transactional(readOnly = true)
+    public List<NoticeBoardResponse> getPinnedNotices(String boardType) {
+        List<Board> boards;
+
+        if (boardType == null) {
+            // boardType이 null이면 NOTICE, EVENT, FAQ 모두 조회
+            boards = boardRepository.findByBoardTypeInAndIsPinnedTrueAndIsDeletedFalseAndIsPublishedTrueOrderByPublishedAtDesc(
+                    NOTICE_BOARD_TYPES);
+        } else {
+            boards = boardService.getPinnedBoards(boardType);
+        }
+
+        // 각 게시글의 썸네일 로드
+        return boards.stream()
+                .map(board -> {
+                    FileInfo thumbnail = loadThumbnail(board);
+                    return NoticeBoardResponse.from(board, thumbnail);
+                })
+                .toList();
+    }
+}

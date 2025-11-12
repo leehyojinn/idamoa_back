@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * 파일 업로드 응답 DTO
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 public class FileUploadResponse {
 
     private Long id;
+    private UUID uuid;
     private String originalFilename;
     private String storedFilename;
     private String fileUrl;
@@ -31,6 +33,7 @@ public class FileUploadResponse {
     public static FileUploadResponse from(File file) {
         return FileUploadResponse.builder()
                 .id(file.getId())
+                .uuid(file.getUuid())
                 .originalFilename(file.getOriginalFilename())
                 .storedFilename(file.getStoredFilename())
                 .fileUrl(file.getFileUrl())

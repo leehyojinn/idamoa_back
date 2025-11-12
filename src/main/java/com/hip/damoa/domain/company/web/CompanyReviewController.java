@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-@Tag(name = "Company Review", description = "업체 리뷰 관련 API")
+@Tag(name = "07. Company Review", description = "업체 리뷰 관련 API")
 @Slf4j
 @RestController
 @RequiredArgsConstructor

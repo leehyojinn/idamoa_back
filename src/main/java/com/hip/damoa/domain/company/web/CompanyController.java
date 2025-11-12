@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
  * 업체 관리 REST API (업체 소유자용)
  */
 @Slf4j
-@Tag(name = "Company", description = "업체 관리 API (업체 소유자용)")
+@Tag(name = "05. Company", description = "업체 관리 API (업체 소유자용)")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/companies")

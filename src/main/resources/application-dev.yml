@@ -10,7 +10,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none  # Changed from validate to none for Docker testing
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true

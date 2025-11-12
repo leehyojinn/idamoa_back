@@ -122,3 +122,15 @@ notification:
       secret-key: ${NCP_SECRET_KEY:your-ncp-secret-key}
       service-id: ${NCP_SERVICE_ID:ncp:sms:kr:service-id}
       sender: ${SMS_SENDER:01012345678}
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+    filter: true
+    tags-sorter: alpha
+    operations-sorter: alpha
