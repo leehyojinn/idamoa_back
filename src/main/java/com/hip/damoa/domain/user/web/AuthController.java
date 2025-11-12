@@ -1,5 +1,6 @@
 package com.hip.damoa.domain.user.web;
 
+import com.hip.damoa.core.jwt.LoginResponse;
 import com.hip.damoa.core.jwt.TokenInfo;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.user.service.AuthService;
@@ -7,7 +8,9 @@ import com.hip.damoa.domain.user.service.VerificationService;
 import com.hip.damoa.domain.user.web.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -128,6 +131,58 @@ public class AuthController {
     @PostMapping("/verification/sms/verify")
     public ApiResponse<Void> verifySms(@Valid @RequestBody VerificationConfirmRequest request) {
         verificationService.verifySmsCode(request.getSignupToken(), request.getCode());
+        return ApiResponse.success();
+    }
+
+    /**
+     * 비밀번호 재설정 시작 (1단계 - 토큰 발급)
+     */
+    @Operation(summary = "비밀번호 재설정 시작", description = "이메일로 사용자를 확인하고 재설정 토큰을 발급합니다")
+    @PostMapping("/password/reset/start")
+    public ApiResponse<PasswordResetStartResponse> startPasswordReset(@Valid @RequestBody PasswordResetRequestRequest request) {
+        PasswordResetStartResponse response = authService.startPasswordReset(request.getEmail());
+        return ApiResponse.success(response);
+    }
+
+    /**
+     * 비밀번호 재설정 이메일 인증 코드 발송 (2단계)
+     */
+    @Operation(summary = "비밀번호 재설정 이메일 인증 코드 발송", description = "재설정 토큰으로 이메일 인증 코드를 발송합니다")
+    @PostMapping("/password/reset/verification/send")
+    public ApiResponse<Void> sendPasswordResetVerification(@Valid @RequestBody PasswordResetEmailVerificationRequest request) {
+        verificationService.sendPasswordResetCode(request.getResetToken(), request.getEmail());
+        return ApiResponse.success();
+    }
+
+    /**
+     * 비밀번호 재설정 인증 코드 확인 (3단계)
+     */
+    @Operation(summary = "비밀번호 재설정 인증 코드 확인", description = "이메일로 받은 인증 코드를 확인합니다")
+    @PostMapping("/password/reset/verification/verify")
+    public ApiResponse<Void> verifyPasswordResetCode(@Valid @RequestBody PasswordResetVerifyRequest request) {
+        authService.verifyPasswordResetCode(request.getResetToken(), request.getCode());
+        return ApiResponse.success();
+    }
+
+    /**
+     * 비밀번호 재설정 완료 (4단계)
+     */
+    @Operation(summary = "비밀번호 재설정 완료", description = "인증 완료 후 새 비밀번호로 변경합니다")
+    @PostMapping("/password/reset/complete")
+    public ApiResponse<Void> completePasswordReset(@Valid @RequestBody PasswordResetCompleteRequest request) {
+        authService.completePasswordReset(request.getResetToken(), request.getNewPassword());
+        return ApiResponse.success();
+    }
+
+    /**
+     * 비밀번호 변경 (로그인 상태)
+     */
+    @Operation(summary = "비밀번호 변경", description = "로그인 상태에서 현재 비밀번호를 확인하고 새 비밀번호로 변경합니다")
+    @PostMapping("/password/change")
+    public ApiResponse<Void> changePassword(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody PasswordChangeRequest request) {
+        authService.changePassword(userDetails.getUsername(), request.getCurrentPassword(), request.getNewPassword());
         return ApiResponse.success();
     }
 }

@@ -13,7 +13,7 @@ import com.hip.damoa.domain.user.model.UserProfile;
 import com.hip.damoa.domain.user.repository.UserProfileRepository;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import com.hip.damoa.domain.user.web.dto.*;
-import com.hip.damoa.domain.user.web.dto.*;
+import com.hip.damoa.infra.notification.UnifiedMessagingService;
 import com.hip.damoa.infra.redis.RedisService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -45,12 +47,15 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final RedisService redisService;
     private final VerificationService verificationService;
+    private final UnifiedMessagingService unifiedMessagingService;
     private final ObjectMapper objectMapper;
 
     private static final String SIGNUP_PREFIX = "signup:";
+    private static final String PASSWORD_RESET_PREFIX = "password_reset:";
     private static final String REFRESH_TOKEN_PREFIX = "refresh:";
     private static final String TOKEN_BLACKLIST_PREFIX = "blacklist:";
     private static final Duration SIGNUP_TTL = Duration.ofMinutes(10);
+    private static final Duration PASSWORD_RESET_TTL = Duration.ofMinutes(30);
     private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(14);
 
     /**
@@ -295,5 +300,142 @@ public class AuthService {
             ip = request.getRemoteAddr();
         }
         return ip;
+    }
+
+    /**
+     * 비밀번호 재설정 시작 (1단계)
+     * - 사용자 존재 확인
+     * - Redis에 이메일 저장
+     * - UUID 토큰 생성 및 반환
+     */
+    @Transactional(readOnly = true)
+    public PasswordResetStartResponse startPasswordReset(String email) {
+        log.info("비밀번호 재설정 시작: email={}", email);
+
+        // 사용자 존재 확인
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // UUID 토큰 생성
+        String resetToken = UUID.randomUUID().toString();
+        String redisKey = PASSWORD_RESET_PREFIX + resetToken;
+
+        // Redis에 이메일 저장
+        redisService.setValues(redisKey, email, PASSWORD_RESET_TTL);
+        log.info("비밀번호 재설정 토큰 생성 완료: token={}, email={}", resetToken, email);
+
+        return PasswordResetStartResponse.builder()
+                .resetToken(resetToken)
+                .message("이메일 인증을 진행해주세요")
+                .expiresIn(PASSWORD_RESET_TTL.getSeconds())
+                .build();
+    }
+
+    /**
+     * 비밀번호 재설정 인증 코드 확인 (2단계)
+     */
+    public void verifyPasswordResetCode(String resetToken, String code) {
+        log.info("비밀번호 재설정 인증 코드 확인: token={}", resetToken);
+
+        // 인증 코드 확인 (VerificationService에서 플래그 저장까지 처리)
+        verificationService.verifyPasswordResetCode(resetToken, code);
+
+        log.info("비밀번호 재설정 인증 코드 확인 완료: token={}", resetToken);
+    }
+
+    /**
+     * 비밀번호 재설정 완료 (3단계)
+     */
+    @Transactional
+    public void completePasswordReset(String resetToken, String newPassword) {
+        log.info("비밀번호 재설정 완료 시작: token={}", resetToken);
+
+        // 1. 인증 완료 여부 확인
+        if (!verificationService.isPasswordResetVerified(resetToken)) {
+            log.warn("비밀번호 재설정 인증 미완료: token={}", resetToken);
+            throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
+
+        // 2. Redis에서 이메일 조회
+        String redisKey = PASSWORD_RESET_PREFIX + resetToken;
+        String email = redisService.getValues(redisKey);
+
+        if (email == null) {
+            log.warn("비밀번호 재설정 토큰 만료: token={}", resetToken);
+            throw new BusinessException(ErrorCode.PASSWORD_RESET_TOKEN_EXPIRED);
+        }
+
+        // 3. 사용자 조회
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 4. 비밀번호 암호화 및 업데이트
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        user.updatePassword(encodedPassword);
+        userRepository.save(user);
+
+        // 5. Redis에서 토큰 및 인증 플래그 삭제
+        redisService.deleteValues(redisKey);
+        verificationService.deletePasswordResetVerifiedFlag(resetToken);
+
+        log.info("비밀번호 재설정 완료: email={}, token={}", email, resetToken);
+    }
+
+    /**
+     * 비밀번호 변경 (로그인 상태)
+     */
+    @Transactional
+    public void changePassword(String userEmail, String currentPassword, String newPassword) {
+        log.info("비밀번호 변경 시작: email={}", userEmail);
+
+        // 1. 사용자 조회
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 2. 현재 비밀번호 확인
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            log.warn("비밀번호 변경 실패 - 현재 비밀번호 불일치: email={}", userEmail);
+            throw new BusinessException(ErrorCode.INVALID_PASSWORD);
+        }
+
+        // 3. 새 비밀번호와 현재 비밀번호가 같은지 확인
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            log.warn("비밀번호 변경 실패 - 새 비밀번호가 현재 비밀번호와 동일: email={}", userEmail);
+            throw new BusinessException(ErrorCode.SAME_PASSWORD);
+        }
+
+        // 4. 비밀번호 암호화 및 업데이트
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        user.updatePassword(encodedPassword);
+        userRepository.save(user);
+
+        log.info("비밀번호 변경 완료: email={}", userEmail);
+    }
+
+    /**
+     * 비밀번호 변경 알림 이메일 발송
+     */
+    private void sendPasswordChangedEmail(String email, Long userId, String changeMethod) {
+        try {
+            String changedAt = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+            Map<String, String> variables = Map.of(
+                    "changedAt", changedAt,
+                    "changeMethod", changeMethod
+            );
+
+            unifiedMessagingService.sendEmail(
+                    email,
+                    "PASSWORD_CHANGED",
+                    variables,
+                    userId,
+                    "PASSWORD_CHANGE"
+            );
+
+            log.info("비밀번호 변경 알림 이메일 발송 완료: email={}, changeMethod={}", email, changeMethod);
+        } catch (Exception e) {
+            log.error("비밀번호 변경 알림 이메일 발송 실패: email={}", email, e);
+            // 이메일 발송 실패는 비밀번호 변경 자체에 영향을 주지 않도록 로그만 기록
+        }
     }
 }
