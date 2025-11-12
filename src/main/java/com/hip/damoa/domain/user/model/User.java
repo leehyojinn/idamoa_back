@@ -314,4 +314,11 @@ User extends BaseEntity implements UserDetails {
     public boolean isSuspended() {
         return UserStatus.SUSPENDED == this.status;
     }
+
+    /**
+     * 비밀번호 업데이트
+     */
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
 }

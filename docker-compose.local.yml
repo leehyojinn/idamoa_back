@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/${GITHUB_REPOSITORY:-interior-damoa/hip-damoa-backend}:latest
+    image: damoa-app:local  # 로컬 빌드 이미지 사용
     container_name: damoa-app-dev
     restart: unless-stopped
     environment:
@@ -8,14 +8,14 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
 
       # Database (외부 네트워크의 postgres 컨테이너 사용)
-      DB_HOST: damoa-postgres-dev
+      DB_HOST: damoa-postgres-infra  # 로컬 인프라 컨테이너 이름
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-hip_damoa_dev}
-      DB_USERNAME: ${DB_USERNAME:-hip_damoa_user}
+      DB_NAME: ${DB_NAME:-hip_damoa_local}  # 로컬 데이터베이스 이름
+      DB_USERNAME: ${DB_USERNAME:-postgres}   # 로컬 사용자
       DB_PASSWORD: ${DB_PASSWORD}
 
       # Redis (외부 네트워크의 redis 컨테이너 사용)
-      REDIS_HOST: damoa-redis-dev
+      REDIS_HOST: damoa-redis-infra  # 로컬 인프라 컨테이너 이름
       REDIS_PORT: 6379
 
       # JWT
@@ -49,10 +49,19 @@ services:
       # Notifications
       EMAIL_NOTIFICATION_ENABLED: ${EMAIL_NOTIFICATION_ENABLED:-false}
       EMAIL_FROM: ${EMAIL_FROM:-}
+
+      # Gmail API
+      GMAIL_API_ENABLED: ${GMAIL_API_ENABLED:-false}
+      GMAIL_DELEGATED_USER: ${GMAIL_DELEGATED_USER:-}
+      GMAIL_SERVICE_ACCOUNT_KEY: ${GMAIL_SERVICE_ACCOUNT_KEY:-}
+      GMAIL_APP_NAME: ${GMAIL_APP_NAME:-damoa}
+
+      # Legacy SMTP (deprecated)
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+
       SMS_NOTIFICATION_ENABLED: ${SMS_NOTIFICATION_ENABLED:-false}
       SMS_PROVIDER: ${SMS_PROVIDER:-ALIGO}
       SMS_SENDER: ${SMS_SENDER:-}
@@ -63,9 +72,10 @@ services:
       JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC"
 
     ports:
-      - "8080:8080"
+      - "8081:8080"  # 로컬 포트 8081로 변경
     volumes:
       - app-logs:/app/logs
+      - ./secrets:/app/secrets:ro  # Gmail service account key (read-only)
     networks:
       - damoa-network
     healthcheck:
@@ -81,4 +91,5 @@ volumes:
 
 networks:
   damoa-network:
-    external: true  # 인프라에서 만든 네트워크 사용
+    external: true
+    name: damoa_damoa-network  # 로컬 인프라 네트워크와 동일하게 설정

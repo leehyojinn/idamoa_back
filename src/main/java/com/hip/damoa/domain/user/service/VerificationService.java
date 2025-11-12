@@ -40,6 +40,9 @@ public class VerificationService {
     private static final String SMS_VERIFIED_SUFFIX = ":sms_verified";
     private static final String EMAIL_ATTEMPT_PREFIX = "attempt:email:";
     private static final String SMS_ATTEMPT_PREFIX = "attempt:sms:";
+    private static final String PASSWORD_RESET_PREFIX = "password_reset:";
+    private static final String PASSWORD_RESET_OTP_PREFIX = "password_reset_otp:";
+    private static final String PASSWORD_RESET_VERIFIED_PREFIX = "password_reset_verified:";
 
     private static final Duration EMAIL_OTP_TTL = Duration.ofMinutes(15);
     private static final Duration SMS_OTP_TTL = Duration.ofMinutes(3);
@@ -305,5 +308,136 @@ public class VerificationService {
             log.error("회원가입 데이터 역직렬화 실패: token={}", signupToken, e);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * 비밀번호 재설정 인증 코드 발송 (토큰 기반)
+     */
+    public String sendPasswordResetCode(String resetToken, String email) {
+        // 1. 이메일 형식 검증
+        validateEmailFormat(email);
+
+        // 2. 토큰-이메일 매칭 검증
+        validateResetTokenAndEmail(resetToken, email);
+
+        // 3. 시도 횟수 체크
+        checkAttempts(EMAIL_ATTEMPT_PREFIX + resetToken);
+
+        // 4. 6자리 숫자 코드 생성
+        String code = generateNumericCode(6);
+        String key = PASSWORD_RESET_OTP_PREFIX + resetToken;
+
+        // 5. Redis에 저장
+        redisService.setValues(key, code, EMAIL_OTP_TTL);
+
+        // 6. 시도 횟수 증가
+        incrementAttempts(EMAIL_ATTEMPT_PREFIX + resetToken);
+
+        log.info("비밀번호 재설정 인증 코드 생성: token={}, email={} (TTL: {}분)", resetToken, email, EMAIL_OTP_TTL.toMinutes());
+
+        // 7. 실제 이메일 발송
+        sendPasswordResetEmail(email, code);
+
+        // 개발 모드에서는 코드 반환
+        if (!emailEnabled) {
+            log.warn("Email 비활성화 상태 - 개발 모드: code={}", code);
+        }
+
+        return code;
+    }
+
+    /**
+     * 비밀번호 재설정 이메일 발송
+     */
+    private void sendPasswordResetEmail(String email, String code) {
+        // 1. 템플릿 변수 준비
+        Map<String, String> variables = Map.of(
+                "verificationCode", code,
+                "expiryMinutes", String.valueOf(EMAIL_OTP_TTL.toMinutes())
+        );
+
+        // 2. UMS를 통한 이메일 발송
+        try {
+            unifiedMessagingService.sendEmail(
+                    email,
+                    "PASSWORD_RESET",  // 템플릿 코드 (DB에 등록 필요)
+                    variables,
+                    null,  // 비밀번호 찾기이므로 userId 없음
+                    "PASSWORD_RESET"
+            );
+
+            log.info("비밀번호 재설정 이메일 발송 완료: email={}", email);
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+
+    /**
+     * 비밀번호 재설정 인증 코드 확인 (토큰 기반)
+     */
+    public boolean verifyPasswordResetCode(String resetToken, String code) {
+        String key = PASSWORD_RESET_OTP_PREFIX + resetToken;
+        String storedCode = redisService.getValues(key);
+
+        if (storedCode == null) {
+            log.warn("비밀번호 재설정 인증 코드 만료 또는 존재하지 않음: token={}", resetToken);
+            throw new BusinessException(ErrorCode.VERIFICATION_CODE_EXPIRED);
+        }
+
+        if (!storedCode.equals(code)) {
+            log.warn("비밀번호 재설정 인증 코드 불일치: token={}", resetToken);
+            throw new BusinessException(ErrorCode.VERIFICATION_CODE_MISMATCH);
+        }
+
+        // 인증 성공 - 코드 삭제 및 플래그 저장
+        redisService.deleteValues(key);
+
+        // 인증 완료 플래그 저장 (30분 유효)
+        String verifiedKey = PASSWORD_RESET_VERIFIED_PREFIX + resetToken;
+        redisService.setValues(verifiedKey, "true", VERIFIED_FLAG_TTL);
+
+        log.info("비밀번호 재설정 인증 성공: token={}", resetToken);
+
+        return true;
+    }
+
+    /**
+     * 비밀번호 재설정 인증 완료 여부 확인 (토큰 기반)
+     */
+    public boolean isPasswordResetVerified(String resetToken) {
+        String verifiedKey = PASSWORD_RESET_VERIFIED_PREFIX + resetToken;
+        String verified = redisService.getValues(verifiedKey);
+        return "true".equals(verified);
+    }
+
+    /**
+     * 비밀번호 재설정 인증 플래그 삭제 (재설정 완료 후, 토큰 기반)
+     */
+    public void deletePasswordResetVerifiedFlag(String resetToken) {
+        String verifiedKey = PASSWORD_RESET_VERIFIED_PREFIX + resetToken;
+        redisService.deleteValues(verifiedKey);
+        log.info("비밀번호 재설정 인증 플래그 삭제: token={}", resetToken);
+    }
+
+    /**
+     * 토큰과 이메일 매칭 검증 (비밀번호 재설정용)
+     */
+    private void validateResetTokenAndEmail(String resetToken, String email) {
+        // Redis에서 비밀번호 재설정 정보 조회
+        String redisKey = PASSWORD_RESET_PREFIX + resetToken;
+        String storedEmail = redisService.getValues(redisKey);
+
+        if (storedEmail == null) {
+            log.warn("비밀번호 재설정 토큰을 찾을 수 없음: token={}", resetToken);
+            throw new BusinessException(ErrorCode.PASSWORD_RESET_TOKEN_NOT_FOUND);
+        }
+
+        // 이메일 매칭 확인
+        if (!storedEmail.equals(email)) {
+            log.warn("토큰-이메일 불일치: token={}, expected={}, actual={}", resetToken, storedEmail, email);
+            throw new BusinessException(ErrorCode.TOKEN_EMAIL_MISMATCH);
+        }
+
+        log.info("토큰-이메일 검증 성공: token={}, email={}", resetToken, email);
     }
 }

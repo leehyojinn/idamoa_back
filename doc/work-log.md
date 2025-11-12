@@ -26,13 +26,120 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: 사용자 상태 관리 구현 완료
-**마지막 업데이트**: 2025-11-11
+**프로젝트 단계**: 비밀번호 찾기/변경 기능 구현 완료
+**마지막 업데이트**: 2025-11-12
 **다음 우선순위**: 사용자 프로필 완성 및 활성화 테스트
 
 ---
 
 ## 📝 작업 로그
+
+### 2025-11-12
+
+#### ✅ 완료 (Completed)
+
+**[AUTH-002] 비밀번호 찾기 및 변경 기능 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-12 (약 2시간)
+- **작업 내용**:
+  - 비밀번호 찾기 기능 구현 (로그인 불필요, 토큰 기반 4단계 플로우)
+  - 비밀번호 변경 기능 구현 (로그인 필요, 현재 비밀번호 검증)
+  - 이메일 템플릿 추가 (PASSWORD_RESET, PASSWORD_CHANGED)
+  - SecurityConfig 업데이트 (비밀번호 찾기 엔드포인트 public 설정)
+  - 에러 코드 추가 (PW001-PW004)
+
+**생성/수정 파일**:
+
+**신규 파일 (7개)**:
+1. `src/main/java/com/hip/damoa/domain/user/web/dto/PasswordResetStartResponse.java`
+2. `src/main/java/com/hip/damoa/domain/user/web/dto/PasswordResetRequestRequest.java`
+3. `src/main/java/com/hip/damoa/domain/user/web/dto/PasswordResetEmailVerificationRequest.java`
+4. `src/main/java/com/hip/damoa/domain/user/web/dto/PasswordResetVerifyRequest.java`
+5. `src/main/java/com/hip/damoa/domain/user/web/dto/PasswordResetCompleteRequest.java`
+6. `src/main/java/com/hip/damoa/domain/user/web/dto/PasswordChangeRequest.java`
+7. `src/main/resources/db/migration/V7__Add_password_reset_and_changed_templates.sql`
+
+**수정 파일 (6개)**:
+1. `src/main/java/com/hip/damoa/config/web/SecurityConfig.java`
+2. `src/main/java/com/hip/damoa/core/exception/ErrorCode.java`
+3. `src/main/java/com/hip/damoa/domain/user/model/User.java`
+4. `src/main/java/com/hip/damoa/domain/user/service/AuthService.java`
+5. `src/main/java/com/hip/damoa/domain/user/service/VerificationService.java`
+6. `src/main/java/com/hip/damoa/domain/user/web/AuthController.java`
+
+**주요 변경사항**:
+
+1. **비밀번호 찾기 플로우 (Public - 로그인 불필요)**:
+   - `POST /api/auth/password/reset/start` - UUID 토큰 발급, Redis에 이메일 저장 (30분 TTL)
+   - `POST /api/auth/password/reset/verification/send` - 6자리 인증 코드 이메일 발송 (15분 TTL)
+   - `POST /api/auth/password/reset/verification/verify` - 인증 코드 확인 및 검증 플래그 설정
+   - `POST /api/auth/password/reset/complete` - 비밀번호 변경 + 완료 이메일 발송
+
+2. **비밀번호 변경 플로우 (Authenticated - 로그인 필요)**:
+   - `POST /api/auth/password/change` - 현재 비밀번호 확인 → 새 비밀번호 변경 + 완료 이메일 발송
+
+3. **VerificationService 개선**:
+   - `PASSWORD_RESET_PREFIX`, `PASSWORD_RESET_OTP_PREFIX`, `PASSWORD_RESET_VERIFIED_PREFIX` 상수 추가
+   - `sendPasswordResetCode(resetToken, email)` - 토큰 기반 인증 코드 발송
+   - `verifyPasswordResetCode(resetToken, code)` - 토큰 기반 코드 검증
+   - `validateResetTokenAndEmail(resetToken, email)` - 토큰-이메일 매칭 검증
+
+4. **AuthService 개선**:
+   - `startPasswordReset(email)` - 토큰 발급 및 Redis 저장 (30분 TTL)
+   - `verifyPasswordResetCode(resetToken, code)` - 인증 코드 검증 위임
+   - `completePasswordReset(resetToken, newPassword)` - 비밀번호 변경 + Redis 정리
+   - `changePassword(userEmail, currentPassword, newPassword)` - 로그인 상태 비밀번호 변경
+   - `sendPasswordChangedEmail(email, userId, changeMethod)` - 비밀번호 변경 알림 이메일
+
+5. **User 엔티티**:
+   - `updatePassword(encodedPassword)` 메서드 추가
+
+6. **SecurityConfig**:
+   - `/api/auth/password/reset/**` 엔드포인트 public 설정 추가
+
+7. **에러 코드**:
+   - `PASSWORD_RESET_TOKEN_NOT_FOUND` (PW001)
+   - `PASSWORD_RESET_TOKEN_EXPIRED` (PW002)
+   - `INVALID_PASSWORD` (PW003)
+   - `SAME_PASSWORD` (PW004)
+
+8. **이메일 템플릿 (V7 Migration)**:
+   - `PASSWORD_RESET` - 비밀번호 찾기 인증 코드 발송용
+   - `PASSWORD_CHANGED` - 비밀번호 변경 완료 알림용
+
+**API 엔드포인트**:
+
+**비밀번호 찾기 (Public)**:
+```
+POST /api/auth/password/reset/start              # 토큰 발급
+POST /api/auth/password/reset/verification/send  # 인증 코드 발송
+POST /api/auth/password/reset/verification/verify # 인증 코드 확인
+POST /api/auth/password/reset/complete           # 비밀번호 변경 완료
+```
+
+**비밀번호 변경 (Authenticated)**:
+```
+POST /api/auth/password/change                    # 로그인 상태 비밀번호 변경
+```
+
+**보안 고려사항**:
+- 토큰 기반 시스템으로 Redis 상태 관리 (회원가입 패턴과 동일)
+- 이메일-토큰 검증으로 타인의 비밀번호 변경 방지
+- 인증 코드 시도 횟수 제한 (VerificationService의 checkAttempts)
+- 비밀번호 변경 후 알림 이메일 자동 발송 (보안 알림)
+- 현재 비밀번호와 동일한 새 비밀번호 차단 (SAME_PASSWORD 에러)
+
+**빌드 결과**: ✅ BUILD SUCCESSFUL
+
+**런타임 테스트**: ✅ Application started successfully
+
+**문제 해결**:
+- ✅ Redis 토큰 기반 시스템 적용 (회원가입과 동일한 패턴)
+- ✅ Public 엔드포인트 설정 (SecurityConfig 업데이트)
+- ✅ 이메일 템플릿 추가 (V7 migration)
+- ✅ 에러 코드 충돌 방지 (PR → PW prefix 사용)
+
+---
 
 ### 2025-11-11
 

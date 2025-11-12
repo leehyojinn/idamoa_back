@@ -44,6 +44,12 @@ public enum ErrorCode {
     SIGNUP_TOKEN_NOT_FOUND(HttpStatus.BAD_REQUEST, "S001", "회원가입 토큰을 찾을 수 없거나 만료되었습니다"),
     SIGNUP_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "S002", "유효하지 않은 회원가입 토큰입니다"),
 
+    // Password Reset
+    PASSWORD_RESET_TOKEN_NOT_FOUND(HttpStatus.BAD_REQUEST, "PW001", "비밀번호 재설정 토큰을 찾을 수 없거나 만료되었습니다"),
+    PASSWORD_RESET_TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "PW002", "비밀번호 재설정 토큰이 만료되었습니다"),
+    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "PW003", "현재 비밀번호가 일치하지 않습니다"),
+    SAME_PASSWORD(HttpStatus.BAD_REQUEST, "PW004", "새 비밀번호는 현재 비밀번호와 달라야 합니다"),
+
     // OAuth
     INVALID_OAUTH_PROVIDER(HttpStatus.BAD_REQUEST, "O001", "유효하지 않은 OAuth 제공자입니다"),
     OAUTH_STATE_NOT_FOUND(HttpStatus.BAD_REQUEST, "O002", "OAuth 상태를 찾을 수 없거나 만료되었습니다"),

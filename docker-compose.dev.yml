@@ -1,0 +1,94 @@
+services:
+  app:
+    image: ghcr.io/${GITHUB_REPOSITORY:-interior-damoa/hip-damoa-backend}:latest
+    container_name: damoa-app-dev
+    restart: unless-stopped
+    environment:
+      # Spring Profile
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+
+      # Database (외부 네트워크의 postgres 컨테이너 사용)
+      DB_HOST: damoa-postgres-dev
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-hip_damoa_dev}
+      DB_USERNAME: ${DB_USERNAME:-hip_damoa_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # Redis (외부 네트워크의 redis 컨테이너 사용)
+      REDIS_HOST: damoa-redis-dev
+      REDIS_PORT: 6379
+
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION:-86400000}
+      JWT_REFRESH_TOKEN_EXPIRATION: ${JWT_REFRESH_TOKEN_EXPIRATION:-604800000}
+
+      # OAuth2
+      OAUTH_REDIRECT_BASE_URL: ${OAUTH_REDIRECT_BASE_URL:-http://localhost:8080}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
+      NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:-}
+      NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+
+      # AWS S3
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+
+      # Payment
+      KAKAOPAY_ADMIN_KEY: ${KAKAOPAY_ADMIN_KEY:-}
+      KAKAOPAY_CID: ${KAKAOPAY_CID:-}
+      TOSS_SECRET_KEY: ${TOSS_SECRET_KEY:-}
+      TOSS_CLIENT_KEY: ${TOSS_CLIENT_KEY:-}
+      INICIS_MID: ${INICIS_MID:-}
+      INICIS_SIGN_KEY: ${INICIS_SIGN_KEY:-}
+
+      # Notifications
+      EMAIL_NOTIFICATION_ENABLED: ${EMAIL_NOTIFICATION_ENABLED:-false}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+
+      # Gmail API
+      GMAIL_API_ENABLED: ${GMAIL_API_ENABLED:-false}
+      GMAIL_DELEGATED_USER: ${GMAIL_DELEGATED_USER:-}
+      GMAIL_SERVICE_ACCOUNT_KEY: ${GMAIL_SERVICE_ACCOUNT_KEY:-}
+      GMAIL_APP_NAME: ${GMAIL_APP_NAME:-damoa}
+
+      # Legacy SMTP (deprecated)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+
+      SMS_NOTIFICATION_ENABLED: ${SMS_NOTIFICATION_ENABLED:-false}
+      SMS_PROVIDER: ${SMS_PROVIDER:-ALIGO}
+      SMS_SENDER: ${SMS_SENDER:-}
+      ALIGO_API_KEY: ${ALIGO_API_KEY:-}
+      ALIGO_USER_ID: ${ALIGO_USER_ID:-}
+
+      # JVM Options
+      JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC"
+
+    ports:
+      - "8080:8080"
+    volumes:
+      - app-logs:/app/logs
+      - ./secrets:/app/secrets:ro  # Gmail service account key (read-only)
+    networks:
+      - damoa-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  app-logs:
+    driver: local
+
+networks:
+  damoa-network:
+    external: true  # 인프라에서 만든 네트워크 사용

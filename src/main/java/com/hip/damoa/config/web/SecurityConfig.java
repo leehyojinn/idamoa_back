@@ -63,6 +63,7 @@ public class SecurityConfig {
                                 "/api/auth/email/**",
                                 "/api/auth/sms/**",
                                 "/api/auth/verification/**",
+                                "/api/auth/password/reset/**",  // 비밀번호 찾기 (로그인 불필요)
                                 "/api/auth/refresh",
                                 "/api/oauth/*/authorize",
                                 "/api/oauth/*/callback",
