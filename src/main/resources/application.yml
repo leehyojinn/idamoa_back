@@ -32,6 +32,7 @@ spring:
     locations: classpath:db/migration
     schemas: public
     validate-on-migrate: true
+    encoding: UTF-8
 
 jwt:
   secret: V29vTGVlS2ltSmVvbmdNaW5Hb29kSGVsbG9Xb3JsZEhpSGVsbG9Xb3JsZEhpSGVsbG9Xb3JsZEhpSGVsbG9Xb3JsZEhp
@@ -101,14 +102,12 @@ notification:
   email:
     enabled: ${EMAIL_NOTIFICATION_ENABLED:true}
     from: ${EMAIL_FROM:noreply@damoa.com}
-    # SMTP 설정 (Gmail 예시)
-    smtp:
-      host: ${SMTP_HOST:smtp.gmail.com}
-      port: ${SMTP_PORT:587}
-      username: ${SMTP_USERNAME:your-email@gmail.com}
-      password: ${SMTP_PASSWORD:your-app-password}  # Gmail 앱 비밀번호
-      auth: true
-      starttls: true
+    # Gmail API 설정 (Service Account + Domain-wide Delegation)
+    gmail-api:
+      enabled: ${GMAIL_API_ENABLED:false}  # true로 설정 시 Gmail API 사용
+      delegated-user: ${GMAIL_DELEGATED_USER:noreply@yourdomain.com}
+      service-account-key-path: ${GMAIL_SERVICE_ACCOUNT_KEY:file:./secrets/service-account.json}
+      application-name: ${GMAIL_APP_NAME:damoa}
   sms:
     enabled: ${SMS_NOTIFICATION_ENABLED:true}
     provider: ${SMS_PROVIDER:ALIGO}  # ALIGO, NCP (Naver Cloud Platform)

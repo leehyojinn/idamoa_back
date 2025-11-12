@@ -11,32 +11,19 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 모든 엔티티의 베이스 클래스
+ * Soft Delete가 필요한 엔티티의 베이스 클래스
  *
- * 공통 패턴:
- * - id: BIGSERIAL (내부 참조용)
- * - uuid: UUID (외부 API용)
- * - created_at, updated_at: 생성/수정 시간
+ * BaseTimeEntity를 상속하여 다음 필드를 추가:
  * - is_deleted, deleted_at: Soft Delete
  * - metadata: JSONB (확장 데이터)
+ *
+ * 사용 대상:
+ * - 비즈니스 데이터 (삭제가 필요한 경우)
+ * - 템플릿, 설정 등 soft delete가 필요한 경우
  */
 @Getter
 @MappedSuperclass
-public abstract class BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
-    private Long id;
-
-    @Column(name = "uuid", unique = true, nullable = false, updatable = false, columnDefinition = "UUID")
-    private UUID uuid;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+public abstract class BaseEntity extends BaseTimeEntity {
 
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;
@@ -48,25 +35,15 @@ public abstract class BaseEntity {
     @Column(name = "metadata", columnDefinition = "jsonb")
     private Map<String, Object> metadata = new HashMap<>();
 
-    @PrePersist
+    @Override
     protected void onCreate() {
-        if (uuid == null) {
-            uuid = UUID.randomUUID();
-        }
-        LocalDateTime now = LocalDateTime.now();
-        this.createdAt = now;
-        this.updatedAt = now;
+        super.onCreate();
         if (this.isDeleted == null) {
             this.isDeleted = false;
         }
         if (this.metadata == null) {
             this.metadata = new HashMap<>();
         }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
     }
 
     /**

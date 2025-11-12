@@ -96,11 +96,12 @@ public class ProfileService {
             log.info("사용자 role 변경: userId={}, role=USER", user.getId());
         }
 
-        // User의 프로필 완성 상태 업데이트
+        // User의 프로필 완성 상태 업데이트 및 활성화
         user.completeProfile();
+        user.activate();
         user = userRepository.save(user);
-        log.info("프로필 완성 처리: userId={}, profileCompleted={}, role={}",
-                user.getId(), user.getProfileCompleted(), user.getRoles()[0]);
+        log.info("프로필 완성 및 활성화 처리: userId={}, profileCompleted={}, status={}, role={}",
+                user.getId(), user.getProfileCompleted(), user.getStatus(), user.getRoles()[0]);
 
         // JWT 토큰 재발급 (profileCompleted=true, currentRole=USER 반영)
         TokenInfo tokenInfo = jwtTokenProvider.generateToken(user);
@@ -151,11 +152,12 @@ public class ProfileService {
             log.info("사용자 role 변경: userId={}, role=COMPANY", user.getId());
         }
 
-        // User의 프로필 완성 상태 업데이트
+        // User의 프로필 완성 상태 업데이트 및 활성화
         user.completeProfile();
+        user.activate();
         user = userRepository.save(user);
-        log.info("프로필 완성 처리: userId={}, profileCompleted={}, role={}",
-                user.getId(), user.getProfileCompleted(), user.getRoles()[0]);
+        log.info("프로필 완성 및 활성화 처리: userId={}, profileCompleted={}, status={}, role={}",
+                user.getId(), user.getProfileCompleted(), user.getStatus(), user.getRoles()[0]);
 
         // JWT 토큰 재발급 (profileCompleted=true, currentRole=COMPANY 반영)
         TokenInfo tokenInfo = jwtTokenProvider.generateToken(user);

@@ -107,7 +107,7 @@ public class AuthController {
     @Operation(summary = "이메일 인증 코드 확인", description = "발송된 이메일 인증 코드를 확인합니다")
     @PostMapping("/verification/email/verify")
     public ApiResponse<Void> verifyEmail(@Valid @RequestBody VerificationConfirmRequest request) {
-        verificationService.verifyEmailCode(request.getSignupToken(), request.getCode());
+        verificationService.verifyEmailCode(request.getSignupToken(), request.getCode(), request.getEmail());
         return ApiResponse.success();
     }
 

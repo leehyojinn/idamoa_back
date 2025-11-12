@@ -18,24 +18,25 @@ import java.util.Map;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "notification_templates", indexes = {
     @Index(name = "idx_notification_templates_channel", columnList = "channel"),
-    @Index(name = "idx_notification_templates_code", columnList = "template_code")
+    @Index(name = "idx_notification_templates_code", columnList = "code")
 })
 public class NotificationTemplate extends BaseEntity {
 
-    @Column(name = "template_code", unique = true, nullable = false, length = 100)
-    private String templateCode;
+    @Column(name = "code", unique = true, nullable = false, length = 100)
+    private String code;
 
-    @Column(name = "template_name", nullable = false, length = 200)
-    private String templateName;
+    @Column(name = "name", nullable = false, length = 200)
+    private String name;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "channel", nullable = false, length = 20)
-    private String channel; // EMAIL, SMS, PUSH, KAKAO
+    private NotificationChannel channel; // EMAIL, SMS, KAKAO, FCM
 
-    @Column(name = "subject", length = 500)
-    private String subject;
+    @Column(name = "title_template", length = 500)
+    private String titleTemplate;
 
-    @Column(name = "content", columnDefinition = "TEXT", nullable = false)
-    private String content;
+    @Column(name = "content_template", columnDefinition = "TEXT", nullable = false)
+    private String contentTemplate;
 
     @Type(JsonBinaryType.class)
     @Column(name = "variables", columnDefinition = "jsonb")

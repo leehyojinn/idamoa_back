@@ -31,6 +31,8 @@ public enum ErrorCode {
     PHONE_NOT_VERIFIED(HttpStatus.FORBIDDEN, "V005", "전화번호 인증이 완료되지 않았습니다"),
     EMAIL_VERIFICATION_REQUIRED(HttpStatus.BAD_REQUEST, "V006", "이메일 인증이 필요합니다"),
     SMS_VERIFICATION_REQUIRED(HttpStatus.BAD_REQUEST, "V007", "SMS 인증이 필요합니다"),
+    INVALID_EMAIL_FORMAT(HttpStatus.BAD_REQUEST, "V008", "올바른 이메일 형식이 아닙니다"),
+    TOKEN_EMAIL_MISMATCH(HttpStatus.BAD_REQUEST, "V009", "토큰과 이메일이 일치하지 않습니다"),
 
     // JWT
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "J001", "유효하지 않은 토큰입니다"),
@@ -141,7 +143,10 @@ public enum ErrorCode {
     BOARD_CANNOT_BE_DELETED(HttpStatus.BAD_REQUEST, "BD003", "게시글을 삭제할 수 없습니다"),
 
     // Filter
-    FILTER_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "FC001", "필터 카테고리를 찾을 수 없습니다");
+    FILTER_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "FC001", "필터 카테고리를 찾을 수 없습니다"),
+
+    // Notification
+    TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "NT001", "알림 템플릿을 찾을 수 없습니다");
 
     private final HttpStatus status;
     private final String code;
