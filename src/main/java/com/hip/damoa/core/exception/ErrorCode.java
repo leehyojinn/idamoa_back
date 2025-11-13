@@ -142,6 +142,7 @@ public enum ErrorCode {
     DOWNLOAD_LIMIT_EXCEEDED(HttpStatus.FORBIDDEN, "F007", "다운로드 제한을 초과했습니다"),
 
     // Profile
+    PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "PR000", "프로필을 찾을 수 없습니다"),
     INVALID_PROFILE_TYPE(HttpStatus.BAD_REQUEST, "PR001", "유효하지 않은 프로필 타입입니다"),
     PROFILE_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "PR002", "이미 완료된 프로필입니다"),
     PROFILE_TYPE_NOT_SELECTED(HttpStatus.BAD_REQUEST, "PR003", "프로필 타입이 선택되지 않았습니다"),
@@ -162,7 +163,15 @@ public enum ErrorCode {
     FILTER_OPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "FC002", "필터 옵션을 찾을 수 없습니다"),
 
     // Notification
-    TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "NT001", "알림 템플릿을 찾을 수 없습니다");
+    TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "NT001", "알림 템플릿을 찾을 수 없습니다"),
+
+    // Quick Consultation
+    CONSULTATION_NOT_FOUND(HttpStatus.NOT_FOUND, "QC001", "상담을 찾을 수 없습니다"),
+    CONSULTATION_PASSWORD_MISMATCH(HttpStatus.UNAUTHORIZED, "QC002", "비밀번호가 일치하지 않습니다"),
+    CONSULTATION_ALREADY_ASSIGNED(HttpStatus.BAD_REQUEST, "QC003", "이미 배정된 상담입니다"),
+    CONSULTATION_CANNOT_BE_UPDATED(HttpStatus.BAD_REQUEST, "QC004", "상담을 수정할 수 없습니다"),
+    CONSULTATION_CONSENT_REQUIRED(HttpStatus.BAD_REQUEST, "QC005", "필수 동의가 필요합니다"),
+    INVALID_CONSULTATION_STATUS(HttpStatus.BAD_REQUEST, "QC006", "유효하지 않은 상담 상태입니다");
 
     private final HttpStatus status;
     private final String code;

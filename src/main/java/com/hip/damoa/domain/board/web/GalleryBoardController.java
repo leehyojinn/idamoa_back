@@ -7,6 +7,7 @@ import com.hip.damoa.domain.board.web.dto.GalleryCreateRequest;
 import com.hip.damoa.domain.board.web.dto.GalleryResponse;
 import com.hip.damoa.domain.board.web.dto.GalleryUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class GalleryBoardController {
     private final BoardBookmarkService boardBookmarkService;
 
     @Operation(summary = "Gallery 게시글 생성", description = "새로운 사진 게시글을 생성합니다")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<GalleryResponse> createGallery(
@@ -90,6 +92,7 @@ public class GalleryBoardController {
     }
 
     @Operation(summary = "Gallery 게시글 수정", description = "사진 게시글을 수정합니다")
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{uuid}")
     public ApiResponse<GalleryResponse> updateGallery(
             @PathVariable UUID uuid,
@@ -105,6 +108,7 @@ public class GalleryBoardController {
     }
 
     @Operation(summary = "Gallery 게시글 삭제", description = "사진 게시글을 삭제합니다 (Soft Delete)")
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{uuid}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public ApiResponse<Void> deleteGallery(
@@ -141,6 +145,7 @@ public class GalleryBoardController {
 //    }
 
     @Operation(summary = "Gallery 북마크 토글", description = "사진 게시글 북마크를 추가/제거합니다")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/{uuid}/bookmark")
     public ApiResponse<Boolean> toggleBookmark(
             @PathVariable UUID uuid,
@@ -154,6 +159,7 @@ public class GalleryBoardController {
     }
 
     @Operation(summary = "Gallery 북마크 여부 확인", description = "사용자의 북마크 여부를 확인합니다")
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/{uuid}/bookmark")
     public ApiResponse<Boolean> checkBookmark(
             @PathVariable UUID uuid,

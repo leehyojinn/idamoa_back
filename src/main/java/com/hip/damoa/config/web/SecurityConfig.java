@@ -103,6 +103,12 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
+                        // Quick Consultation - public (non-member consultation)
+                        .requestMatchers(HttpMethod.GET, "/api/consultations").permitAll()  // List (public)
+                        .requestMatchers(HttpMethod.POST, "/api/consultations").permitAll()  // Create (public)
+                        .requestMatchers(HttpMethod.POST, "/api/consultations/*/verify").permitAll()  // Detail (unified - member/non-member)
+                        .requestMatchers(HttpMethod.PUT, "/api/consultations/*/with-password").permitAll()  // Update (non-member)
+                        .requestMatchers(HttpMethod.DELETE, "/api/consultations/*/with-password").permitAll()  // Cancel (non-member)
                         // Company endpoints - public (GET only)
                         .requestMatchers(HttpMethod.GET, "/api/companies").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/companies/search").permitAll()

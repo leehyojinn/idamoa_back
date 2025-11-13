@@ -26,13 +26,107 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: 비밀번호 찾기/변경 기능 구현 완료
-**마지막 업데이트**: 2025-11-12
-**다음 우선순위**: 사용자 프로필 완성 및 활성화 테스트
+**프로젝트 단계**: 빠른상담 CRUD 기능 구현 완료
+**마지막 업데이트**: 2025-11-13
+**다음 우선순위**: 빠른상담 기능 테스트 및 프론트엔드 연동
 
 ---
 
 ## 📝 작업 로그
+
+### 2025-11-13
+
+#### ✅ 완료 (Completed)
+
+**[CONSULTATION-001] 빠른상담 CRUD 기능 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-13 (약 3시간)
+- **작업 내용**:
+  - 빠른상담 CRUD 기능 전체 구현 (비회원/회원 모두 지원)
+  - 4가지 동의 관리 (개인정보, 제3자 제공, 이용약관, 마케팅)
+  - 비밀번호 기반 비회원 조회 기능 (4자리 평문)
+  - 관리자 기능 (상태 변경, 답변 작성, 업체 배정, 삭제)
+  - 4가지 상태 관리 (SUBMITTED, IN_PROGRESS, COMPLETED, CANCELLED)
+
+**생성/수정 파일**:
+
+**신규 파일 (15개)**:
+1. `src/main/resources/db/migration/V16__Add_consultation_password_and_terms.sql`
+2. `src/main/java/com/hip/damoa/domain/consultation/model/ConsultationStatus.java`
+3. `src/main/java/com/hip/damoa/domain/consultation/model/QuickConsultation.java`
+4. `src/main/java/com/hip/damoa/domain/consultation/repository/QuickConsultationRepository.java`
+5. `src/main/java/com/hip/damoa/domain/consultation/web/dto/QuickConsultationCreateRequest.java`
+6. `src/main/java/com/hip/damoa/domain/consultation/web/dto/QuickConsultationVerifyRequest.java`
+7. `src/main/java/com/hip/damoa/domain/consultation/web/dto/ConsultationStatusUpdateRequest.java`
+8. `src/main/java/com/hip/damoa/domain/consultation/web/dto/ConsultationResponseRequest.java`
+9. `src/main/java/com/hip/damoa/domain/consultation/web/dto/QuickConsultationResponse.java`
+10. `src/main/java/com/hip/damoa/domain/consultation/web/dto/QuickConsultationListResponse.java`
+11. `src/main/java/com/hip/damoa/domain/consultation/web/dto/QuickConsultationSummaryResponse.java`
+12. `src/main/java/com/hip/damoa/domain/consultation/service/QuickConsultationService.java`
+13. `src/main/java/com/hip/damoa/domain/consultation/web/QuickConsultationController.java`
+14. `src/main/java/com/hip/damoa/domain/admin/web/AdminQuickConsultationController.java`
+15. `doc/work-log.md` (업데이트)
+
+**수정 파일 (2개)**:
+1. `src/main/java/com/hip/damoa/core/exception/ErrorCode.java`
+2. `src/main/java/com/hip/damoa/config/web/SecurityConfig.java`
+
+**주요 변경사항**:
+
+1. **DB 마이그레이션 (V16)**:
+   - `password` VARCHAR(4) 컬럼 추가 (비회원 조회용, 평문 저장)
+   - `terms_of_service_consent` BOOLEAN 컬럼 추가
+   - `terms_of_service_consent_at` TIMESTAMP 컬럼 추가
+
+2. **Entity 및 Enum**:
+   - `ConsultationStatus` enum (SUBMITTED, IN_PROGRESS, COMPLETED, CANCELLED)
+   - `QuickConsultation` entity (BaseEntity 상속, Soft Delete 지원)
+   - 비즈니스 메서드: `verifyPassword()`, `assignToCompany()`, `respond()`, `complete()`, `cancel()`
+
+3. **사용자 API** (`/api/consultations`):
+   - `POST /api/consultations` - 상담 신청 (Public, 비회원/회원)
+   - `POST /api/consultations/{uuid}/verify` - 비밀번호 검증 후 조회 (Public)
+   - `GET /api/consultations/my` - 내 상담 목록 (Authenticated)
+   - `GET /api/consultations/my/status/{status}` - 내 상담 목록 (상태별)
+   - `GET /api/consultations/{uuid}` - 내 상담 상세 조회
+   - `DELETE /api/consultations/{uuid}` - 상담 취소
+
+4. **관리자 API** (`/api/admin/consultations`):
+   - `GET /api/admin/consultations` - 전체 조회
+   - `GET /api/admin/consultations/status/{status}` - 상태별 조회
+   - `GET /api/admin/consultations/{uuid}` - 상세 조회
+   - `PUT /api/admin/consultations/{uuid}/status` - 상태 변경
+   - `POST /api/admin/consultations/{uuid}/response` - 답변 작성
+   - `PUT /api/admin/consultations/{uuid}/assign/{companyUuid}` - 업체 배정
+   - `DELETE /api/admin/consultations/{uuid}` - 삭제 (Soft Delete)
+
+5. **에러 코드 추가** (QC001-QC006):
+   - `CONSULTATION_NOT_FOUND` - 상담을 찾을 수 없습니다
+   - `CONSULTATION_PASSWORD_MISMATCH` - 비밀번호가 일치하지 않습니다
+   - `CONSULTATION_ALREADY_ASSIGNED` - 이미 배정된 상담입니다
+   - `CONSULTATION_CANNOT_BE_UPDATED` - 상담을 수정할 수 없습니다
+   - `CONSULTATION_CONSENT_REQUIRED` - 필수 동의가 필요합니다
+   - `INVALID_CONSULTATION_STATUS` - 유효하지 않은 상담 상태입니다
+
+6. **SecurityConfig**:
+   - `POST /api/consultations` - Public (비회원 상담 신청)
+   - `POST /api/consultations/*/verify` - Public (비밀번호 검증)
+
+**기술 스택**:
+- JPA Entity with BaseEntity
+- Spring Data JPA Repository
+- Spring Security (Public/Authenticated endpoints)
+- Jakarta Validation
+- Lombok
+- UUID 기반 외부 API
+- Soft Delete 패턴
+
+**다음 작업**:
+- [ ] 빠른상담 기능 통합 테스트 작성
+- [ ] API 문서 Swagger 확인
+- [ ] 프론트엔드 연동 가이드 작성
+
+---
 
 ### 2025-11-12
 

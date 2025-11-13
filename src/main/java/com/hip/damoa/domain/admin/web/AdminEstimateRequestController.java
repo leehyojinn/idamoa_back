@@ -11,6 +11,7 @@ import com.hip.damoa.domain.admin.web.dto.AdminEstimateRequestResponse;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +28,8 @@ import org.springframework.web.bind.annotation.*;
  * 견적 요청 관리 REST API (관리자용)
  */
 @Slf4j
-@Tag(name = "15. Admin - EstimateRequest", description = "견적 요청 관리 API (관리자)")
+@Tag(name = "1902. Admin - EstimateRequest", description = "견적 요청 관리 API (관리자)")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/estimate-requests")

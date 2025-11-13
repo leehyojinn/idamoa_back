@@ -177,4 +177,151 @@ public class ProfileService {
                 .tokenInfo(tokenInfo)  // 새로운 JWT 토큰 포함
                 .build();
     }
+
+    /**
+     * 프로필 조회 (통합 - USER/COMPANY 자동 판단)
+     */
+    @Transactional(readOnly = true)
+    public ProfileResponse getProfile(String email) {
+        log.info("프로필 조회 (통합): email={}", email);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        UserProfile profile = userProfileRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
+
+        return ProfileResponse.from(profile, user);
+    }
+
+    /**
+     * USER 프로필 조회
+     */
+    @Transactional(readOnly = true)
+    public UserProfileResponse getUserProfile(String email) {
+        log.info("USER 프로필 조회: email={}", email);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        UserProfile userProfile = userProfileRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
+
+        return UserProfileResponse.from(userProfile);
+    }
+
+    /**
+     * COMPANY 프로필 조회 (UserProfile 테이블에서)
+     */
+    @Transactional(readOnly = true)
+    public CompanyProfileResponse getCompanyProfile(String email) {
+        log.info("COMPANY 프로필 조회: email={}", email);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        UserProfile companyProfile = userProfileRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
+
+        // UserProfile → CompanyProfileResponse 변환
+        return CompanyProfileResponse.builder()
+                .id(companyProfile.getId())
+                .name(companyProfile.getName())
+                .description(companyProfile.getBio())
+                .primaryPhone(companyProfile.getPhone())
+                .email(user.getEmail())
+                .address(companyProfile.getAddress())
+                .postalCode(companyProfile.getPostalCode())
+                .status("ACTIVE")
+                .build();
+    }
+
+    /**
+     * USER 프로필 수정
+     */
+    @Transactional
+    public UserProfileResponse updateUserProfile(String email, UserProfileUpdateRequest request) {
+        log.info("USER 프로필 수정 시작: email={}", email);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        UserProfile userProfile = userProfileRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
+
+        // 프로필 정보 업데이트
+        userProfile.updateProfile(request.getName(), request.getNickname(), request.getBio());
+
+        // 주소 정보 업데이트
+        if (request.getAddress() != null || request.getPostalCode() != null) {
+            userProfile.updateAddress(
+                request.getAddress(),
+                request.getPostalCode(),
+                null,  // latitude
+                null   // longitude
+            );
+        }
+
+        // 아바타 업데이트
+        if (request.getAvatarUrl() != null) {
+            userProfile.updateAvatar(request.getAvatarUrl());
+        }
+
+        // 공개 여부 업데이트
+        if (request.getProfileVisibility() != null) {
+            userProfile.changeVisibility(request.getProfileVisibility());
+        }
+
+        userProfile = userProfileRepository.save(userProfile);
+        log.info("USER 프로필 수정 완료: id={}, userId={}", userProfile.getId(), user.getId());
+
+        return UserProfileResponse.from(userProfile);
+    }
+
+    /**
+     * COMPANY 프로필 수정
+     */
+    @Transactional
+    public CompanyProfileResponse updateCompanyProfile(String email, CompanyProfileUpdateRequest request) {
+        log.info("COMPANY 프로필 수정 시작: email={}", email);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        UserProfile companyProfile = userProfileRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
+
+        // COMPANY 타입 확인
+        if (!"COMPANY".equals(companyProfile.getProfileType())) {
+            throw new BusinessException(ErrorCode.INVALID_PROFILE_TYPE);
+        }
+
+        // 프로필 정보 업데이트 (COMPANY는 nickname 없음)
+        companyProfile.updateProfile(request.getName(), null, request.getDescription());
+
+        // 주소 정보 업데이트
+        if (request.getAddress() != null || request.getPostalCode() != null) {
+            companyProfile.updateAddress(
+                request.getAddress(),
+                request.getPostalCode(),
+                null,  // latitude
+                null   // longitude
+            );
+        }
+
+        companyProfile = userProfileRepository.save(companyProfile);
+        log.info("COMPANY 프로필 수정 완료: id={}, userId={}", companyProfile.getId(), user.getId());
+
+        // CompanyProfileResponse로 변환
+        return CompanyProfileResponse.builder()
+                .id(companyProfile.getId())
+                .name(companyProfile.getName())
+                .description(companyProfile.getBio())
+                .primaryPhone(request.getPrimaryPhone())
+                .email(request.getEmail())
+                .address(companyProfile.getAddress())
+                .postalCode(companyProfile.getPostalCode())
+                .status("ACTIVE")
+                .build();
+    }
 }

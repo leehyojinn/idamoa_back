@@ -7,6 +7,7 @@ import com.hip.damoa.domain.company.service.CompanyImageService;
 import com.hip.damoa.domain.company.service.CompanyService;
 import com.hip.damoa.domain.company.web.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,7 @@ public class CompanyController {
      * 업체 등록
      */
     @Operation(summary = "업체 등록", description = "새로운 업체를 등록합니다 (COMPANY 역할 필요)")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<CompanyResponse> createCompany(
@@ -56,12 +58,28 @@ public class CompanyController {
      * 내 업체 조회
      */
     @Operation(summary = "내 업체 조회", description = "로그인한 사용자의 업체 정보를 조회합니다")
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/my")
     public ApiResponse<CompanyResponse> getMyCompany(
             @AuthenticationPrincipal UserDetails userDetails) {
 
         Company company = companyService.getMyCompany(userDetails.getUsername());
-        return ApiResponse.success(CompanyResponse.from(company));
+        List<CompanyImage> images = companyImageService.getCompanyImages(company.getUuid());
+
+        CompanyResponse response = CompanyResponse.from(company);
+        // CompanyImageService를 사용하여 File ID → URL 변환
+        response.setImages(images.stream()
+                .map(companyImageService::toDto)
+                .collect(Collectors.toList()));
+
+        // 필터 옵션 추가 (전문영역, 진료과, 작업평수 등)
+        List<FilterOptionDto> filterOptions = companyService.getCompanyFilterOptions(company);
+        response.setFilterOptions(filterOptions);
+
+        // 본인 업체이므로 좋아요는 항상 false
+        response.setIsLiked(false);
+
+        return ApiResponse.success(response);
     }
 
     /**
@@ -205,6 +223,7 @@ public class CompanyController {
      * 업체 수정
      */
     @Operation(summary = "업체 수정", description = "업체 정보를 수정합니다 (소유자만 가능)")
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{companyUuid}")
     public ApiResponse<CompanyResponse> updateCompany(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -220,6 +239,7 @@ public class CompanyController {
      * 업체 삭제
      */
     @Operation(summary = "업체 삭제", description = "업체를 삭제합니다 (소유자만 가능, Soft Delete)")
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{companyUuid}")
     public ApiResponse<Void> deleteCompany(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -233,6 +253,7 @@ public class CompanyController {
      * 업체 보유 여부 확인
      */
     @Operation(summary = "업체 보유 여부 확인", description = "현재 사용자가 이미 업체를 보유하고 있는지 확인합니다")
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/check")
     public ApiResponse<Map<String, Boolean>> checkHasCompany(
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -245,6 +266,7 @@ public class CompanyController {
      * 업체 좋아요 토글
      */
     @Operation(summary = "업체 좋아요 토글", description = "업체 좋아요를 추가하거나 취소합니다")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/{companyUuid}/like")
     public ApiResponse<Map<String, Object>> toggleLike(
             @AuthenticationPrincipal UserDetails userDetails,

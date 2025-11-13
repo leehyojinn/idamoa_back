@@ -6,6 +6,7 @@ import com.hip.damoa.domain.board.service.NoticeBoardService;
 import com.hip.damoa.domain.board.web.dto.NoticeBoardRequest;
 import com.hip.damoa.domain.board.web.dto.NoticeBoardResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,8 @@ import java.util.UUID;
  *
  * 공지사항 및 이벤트 등록/수정/삭제 API (관리자 전용)
  */
-@Tag(name = "17. Admin - Notice/Event Board", description = "공지사항 및 이벤트 관리 API (관리자 전용)")
+@Tag(name = "1904. Admin - Notice/Event Board", description = "공지사항 및 이벤트 관리 API (관리자 전용)")
+@SecurityRequirement(name = "bearerAuth")
 @Slf4j
 @RestController
 @RequiredArgsConstructor
