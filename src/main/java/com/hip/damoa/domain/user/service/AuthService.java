@@ -438,4 +438,17 @@ public class AuthService {
             // 이메일 발송 실패는 비밀번호 변경 자체에 영향을 주지 않도록 로그만 기록
         }
     }
+
+    /**
+     * 현재 로그인한 사용자 정보 조회
+     */
+    @Transactional(readOnly = true)
+    public UserInfoResponse getCurrentUserInfo(String email) {
+        log.info("사용자 정보 조회: email={}", email);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        return UserInfoResponse.from(user);
+    }
 }

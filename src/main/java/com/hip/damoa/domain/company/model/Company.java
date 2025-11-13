@@ -300,4 +300,42 @@ public class Company extends BaseEntity {
     public void addFilterOption(CompanyFilterOption filterOption) {
         this.filterOptions.add(filterOption);
     }
+
+    /**
+     * 업체 정보 전체 업데이트 (UPDATE용)
+     */
+    public void updateAllFields(
+            String name, String slug, String description, String detailContent, String detailContentFormat,
+            Map<String, Object> businessInfo, Map<String, Object> businessHours, String businessHoursNote,
+            String[] serviceAreas, String[] tags, String[] keywords,
+            String primaryPhone, String secondaryPhone, String emergencyContact,
+            String email, String websiteUrl, String kakaoChatUrl, Map<String, Object> socialLinks,
+            String address, String postalCode, BigDecimal latitude, BigDecimal longitude,
+            String status, Boolean featured) {
+
+        if (name != null) this.name = name;
+        if (slug != null) this.slug = slug;
+        if (description != null) this.description = description;
+        if (detailContent != null) this.detailContent = detailContent;
+        if (detailContentFormat != null) this.detailContentFormat = detailContentFormat;
+        if (businessInfo != null) this.businessInfo = businessInfo;
+        if (businessHours != null) this.businessHours = businessHours;
+        if (businessHoursNote != null) this.businessHoursNote = businessHoursNote;
+        if (serviceAreas != null) this.serviceAreas = serviceAreas;
+        if (tags != null) this.tags = tags;
+        if (keywords != null) this.keywords = keywords;
+        if (primaryPhone != null) this.primaryPhone = primaryPhone;
+        if (secondaryPhone != null) this.secondaryPhone = secondaryPhone;
+        if (emergencyContact != null) this.emergencyContact = emergencyContact;
+        if (email != null) this.email = email;
+        if (websiteUrl != null) this.websiteUrl = websiteUrl;
+        if (kakaoChatUrl != null) this.kakaoChatUrl = kakaoChatUrl;
+        if (socialLinks != null) this.socialLinks = socialLinks;
+        if (address != null) this.address = address;
+        if (postalCode != null) this.postalCode = postalCode;
+        if (latitude != null) this.latitude = latitude;
+        if (longitude != null) this.longitude = longitude;
+        if (status != null) this.status = status;
+        if (featured != null) this.featured = featured;
+    }
 }

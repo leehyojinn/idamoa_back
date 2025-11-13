@@ -269,4 +269,20 @@ public class AuthController {
         authService.changePassword(userDetails.getUsername(), request.getCurrentPassword(), request.getNewPassword());
         return ApiResponse.success();
     }
+
+    /**
+     * 현재 로그인한 사용자 정보 조회
+     */
+    @Operation(summary = "내 정보 조회",
+            description = "현재 로그인한 사용자의 정보를 조회합니다.\n\n" +
+                    "- 이메일, role, 상태, 프로필 완성 여부\n" +
+                    "- isAdmin, isUser, isCompany 편의 필드 제공")
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/me")
+    public ApiResponse<UserInfoResponse> getCurrentUser(
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        UserInfoResponse response = authService.getCurrentUserInfo(userDetails.getUsername());
+        return ApiResponse.success(response);
+    }
 }

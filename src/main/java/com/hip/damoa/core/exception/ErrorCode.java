@@ -171,7 +171,13 @@ public enum ErrorCode {
     CONSULTATION_ALREADY_ASSIGNED(HttpStatus.BAD_REQUEST, "QC003", "이미 배정된 상담입니다"),
     CONSULTATION_CANNOT_BE_UPDATED(HttpStatus.BAD_REQUEST, "QC004", "상담을 수정할 수 없습니다"),
     CONSULTATION_CONSENT_REQUIRED(HttpStatus.BAD_REQUEST, "QC005", "필수 동의가 필요합니다"),
-    INVALID_CONSULTATION_STATUS(HttpStatus.BAD_REQUEST, "QC006", "유효하지 않은 상담 상태입니다");
+    INVALID_CONSULTATION_STATUS(HttpStatus.BAD_REQUEST, "QC006", "유효하지 않은 상담 상태입니다"),
+
+    // Planner Application
+    PLANNER_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "PA001", "플래너 신청서를 찾을 수 없습니다"),
+    PLANNER_APPLICATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "PA002", "플래너 신청서에 접근할 수 없습니다"),
+    PLANNER_APPLICATION_INVALID_STATUS(HttpStatus.BAD_REQUEST, "PA003", "유효하지 않은 플래너 신청서 상태입니다"),
+    PLANNER_APPLICATION_FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "PA004", "첨부파일 전체 크기가 100MB를 초과했습니다");
 
     private final HttpStatus status;
     private final String code;
