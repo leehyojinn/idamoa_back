@@ -526,47 +526,38 @@ public class CompanyService {
     }
 
     /**
-     * 업체 필드 업데이트 헬퍼 메서드
+     * 업체 필드 업데이트 헬퍼 메서드 (기존 엔티티 수정 방식)
      */
     private Company updateCompanyFields(Company company, CompanyUpdateRequest request) {
-        return Company.builder()
-                .owner(company.getOwner())
-                .name(request.getName() != null ? request.getName() : company.getName())
-                .slug(request.getSlug() != null ? request.getSlug() : company.getSlug())
-                .description(request.getDescription() != null ? request.getDescription() : company.getDescription())
-                .detailContent(request.getDetailContent() != null ? request.getDetailContent() : company.getDetailContent())
-                .detailContentFormat(request.getDetailContentFormat() != null ? request.getDetailContentFormat() : company.getDetailContentFormat())
-                .businessInfo(request.getBusinessInfo() != null ? request.getBusinessInfo() : company.getBusinessInfo())
-                .businessHours(request.getBusinessHours() != null ? request.getBusinessHours() : company.getBusinessHours())
-                .businessHoursNote(request.getBusinessHoursNote() != null ? request.getBusinessHoursNote() : company.getBusinessHoursNote())
-                .serviceAreas(request.getServiceAreas() != null ? request.getServiceAreas() : company.getServiceAreas())
-                .tags(request.getTags() != null ? request.getTags() : company.getTags())
-                .keywords(request.getKeywords() != null ? request.getKeywords() : company.getKeywords())
-                .primaryPhone(request.getPrimaryPhone() != null ? request.getPrimaryPhone() : company.getPrimaryPhone())
-                .secondaryPhone(request.getSecondaryPhone() != null ? request.getSecondaryPhone() : company.getSecondaryPhone())
-                .emergencyContact(request.getEmergencyContact() != null ? request.getEmergencyContact() : company.getEmergencyContact())
-                .email(request.getEmail() != null ? request.getEmail() : company.getEmail())
-                .websiteUrl(request.getWebsiteUrl() != null ? request.getWebsiteUrl() : company.getWebsiteUrl())
-                .kakaoChatUrl(request.getKakaoChatUrl() != null ? request.getKakaoChatUrl() : company.getKakaoChatUrl())
-                .socialLinks(request.getSocialLinks() != null ? request.getSocialLinks() : company.getSocialLinks())
-                .address(request.getAddress() != null ? request.getAddress() : company.getAddress())
-                .postalCode(request.getPostalCode() != null ? request.getPostalCode() : company.getPostalCode())
-                .latitude(request.getLatitude() != null ? request.getLatitude() : company.getLatitude())
-                .longitude(request.getLongitude() != null ? request.getLongitude() : company.getLongitude())
-                .avgRating(company.getAvgRating())
-                .reviewCount(company.getReviewCount())
-                .viewCount(company.getViewCount())
-                .likeCount(company.getLikeCount())
-                .portfolioCount(company.getPortfolioCount())
-                .completedProjects(company.getCompletedProjects())
-                .status(request.getStatus() != null ? request.getStatus() : company.getStatus())
-                .featured(request.getFeatured() != null ? request.getFeatured() : company.getFeatured())
-                .verified(company.getVerified())
-                .verifiedAt(company.getVerifiedAt())
-                .premiumUntil(company.getPremiumUntil())
-                .premiumTier(company.getPremiumTier())
-                .premiumMonthlyAmount(company.getPremiumMonthlyAmount())
-                .build();
+        // 기존 엔티티의 updateAllFields 메서드를 호출하여 필드 업데이트
+        company.updateAllFields(
+                request.getName(),
+                request.getSlug(),
+                request.getDescription(),
+                request.getDetailContent(),
+                request.getDetailContentFormat(),
+                request.getBusinessInfo(),
+                request.getBusinessHours(),
+                request.getBusinessHoursNote(),
+                request.getServiceAreas(),
+                request.getTags(),
+                request.getKeywords(),
+                request.getPrimaryPhone(),
+                request.getSecondaryPhone(),
+                request.getEmergencyContact(),
+                request.getEmail(),
+                request.getWebsiteUrl(),
+                request.getKakaoChatUrl(),
+                request.getSocialLinks(),
+                request.getAddress(),
+                request.getPostalCode(),
+                request.getLatitude(),
+                request.getLongitude(),
+                request.getStatus(),
+                request.getFeatured()
+        );
+
+        return company;
     }
 
     /**
