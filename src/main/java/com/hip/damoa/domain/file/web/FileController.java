@@ -8,6 +8,7 @@ import com.hip.damoa.domain.file.web.dto.FileUploadResponse;
 import com.hip.damoa.domain.file.web.dto.PresignedUrlRequest;
 import com.hip.damoa.domain.file.web.dto.PresignedUrlResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Tag(name = "04. File", description = "파일 업로드 API (Presigned URL)")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/files")

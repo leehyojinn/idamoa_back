@@ -12,6 +12,7 @@ import com.hip.damoa.domain.file.model.File;
 import com.hip.damoa.domain.file.repository.FileRepository;
 import com.hip.damoa.domain.file.web.dto.FileUploadResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +59,7 @@ public class EstimateRequestController {
      * 견적 요청 작성
      */
     @Operation(summary = "견적 요청 작성", description = "새로운 견적 요청을 작성합니다 (DRAFT 상태)")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<EstimateRequestResponse> createEstimateRequest(
@@ -74,6 +76,7 @@ public class EstimateRequestController {
      * 견적 요청 수정
      */
     @Operation(summary = "견적 요청 수정", description = "내 견적 요청을 수정합니다 (DRAFT 상태만)")
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{requestUuid}")
     public ApiResponse<EstimateRequestResponse> updateEstimateRequest(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -90,6 +93,7 @@ public class EstimateRequestController {
      * 견적 요청 발행 (DRAFT → PUBLISHED)
      */
     @Operation(summary = "견적 요청 발행", description = "견적 요청을 발행하여 업체들이 볼 수 있게 합니다")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/{requestUuid}/publish")
     public ApiResponse<EstimateRequestResponse> publishEstimateRequest(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -118,6 +122,7 @@ public class EstimateRequestController {
      * 내 견적 요청 목록 조회
      */
     @Operation(summary = "내 견적 요청 목록", description = "내가 작성한 견적 요청 목록을 조회합니다")
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/my")
     public ApiResponse<Page<EstimateRequestListResponse>> getMyEstimateRequests(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -152,6 +157,7 @@ public class EstimateRequestController {
      * 견적 요청 삭제
      */
     @Operation(summary = "견적 요청 삭제", description = "내 견적 요청을 삭제합니다 (Soft Delete)")
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{requestUuid}")
     public ApiResponse<Void> deleteEstimateRequest(
             @AuthenticationPrincipal UserDetails userDetails,

@@ -7,6 +7,7 @@ import com.hip.damoa.domain.user.service.AuthService;
 import com.hip.damoa.domain.user.service.VerificationService;
 import com.hip.damoa.domain.user.web.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -156,6 +157,7 @@ public class AuthController {
      * 로그아웃
      */
     @Operation(summary = "로그아웃", description = "로그아웃 처리 (Refresh Token 쿠키 삭제, Redis에서 Refresh Token 삭제, Access Token 블랙리스트 등록)")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
             @RequestHeader(value = "Authorization", required = false) String authorization,
@@ -259,6 +261,7 @@ public class AuthController {
      * 비밀번호 변경 (로그인 상태)
      */
     @Operation(summary = "비밀번호 변경", description = "로그인 상태에서 현재 비밀번호를 확인하고 새 비밀번호로 변경합니다")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/password/change")
     public ApiResponse<Void> changePassword(
             @AuthenticationPrincipal UserDetails userDetails,

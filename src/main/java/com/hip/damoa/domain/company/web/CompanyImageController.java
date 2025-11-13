@@ -6,6 +6,7 @@ import com.hip.damoa.domain.company.service.CompanyImageService;
 import com.hip.damoa.domain.company.web.dto.CompanyImageRequest;
 import com.hip.damoa.domain.company.web.dto.CompanyImageResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Tag(name = "06. Company Image", description = "업체 이미지 관리 API")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/companies/{companyUuid}/images")

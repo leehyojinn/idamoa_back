@@ -7,6 +7,7 @@ import com.hip.damoa.domain.company.web.dto.CompanyReviewCreateRequest;
 import com.hip.damoa.domain.company.web.dto.CompanyReviewReplyRequest;
 import com.hip.damoa.domain.company.web.dto.CompanyReviewResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class CompanyReviewController {
      * 리뷰 작성
      */
     @Operation(summary = "리뷰 작성", description = "업체에 대한 리뷰를 작성합니다")
+    @SecurityRequirement(name = "bearerAuth")
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/companies/{companyUuid}/reviews")
     public ApiResponse<CompanyReviewResponse> createReview(
@@ -90,6 +92,7 @@ public class CompanyReviewController {
      * 리뷰 수정
      */
     @Operation(summary = "리뷰 수정", description = "작성한 리뷰를 수정합니다 (작성자만 가능)")
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/reviews/{reviewUuid}")
     public ApiResponse<CompanyReviewResponse> updateReview(
             @PathVariable UUID reviewUuid,
@@ -111,6 +114,7 @@ public class CompanyReviewController {
      * 리뷰 삭제
      */
     @Operation(summary = "리뷰 삭제", description = "작성한 리뷰를 삭제합니다 (작성자만 가능)")
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/reviews/{reviewUuid}")
     public ApiResponse<Void> deleteReview(
             @PathVariable UUID reviewUuid,
@@ -127,6 +131,7 @@ public class CompanyReviewController {
      * 업체 답변 작성
      */
     @Operation(summary = "업체 답변 작성", description = "리뷰에 대한 업체 답변을 작성합니다 (업체 소유자만 가능)")
+    @SecurityRequirement(name = "bearerAuth")
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/reviews/{reviewUuid}/reply")
     public ApiResponse<CompanyReviewResponse> addReply(
@@ -149,6 +154,7 @@ public class CompanyReviewController {
      * 업체 답변 수정
      */
     @Operation(summary = "업체 답변 수정", description = "작성한 업체 답변을 수정합니다 (업체 소유자만 가능)")
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/reviews/{reviewUuid}/reply")
     public ApiResponse<CompanyReviewResponse> updateReply(
             @PathVariable UUID reviewUuid,
@@ -170,6 +176,7 @@ public class CompanyReviewController {
      * 업체 답변 삭제
      */
     @Operation(summary = "업체 답변 삭제", description = "작성한 업체 답변을 삭제합니다 (업체 소유자만 가능)")
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/reviews/{reviewUuid}/reply")
     public ApiResponse<Void> deleteReply(
             @PathVariable UUID reviewUuid,

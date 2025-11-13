@@ -8,6 +8,7 @@ import com.hip.damoa.domain.company.web.dto.CompanyListResponse;
 import com.hip.damoa.domain.company.web.dto.CompanyResponse;
 import com.hip.damoa.domain.company.web.dto.CompanyUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,8 @@ import java.util.UUID;
  * 업체 관리 REST API (관리자용)
  */
 @Slf4j
-@Tag(name = "14. Admin - Company", description = "업체 관리 API (관리자용)")
+@Tag(name = "1901. Admin - Company", description = "업체 관리 API (관리자용)")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/companies")
