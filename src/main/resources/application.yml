@@ -41,6 +41,7 @@ jwt:
 
 oauth:
   redirect-base-url: ${OAUTH_REDIRECT_BASE_URL:http://localhost:8080}
+  frontend-redirect-url: ${OAUTH_FRONTEND_REDIRECT_URL:http://localhost:3000/auth/callback}
   kakao:
     client-id: ${KAKAO_CLIENT_ID:your-kakao-client-id}
     client-secret: ${KAKAO_CLIENT_SECRET:your-kakao-client-secret}

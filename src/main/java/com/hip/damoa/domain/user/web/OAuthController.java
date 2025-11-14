@@ -10,7 +10,10 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
 
 /**
  * OAuth 소셜 로그인 REST API
@@ -23,6 +26,9 @@ import org.springframework.web.bind.annotation.*;
 public class OAuthController {
 
     private final OAuthService oauthService;
+
+    @Value("${oauth.frontend-redirect-url}")
+    private String frontendRedirectUrl;
 
     // Refresh Token 쿠키 설정 상수
     private static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
@@ -54,24 +60,32 @@ public class OAuthController {
     /**
      * OAuth Callback 처리 (카카오)
      */
-    @Operation(summary = "카카오 로그인 Callback", description = "카카오 OAuth Callback을 처리하고 JWT 토큰을 발급합니다 (Refresh Token은 HttpOnly 쿠키로 전달)")
+    @Operation(summary = "카카오 로그인 Callback",
+            description = "카카오 OAuth Callback을 처리하고 프론트엔드로 리다이렉트합니다.\n\n" +
+                    "**보안 플로우:**\n" +
+                    "1. Refresh Token은 HttpOnly 쿠키에 저장 (XSS 방지)\n" +
+                    "2. 프론트엔드 페이지로 리다이렉트 (Access Token은 URL에 포함하지 않음)\n" +
+                    "3. 프론트엔드에서 `/api/auth/refresh`를 호출하여 새 Access Token 발급\n\n" +
+                    "**리다이렉트 URL 파라미터:**\n" +
+                    "- success: 로그인 성공 여부 (true/false)\n" +
+                    "- requiresProfileSetup: 프로필 완성 필요 여부 (true/false)")
     @GetMapping("/kakao/callback")
-    public String handleKakaoCallback(
+    public void handleKakaoCallback(
             @RequestParam String code,
             @RequestParam String state,
-            HttpServletResponse httpResponse) {
+            HttpServletResponse httpResponse) throws IOException {
         OAuthCallbackResponse response = oauthService.handleCallback("kakao", code, state);
 
         // Refresh Token을 HttpOnly 쿠키에 설정
         setRefreshTokenCookie(httpResponse, response.getTokenInfo().getRefreshToken());
 
-        // HTML 페이지로 리다이렉트 (test-oauth.html) - refreshToken 제거
-        String redirectUrl = "/test-oauth.html" +
+        // 프론트엔드로 리다이렉트 (Access Token은 URL에 포함하지 않음)
+        String redirectUrl = frontendRedirectUrl +
                 "?success=true" +
-                "&accessToken=" + response.getTokenInfo().getAccessToken() +
                 "&requiresProfileSetup=" + !response.getTokenInfo().isProfileCompleted();
 
-        return "redirect:" + redirectUrl;
+        log.info("OAuth 카카오 로그인 성공 - 리다이렉트: {}", redirectUrl);
+        httpResponse.sendRedirect(redirectUrl);
     }
 
     /**
@@ -87,24 +101,32 @@ public class OAuthController {
     /**
      * OAuth Callback 처리 (네이버)
      */
-    @Operation(summary = "네이버 로그인 Callback", description = "네이버 OAuth Callback을 처리하고 JWT 토큰을 발급합니다 (Refresh Token은 HttpOnly 쿠키로 전달)")
+    @Operation(summary = "네이버 로그인 Callback",
+            description = "네이버 OAuth Callback을 처리하고 프론트엔드로 리다이렉트합니다.\\n\\n" +
+                    "**보안 플로우:**\\n" +
+                    "1. Refresh Token은 HttpOnly 쿠키에 저장 (XSS 방지)\\n" +
+                    "2. 프론트엔드 페이지로 리다이렉트 (Access Token은 URL에 포함하지 않음)\\n" +
+                    "3. 프론트엔드에서 `/api/auth/refresh`를 호출하여 새 Access Token 발급\\n\\n" +
+                    "**리다이렉트 URL 파라미터:**\\n" +
+                    "- success: 로그인 성공 여부 (true/false)\\n" +
+                    "- requiresProfileSetup: 프로필 완성 필요 여부 (true/false)")
     @GetMapping("/naver/callback")
-    public String handleNaverCallback(
+    public void handleNaverCallback(
             @RequestParam String code,
             @RequestParam String state,
-            HttpServletResponse httpResponse) {
+            HttpServletResponse httpResponse) throws IOException {
         OAuthCallbackResponse response = oauthService.handleCallback("naver", code, state);
 
         // Refresh Token을 HttpOnly 쿠키에 설정
         setRefreshTokenCookie(httpResponse, response.getTokenInfo().getRefreshToken());
 
-        // HTML 페이지로 리다이렉트 (test-oauth.html) - refreshToken 제거
-        String redirectUrl = "/test-oauth.html" +
+        // 프론트엔드로 리다이렉트 (Access Token은 URL에 포함하지 않음)
+        String redirectUrl = frontendRedirectUrl +
                 "?success=true" +
-                "&accessToken=" + response.getTokenInfo().getAccessToken() +
                 "&requiresProfileSetup=" + !response.getTokenInfo().isProfileCompleted();
 
-        return "redirect:" + redirectUrl;
+        log.info("OAuth 네이버 로그인 성공 - 리다이렉트: {}", redirectUrl);
+        httpResponse.sendRedirect(redirectUrl);
     }
 
     /**
@@ -120,23 +142,31 @@ public class OAuthController {
     /**
      * OAuth Callback 처리 (구글)
      */
-    @Operation(summary = "구글 로그인 Callback", description = "구글 OAuth Callback을 처리하고 JWT 토큰을 발급합니다 (Refresh Token은 HttpOnly 쿠키로 전달)")
+    @Operation(summary = "구글 로그인 Callback",
+            description = "구글 OAuth Callback을 처리하고 프론트엔드로 리다이렉트합니다.\\n\\n" +
+                    "**보안 플로우:**\\n" +
+                    "1. Refresh Token은 HttpOnly 쿠키에 저장 (XSS 방지)\\n" +
+                    "2. 프론트엔드 페이지로 리다이렉트 (Access Token은 URL에 포함하지 않음)\\n" +
+                    "3. 프론트엔드에서 `/api/auth/refresh`를 호출하여 새 Access Token 발급\\n\\n" +
+                    "**리다이렉트 URL 파라미터:**\\n" +
+                    "- success: 로그인 성공 여부 (true/false)\\n" +
+                    "- requiresProfileSetup: 프로필 완성 필요 여부 (true/false)")
     @GetMapping("/google/callback")
-    public String handleGoogleCallback(
+    public void handleGoogleCallback(
             @RequestParam String code,
             @RequestParam String state,
-            HttpServletResponse httpResponse) {
+            HttpServletResponse httpResponse) throws IOException {
         OAuthCallbackResponse response = oauthService.handleCallback("google", code, state);
 
         // Refresh Token을 HttpOnly 쿠키에 설정
         setRefreshTokenCookie(httpResponse, response.getTokenInfo().getRefreshToken());
 
-        // HTML 페이지로 리다이렉트 (test-oauth.html) - refreshToken 제거
-        String redirectUrl = "/test-oauth.html" +
+        // 프론트엔드로 리다이렉트 (Access Token은 URL에 포함하지 않음)
+        String redirectUrl = frontendRedirectUrl +
                 "?success=true" +
-                "&accessToken=" + response.getTokenInfo().getAccessToken() +
                 "&requiresProfileSetup=" + !response.getTokenInfo().isProfileCompleted();
 
-        return "redirect:" + redirectUrl;
+        log.info("OAuth 구글 로그인 성공 - 리다이렉트: {}", redirectUrl);
+        httpResponse.sendRedirect(redirectUrl);
     }
 }

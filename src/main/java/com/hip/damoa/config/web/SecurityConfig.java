@@ -127,9 +127,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/reviews/{reviewId}/reply").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/reviews/{reviewId}/reply").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/reviews/{reviewId}/reply").authenticated()
+                        // Estimate Request endpoints - public (GET only)
+                        .requestMatchers(HttpMethod.GET, "/api/estimates/requests").permitAll()  // Public list
+                        .requestMatchers(HttpMethod.GET, "/api/estimates/requests/*").permitAll()  // View detail (UUID)
                         // Authenticated endpoints
                         .requestMatchers("/api/auth/logout", "/api/auth/me").authenticated()
-                        .requestMatchers("/api/estimates/**").authenticated()  // Estimate/bidding endpoints
+                        .requestMatchers("/api/estimates/**").authenticated()  // Estimate/bidding endpoints (other than public GET)
                         .requestMatchers("/api/contests/**").authenticated()  // Contest endpoints
                         .requestMatchers("/api/payments/**").authenticated()  // Payment endpoints (except webhook and plans)
                         .requestMatchers("/api/planner/requests/**").authenticated()  // Planner requests (user)

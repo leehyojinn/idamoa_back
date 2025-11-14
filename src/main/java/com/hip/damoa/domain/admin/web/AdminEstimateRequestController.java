@@ -4,6 +4,7 @@ import com.hip.damoa.core.exception.BusinessException;
 import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.estimate.model.EstimateRequest;
+import com.hip.damoa.domain.estimate.model.EstimateStatus;
 import com.hip.damoa.domain.estimate.repository.EstimateRequestRepository;
 import com.hip.damoa.domain.estimate.service.EstimateRequestService;
 import com.hip.damoa.domain.estimate.web.dto.EstimateRequestListResponse;
@@ -61,7 +62,7 @@ public class AdminEstimateRequestController {
         Page<EstimateRequest> requests;
         if (status != null) {
             try {
-                EstimateRequest.EstimateStatus statusEnum = EstimateRequest.EstimateStatus.valueOf(status);
+                EstimateStatus statusEnum = EstimateStatus.valueOf(status);
                 requests = estimateRequestRepository.findByStatus(statusEnum, pageable);
             } catch (IllegalArgumentException e) {
                 throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
