@@ -1,6 +1,7 @@
 package com.hip.damoa.domain.estimate.repository;
 
 import com.hip.damoa.domain.estimate.model.EstimateRequest;
+import com.hip.damoa.domain.estimate.model.EstimateStatus;
 import com.hip.damoa.domain.user.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,20 +30,20 @@ public interface EstimateRequestRepository extends JpaRepository<EstimateRequest
     List<EstimateRequest> findByUserAndIsDeletedFalse(User user);
 
     // Find by status
-    Page<EstimateRequest> findByStatusAndIsDeletedFalse(EstimateRequest.EstimateStatus status, Pageable pageable);
+    Page<EstimateRequest> findByStatusAndIsDeletedFalse(EstimateStatus status, Pageable pageable);
 
     // Find by status and isPublic
     @Query("SELECT e FROM EstimateRequest e WHERE e.status = :status AND e.isPublic = :isPublic AND e.isDeleted = false")
-    Page<EstimateRequest> findByStatusAndVisibilityAndIsDeletedFalse(@Param("status") EstimateRequest.EstimateStatus status, @Param("isPublic") boolean isPublic, Pageable pageable);
+    Page<EstimateRequest> findByStatusAndVisibilityAndIsDeletedFalse(@Param("status") EstimateStatus status, @Param("isPublic") boolean isPublic, Pageable pageable);
 
     // Find public requests (for companies to browse)
     @Query("SELECT e FROM EstimateRequest e WHERE e.isPublic = true AND e.isDeleted = false " +
            "AND e.status = :status ORDER BY e.createdAt DESC")
-    Page<EstimateRequest> findPublicRequests(@Param("status") EstimateRequest.EstimateStatus status, Pageable pageable);
+    Page<EstimateRequest> findPublicRequests(@Param("status") EstimateStatus status, Pageable pageable);
 
     // Find active public requests (published and not expired)
     @Query("SELECT e FROM EstimateRequest e WHERE e.isPublic = true AND e.isDeleted = false " +
-           "AND e.status = com.hip.damoa.domain.estimate.model.EstimateRequest$EstimateStatus.PUBLISHED " +
+           "AND e.status = com.hip.damoa.domain.estimate.model.EstimateStatus.PUBLISHED " +
            "AND (e.expiresAt IS NULL OR e.expiresAt > :now) " +
            "ORDER BY e.createdAt DESC")
     Page<EstimateRequest> findActivePublicRequests(@Param("now") LocalDateTime now, Pageable pageable);
@@ -52,15 +53,15 @@ public interface EstimateRequestRepository extends JpaRepository<EstimateRequest
 
     // Count by status
     @Query("SELECT COUNT(e) FROM EstimateRequest e WHERE e.status = :status AND e.isDeleted = false")
-    long countByStatusAndIsDeletedFalse(@Param("status") EstimateRequest.EstimateStatus status);
+    long countByStatusAndIsDeletedFalse(@Param("status") EstimateStatus status);
 
     // Find expired requests
     @Query("SELECT e FROM EstimateRequest e WHERE e.isDeleted = false " +
-           "AND e.status = com.hip.damoa.domain.estimate.model.EstimateRequest$EstimateStatus.PUBLISHED " +
+           "AND e.status = com.hip.damoa.domain.estimate.model.EstimateStatus.PUBLISHED " +
            "AND e.expiresAt IS NOT NULL " +
            "AND e.expiresAt < :now")
     List<EstimateRequest> findExpiredRequests(@Param("now") LocalDateTime now);
 
     // Find by status (for admin)
-    Page<EstimateRequest> findByStatus(EstimateRequest.EstimateStatus status, Pageable pageable);
+    Page<EstimateRequest> findByStatus(EstimateStatus status, Pageable pageable);
 }

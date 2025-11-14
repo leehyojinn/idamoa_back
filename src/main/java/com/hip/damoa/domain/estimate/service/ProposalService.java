@@ -7,6 +7,7 @@ import com.hip.damoa.domain.company.repository.CompanyRepository;
 import com.hip.damoa.domain.estimate.model.EstimateProposal;
 import com.hip.damoa.domain.estimate.model.EstimateProposalAttachment;
 import com.hip.damoa.domain.estimate.model.EstimateRequest;
+import com.hip.damoa.domain.estimate.model.EstimateStatus;
 import com.hip.damoa.domain.estimate.repository.EstimateProposalAttachmentRepository;
 import com.hip.damoa.domain.estimate.repository.EstimateProposalRepository;
 import com.hip.damoa.domain.estimate.repository.EstimateRequestRepository;
@@ -73,7 +74,7 @@ public class ProposalService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND));
 
         // 견적 요청 상태 확인 (PUBLISHED 상태만 제안 가능)
-        if (estimateRequest.getStatus() != EstimateRequest.EstimateStatus.PUBLISHED) {
+        if (estimateRequest.getStatus() != EstimateStatus.PUBLISHED) {
             throw new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND);
         }
 

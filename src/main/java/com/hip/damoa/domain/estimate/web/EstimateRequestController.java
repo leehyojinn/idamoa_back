@@ -58,7 +58,24 @@ public class EstimateRequestController {
     /**
      * 견적 요청 작성
      */
-    @Operation(summary = "견적 요청 작성", description = "새로운 견적 요청을 작성합니다 (DRAFT 상태)")
+    @Operation(summary = "견적 요청 작성",
+            description = "새로운 견적 요청을 작성합니다.\n\n" +
+                    "**견적 상태 (status)**\n" +
+                    "- 생성 시 기본 상태: DRAFT (작성중)\n" +
+                    "- DRAFT 상태에서는 수정이 가능합니다\n" +
+                    "- 발행(publish) 후에는 수정이 불가능합니다\n\n" +
+                    "**필수 항목**\n" +
+                    "- title: 견적 요청 제목\n" +
+                    "- description: 상세 설명\n" +
+                    "- estimateType: 견적 유형 (인테리어/건축/리모델링 등)\n\n" +
+                    "**선택 항목**\n" +
+                    "- clientName: 사업장명 또는 고객명\n" +
+                    "- businessType: 업종 (치과/카페/사무실 등)\n" +
+                    "- areaPyeong: 평수\n" +
+                    "- budgetMin/budgetMax: 예산 범위\n" +
+                    "- desiredStartDate/desiredCompletionDate: 희망 일정\n" +
+                    "- contactName/contactPhone: 연락처 정보\n" +
+                    "- attachments: 첨부파일 (도면, 사진 등)")
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -75,7 +92,14 @@ public class EstimateRequestController {
     /**
      * 견적 요청 수정
      */
-    @Operation(summary = "견적 요청 수정", description = "내 견적 요청을 수정합니다 (DRAFT 상태만)")
+    @Operation(summary = "견적 요청 수정",
+            description = "내 견적 요청을 수정합니다.\n\n" +
+                    "**중요**\n" +
+                    "- DRAFT 상태인 견적만 수정 가능합니다\n" +
+                    "- 발행(PUBLISHED) 후에는 수정이 불가능합니다\n" +
+                    "- 본인이 작성한 견적만 수정 가능합니다\n\n" +
+                    "**수정 가능한 필드**\n" +
+                    "- 모든 필드 수정 가능 (null인 필드는 변경되지 않음)")
     @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{requestUuid}")
     public ApiResponse<EstimateRequestResponse> updateEstimateRequest(
@@ -92,7 +116,15 @@ public class EstimateRequestController {
     /**
      * 견적 요청 발행 (DRAFT → PUBLISHED)
      */
-    @Operation(summary = "견적 요청 발행", description = "견적 요청을 발행하여 업체들이 볼 수 있게 합니다")
+    @Operation(summary = "견적 요청 발행",
+            description = "견적 요청을 발행하여 업체들이 볼 수 있게 합니다.\n\n" +
+                    "**상태 변화**\n" +
+                    "- DRAFT → PUBLISHED\n" +
+                    "- 발행 후에는 수정이 불가능합니다\n" +
+                    "- 업체들이 이 견적에 제안을 제출할 수 있게 됩니다\n\n" +
+                    "**주의사항**\n" +
+                    "- DRAFT 상태인 견적만 발행 가능\n" +
+                    "- 본인이 작성한 견적만 발행 가능")
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/{requestUuid}/publish")
     public ApiResponse<EstimateRequestResponse> publishEstimateRequest(
@@ -106,22 +138,58 @@ public class EstimateRequestController {
     }
 
     /**
-     * 견적 요청 상세 조회
+     * 견적 요청 상세 조회 (제안 목록 포함)
      */
-    @Operation(summary = "견적 요청 상세 조회", description = "견적 요청 상세 정보를 조회합니다 (조회수 증가)")
+    @Operation(summary = "견적 요청 상세 조회",
+            description = "견적 요청 상세 정보를 조회합니다 (제안 목록 포함).\n\n" +
+                    "**조회 가능 대상**\n" +
+                    "- 공개(isPublic=true) 견적: 누구나 조회 가능\n" +
+                    "- 비공개 견적: 작성자만 조회 가능\n\n" +
+                    "**제안 목록 권한별 필터링**\n" +
+                    "- 요청자 본인: 모든 제안의 전체 내용 조회 (가격, 상세 설명 포함)\n" +
+                    "- 제안 제출 업체: 본인이 제출한 제안만 전체 내용 조회\n" +
+                    "- 기타 사용자: 제안 요약만 조회 (업체명, 제목, 날짜만 표시, 가격/상세 내용 숨김)\n\n" +
+                    "**응답 구조**\n" +
+                    "```json\n" +
+                    "{\n" +
+                    "  \"request\": { /* 견적 요청 정보 */ },\n" +
+                    "  \"proposals\": {\n" +
+                    "    \"totalCount\": 5,\n" +
+                    "    \"viewedCount\": 2,\n" +
+                    "    \"accessLevel\": \"OWNER|PROPOSER|PUBLIC\",\n" +
+                    "    \"items\": [ /* 권한에 따라 다른 레벨의 제안 정보 */ ]\n" +
+                    "  }\n" +
+                    "}\n" +
+                    "```\n\n" +
+                    "**부가 기능**\n" +
+                    "- 조회 시 viewCount 자동 증가\n" +
+                    "- 첨부파일 정보 포함")
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/{requestUuid}")
-    public ApiResponse<EstimateRequestResponse> getEstimateRequest(
+    public ApiResponse<EstimateRequestDetailResponse> getEstimateRequest(
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID requestUuid) {
 
-        EstimateRequest estimateRequest = estimateRequestService.getEstimateRequestByUuid(requestUuid);
+        EstimateRequestDetailResponse response = estimateRequestService
+                .getEstimateRequestDetailByUuid(userDetails.getUsername(), requestUuid);
 
-        return ApiResponse.success(enrichWithFiles(estimateRequest));
+        return ApiResponse.success(response);
     }
 
     /**
      * 내 견적 요청 목록 조회
      */
-    @Operation(summary = "내 견적 요청 목록", description = "내가 작성한 견적 요청 목록을 조회합니다")
+    @Operation(summary = "내 견적 요청 목록",
+            description = "내가 작성한 견적 요청 목록을 조회합니다.\n\n" +
+                    "**견적 상태 (status)**\n" +
+                    "- DRAFT: 작성중 (임시 저장)\n" +
+                    "- PUBLISHED: 공개됨 (업체 제안 가능)\n" +
+                    "- IN_PROGRESS: 진행중 (제안 검토 중)\n" +
+                    "- MATCHED: 매칭됨 (업체 선정 완료)\n" +
+                    "- COMPLETED: 완료 (프로젝트 완료)\n" +
+                    "- CANCELLED: 취소됨\n\n" +
+                    "**정렬**\n" +
+                    "- 최신순 정렬 (createdAt DESC)")
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/my")
     public ApiResponse<Page<EstimateRequestListResponse>> getMyEstimateRequests(
@@ -140,7 +208,17 @@ public class EstimateRequestController {
     /**
      * 공개 견적 요청 목록 조회
      */
-    @Operation(summary = "공개 견적 요청 목록", description = "공개된 견적 요청 목록을 조회합니다")
+    @Operation(summary = "공개 견적 요청 목록",
+            description = "공개된 견적 요청 목록을 조회합니다.\n\n" +
+                    "**조회 대상**\n" +
+                    "- isPublic=true인 견적만 조회\n" +
+                    "- PUBLISHED 상태 이상의 견적\n" +
+                    "- 인증 없이 누구나 조회 가능\n\n" +
+                    "**정렬**\n" +
+                    "- 최신순 정렬 (createdAt DESC)\n\n" +
+                    "**활용 예시**\n" +
+                    "- 업체들이 제안할 견적 찾기\n" +
+                    "- 메인 페이지 견적 목록 표시")
     @GetMapping
     public ApiResponse<Page<EstimateRequestListResponse>> getPublicEstimateRequests(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
@@ -156,7 +234,14 @@ public class EstimateRequestController {
     /**
      * 견적 요청 삭제
      */
-    @Operation(summary = "견적 요청 삭제", description = "내 견적 요청을 삭제합니다 (Soft Delete)")
+    @Operation(summary = "견적 요청 삭제",
+            description = "내 견적 요청을 삭제합니다.\n\n" +
+                    "**삭제 방식**\n" +
+                    "- Soft Delete: 실제로 삭제되지 않고 isDeleted=true로 표시\n" +
+                    "- 삭제된 데이터는 목록 조회 시 제외됨\n\n" +
+                    "**주의사항**\n" +
+                    "- 본인이 작성한 견적만 삭제 가능\n" +
+                    "- 삭제 후 복구 불가")
     @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{requestUuid}")
     public ApiResponse<Void> deleteEstimateRequest(

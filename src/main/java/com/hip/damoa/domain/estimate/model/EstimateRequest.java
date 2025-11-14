@@ -292,16 +292,6 @@ public class EstimateRequest extends BaseEntity {
         this.attachments.clear();
     }
 
-    // ===== Enum 정의 =====
-
-    public enum EstimateStatus {
-        DRAFT,          // 작성중
-        PUBLISHED,      // 공개됨
-        IN_PROGRESS,    // 진행중
-        MATCHED,        // 매칭됨
-        COMPLETED,      // 완료
-        CANCELLED       // 취소
-    }
 
     // ===== Getter 메서드 추가 (Service에서 사용) =====
 

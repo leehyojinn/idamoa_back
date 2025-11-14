@@ -2,14 +2,16 @@ package com.hip.damoa.domain.estimate.service;
 
 import com.hip.damoa.core.exception.BusinessException;
 import com.hip.damoa.core.exception.ErrorCode;
+import com.hip.damoa.domain.company.model.Company;
+import com.hip.damoa.domain.company.repository.CompanyRepository;
+import com.hip.damoa.domain.estimate.model.EstimateProposal;
 import com.hip.damoa.domain.estimate.model.EstimateRequest;
 import com.hip.damoa.domain.estimate.model.EstimateRequestAttachment;
+import com.hip.damoa.domain.estimate.model.EstimateStatus;
+import com.hip.damoa.domain.estimate.repository.EstimateProposalRepository;
 import com.hip.damoa.domain.estimate.repository.EstimateRequestAttachmentRepository;
 import com.hip.damoa.domain.estimate.repository.EstimateRequestRepository;
-import com.hip.damoa.domain.estimate.web.dto.AttachmentRequest;
-import com.hip.damoa.domain.estimate.web.dto.AttachmentResponse;
-import com.hip.damoa.domain.estimate.web.dto.EstimateRequestCreateRequest;
-import com.hip.damoa.domain.estimate.web.dto.EstimateRequestUpdateRequest;
+import com.hip.damoa.domain.estimate.web.dto.*;
 import com.hip.damoa.domain.file.model.File;
 import com.hip.damoa.domain.file.repository.FileRepository;
 import com.hip.damoa.domain.user.model.User;
@@ -39,6 +41,8 @@ public class EstimateRequestService {
     private final EstimateRequestAttachmentRepository attachmentRepository;
     private final UserRepository userRepository;
     private final FileRepository fileRepository;
+    private final EstimateProposalRepository proposalRepository;
+    private final CompanyRepository companyRepository;
 
     /**
      * 견적 요청 생성
@@ -97,7 +101,7 @@ public class EstimateRequestService {
                 .address(request.getSiteAddress())
                 .expiresAt(request.getSubmissionDeadline())
                 .isPublic(Boolean.TRUE.equals(request.getIsPublic()))
-                .status(EstimateRequest.EstimateStatus.DRAFT)
+                .status(EstimateStatus.DRAFT)
                 // V26 필드 추가
                 .clientName(request.getClientName())
                 .businessType(request.getBusinessType())
@@ -148,7 +152,7 @@ public class EstimateRequestService {
         }
 
         // 상태 확인 (DRAFT 상태만 수정 가능)
-        if (estimateRequest.getStatus() != EstimateRequest.EstimateStatus.DRAFT) {
+        if (estimateRequest.getStatus() != EstimateStatus.DRAFT) {
             throw new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_EDITABLE);
         }
 
@@ -278,7 +282,7 @@ public class EstimateRequestService {
         }
 
         // 상태 확인
-        if (estimateRequest.getStatus() != EstimateRequest.EstimateStatus.DRAFT) {
+        if (estimateRequest.getStatus() != EstimateStatus.DRAFT) {
             throw new BusinessException(ErrorCode.ESTIMATE_REQUEST_ALREADY_PUBLISHED);
         }
 
@@ -327,7 +331,7 @@ public class EstimateRequestService {
     @Transactional(readOnly = true)
     public Page<EstimateRequest> getPublicEstimateRequests(Pageable pageable) {
         log.info("공개 견적 요청 목록 조회");
-        return estimateRequestRepository.findByStatusAndVisibilityAndIsDeletedFalse(EstimateRequest.EstimateStatus.PUBLISHED, true, pageable);
+        return estimateRequestRepository.findByStatusAndVisibilityAndIsDeletedFalse(EstimateStatus.PUBLISHED, true, pageable);
     }
 
     /**
@@ -406,6 +410,94 @@ public class EstimateRequestService {
         estimateRequestRepository.save(estimateRequest);
 
         return estimateRequest;
+    }
+
+    /**
+     * 견적 요청 상세 조회 (제안 목록 포함, 권한별 필터링)
+     */
+    @Transactional
+    public EstimateRequestDetailResponse getEstimateRequestDetailByUuid(String userEmail, UUID requestUuid) {
+        log.info("견적 요청 상세 조회 (제안 포함): requestUuid={}, userEmail={}", requestUuid, userEmail);
+
+        // 사용자 조회
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 견적 요청 조회 (조회수 증가 포함)
+        EstimateRequest estimateRequest = getEstimateRequestByUuid(requestUuid);
+
+        // 기본 응답 생성
+        EstimateRequestDetailResponse response = EstimateRequestDetailResponse.from(estimateRequest);
+
+        // 첨부파일 추가
+        List<AttachmentResponse> attachments = getAttachmentResponses(estimateRequest);
+        response.setAttachments(attachments);
+
+        // 제안 정보 추가 (권한별 필터링)
+        ProposalsInfo proposalsInfo = getProposalsInfo(estimateRequest, user);
+        response.setProposals(proposalsInfo);
+
+        return response;
+    }
+
+    /**
+     * 권한별 제안 정보 조회
+     */
+    private ProposalsInfo getProposalsInfo(EstimateRequest estimateRequest, User user) {
+        // 1. 견적 요청자 본인인 경우 - 모든 제안 조회 (WITHDRAWN 제외)
+        if (estimateRequest.getUser().getId().equals(user.getId())) {
+            List<EstimateProposal> proposals = proposalRepository.findByRequestAndStatusNotWithdrawn(estimateRequest);
+
+            long viewedCount = proposals.stream()
+                    .filter(p -> "VIEWED".equals(p.getStatus()) ||
+                                "SELECTED".equals(p.getStatus()) ||
+                                "REJECTED".equals(p.getStatus()))
+                    .count();
+
+            List<ProposalResponse> proposalResponses = proposals.stream()
+                    .map(ProposalResponse::from)
+                    .toList();
+
+            return ProposalsInfo.builder()
+                    .totalCount(proposals.size())
+                    .viewedCount((int) viewedCount)
+                    .items(proposalResponses)
+                    .accessLevel("OWNER")
+                    .build();
+        }
+
+        // 2. 업체 회원인 경우 - 자신의 제안만 조회
+        if (user.hasRole("COMPANY")) {
+            Company company = companyRepository.findByOwnerAndIsDeletedFalse(user)
+                    .orElse(null);
+
+            if (company != null) {
+                List<ProposalResponse> myProposals = new ArrayList<>();
+                proposalRepository.findByRequestAndCompanyAndIsDeletedFalse(estimateRequest, company)
+                        .ifPresent(proposal -> myProposals.add(ProposalResponse.from(proposal)));
+
+                return ProposalsInfo.builder()
+                        .totalCount(estimateRequest.getProposalCount())
+                        .viewedCount(null) // 본인 제안만 보므로 의미 없음
+                        .items(myProposals)
+                        .accessLevel("PROPOSER")
+                        .build();
+            }
+        }
+
+        // 3. 기타 회원 - 제안 요약만 조회
+        List<EstimateProposal> proposals = proposalRepository.findByRequestAndStatusNotWithdrawn(estimateRequest);
+
+        List<ProposalSummaryResponse> summaries = proposals.stream()
+                .map(ProposalSummaryResponse::from)
+                .toList();
+
+        return ProposalsInfo.builder()
+                .totalCount(proposals.size())
+                .viewedCount(null) // 기타 회원은 확인 불가
+                .items(summaries)
+                .accessLevel("PUBLIC")
+                .build();
     }
 
     /**
