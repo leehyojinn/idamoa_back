@@ -67,6 +67,7 @@ public class OAuthController {
                     "2. 프론트엔드 페이지로 리다이렉트 (Access Token은 URL에 포함하지 않음)\n" +
                     "3. 프론트엔드에서 `/api/auth/refresh`를 호출하여 새 Access Token 발급\n\n" +
                     "**리다이렉트 URL 파라미터:**\n" +
+                    "- http://localhost:3000/auth/callback?success=true&requiresProfileSetup=true\n" +
                     "- success: 로그인 성공 여부 (true/false)\n" +
                     "- requiresProfileSetup: 프로필 완성 필요 여부 (true/false)")
     @GetMapping("/kakao/callback")
@@ -102,13 +103,14 @@ public class OAuthController {
      * OAuth Callback 처리 (네이버)
      */
     @Operation(summary = "네이버 로그인 Callback",
-            description = "네이버 OAuth Callback을 처리하고 프론트엔드로 리다이렉트합니다.\\n\\n" +
-                    "**보안 플로우:**\\n" +
-                    "1. Refresh Token은 HttpOnly 쿠키에 저장 (XSS 방지)\\n" +
-                    "2. 프론트엔드 페이지로 리다이렉트 (Access Token은 URL에 포함하지 않음)\\n" +
-                    "3. 프론트엔드에서 `/api/auth/refresh`를 호출하여 새 Access Token 발급\\n\\n" +
-                    "**리다이렉트 URL 파라미터:**\\n" +
-                    "- success: 로그인 성공 여부 (true/false)\\n" +
+            description = "네이버 OAuth Callback을 처리하고 프론트엔드로 리다이렉트합니다.\n\n" +
+                    "**보안 플로우:**\n" +
+                    "1. Refresh Token은 HttpOnly 쿠키에 저장 (XSS 방지)\n" +
+                    "2. 프론트엔드 페이지로 리다이렉트 (Access Token은 URL에 포함하지 않음)\n" +
+                    "3. 프론트엔드에서 `/api/auth/refresh`를 호출하여 새 Access Token 발급\n\n" +
+                    "**리다이렉트 URL 파라미터:**\n" +
+                    "- http://localhost:3000/auth/callback?success=true&requiresProfileSetup=true\n" +
+                    "- success: 로그인 성공 여부 (true/false)\n" +
                     "- requiresProfileSetup: 프로필 완성 필요 여부 (true/false)")
     @GetMapping("/naver/callback")
     public void handleNaverCallback(
@@ -143,13 +145,14 @@ public class OAuthController {
      * OAuth Callback 처리 (구글)
      */
     @Operation(summary = "구글 로그인 Callback",
-            description = "구글 OAuth Callback을 처리하고 프론트엔드로 리다이렉트합니다.\\n\\n" +
-                    "**보안 플로우:**\\n" +
-                    "1. Refresh Token은 HttpOnly 쿠키에 저장 (XSS 방지)\\n" +
-                    "2. 프론트엔드 페이지로 리다이렉트 (Access Token은 URL에 포함하지 않음)\\n" +
-                    "3. 프론트엔드에서 `/api/auth/refresh`를 호출하여 새 Access Token 발급\\n\\n" +
-                    "**리다이렉트 URL 파라미터:**\\n" +
-                    "- success: 로그인 성공 여부 (true/false)\\n" +
+            description = "구글 OAuth Callback을 처리하고 프론트엔드로 리다이렉트합니다.\n\n" +
+                    "**보안 플로우:**\n" +
+                    "1. Refresh Token은 HttpOnly 쿠키에 저장 (XSS 방지)\n" +
+                    "2. 프론트엔드 페이지로 리다이렉트 (Access Token은 URL에 포함하지 않음)\n" +
+                    "3. 프론트엔드에서 `/api/auth/refresh`를 호출하여 새 Access Token 발급\n\n" +
+                    "**리다이렉트 URL 파라미터:**\n" +
+                    "- http://localhost:3000/auth/callback?success=true&requiresProfileSetup=true\n" +
+                    "- success: 로그인 성공 여부 (true/false)\n" +
                     "- requiresProfileSetup: 프로필 완성 필요 여부 (true/false)")
     @GetMapping("/google/callback")
     public void handleGoogleCallback(
