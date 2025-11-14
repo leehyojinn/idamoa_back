@@ -16,30 +16,30 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     protected ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-        log.error("handleMethodArgumentNotValidException", e);
         final String message = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
+        log.warn("유효성 검증 실패: {}", message);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(message));
     }
 
     @ExceptionHandler(BusinessException.class)
     protected ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
-        log.error("handleBusinessException", e);
         final ErrorCode errorCode = e.getErrorCode();
+        log.warn("비즈니스 예외 발생: {} - {}", errorCode.getCode(), errorCode.getMessage());
         return ResponseEntity.status(errorCode.getStatus())
                 .body(ApiResponse.error(errorCode.getMessage()));
     }
 
     @ExceptionHandler(AuthenticationException.class)
     protected ResponseEntity<ApiResponse<Void>> handleAuthenticationException(AuthenticationException e) {
-        log.error("handleAuthenticationException", e);
+        log.warn("인증 실패: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("인증이 필요합니다. 로그인 후 다시 시도해주세요."));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     protected ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException e) {
-        log.error("handleAccessDeniedException", e);
+        log.warn("접근 권한 없음: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error("접근 권한이 없습니다."));
     }
