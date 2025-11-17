@@ -86,7 +86,7 @@ public class EstimateRequestService {
             requirements.put("siteState", request.getSiteState());
         }
 
-        // 견적 요청 생성
+        // 견적 요청 생성 (바로 PUBLISHED 상태로 생성)
         EstimateRequest estimateRequest = EstimateRequest.builder()
                 .user(user)
                 .title(request.getTitle())
@@ -101,7 +101,7 @@ public class EstimateRequestService {
                 .address(request.getSiteAddress())
                 .expiresAt(request.getSubmissionDeadline())
                 .isPublic(Boolean.TRUE.equals(request.getIsPublic()))
-                .status(EstimateStatus.DRAFT)
+                .status(EstimateStatus.PUBLISHED)  // DRAFT가 아닌 PUBLISHED로 생성
                 // V26 필드 추가
                 .clientName(request.getClientName())
                 .businessType(request.getBusinessType())
@@ -414,14 +414,18 @@ public class EstimateRequestService {
 
     /**
      * 견적 요청 상세 조회 (제안 목록 포함, 권한별 필터링)
+     * 로그인 안한 경우(userEmail=null) PUBLIC 레벨로 조회
      */
     @Transactional
     public EstimateRequestDetailResponse getEstimateRequestDetailByUuid(String userEmail, UUID requestUuid) {
         log.info("견적 요청 상세 조회 (제안 포함): requestUuid={}, userEmail={}", requestUuid, userEmail);
 
-        // 사용자 조회
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        // 사용자 조회 (로그인 안한 경우 null)
+        User user = null;
+        if (userEmail != null) {
+            user = userRepository.findByEmail(userEmail)
+                    .orElse(null);  // 이메일이 잘못된 경우도 null 처리
+        }
 
         // 견적 요청 조회 (조회수 증가 포함)
         EstimateRequest estimateRequest = getEstimateRequestByUuid(requestUuid);
@@ -433,7 +437,7 @@ public class EstimateRequestService {
         List<AttachmentResponse> attachments = getAttachmentResponses(estimateRequest);
         response.setAttachments(attachments);
 
-        // 제안 정보 추가 (권한별 필터링)
+        // 제안 정보 추가 (권한별 필터링, user가 null이면 PUBLIC 레벨)
         ProposalsInfo proposalsInfo = getProposalsInfo(estimateRequest, user);
         response.setProposals(proposalsInfo);
 
@@ -441,9 +445,25 @@ public class EstimateRequestService {
     }
 
     /**
-     * 권한별 제안 정보 조회
+     * 권한별 제안 정보 조회 (user가 null이면 PUBLIC 레벨)
      */
     private ProposalsInfo getProposalsInfo(EstimateRequest estimateRequest, User user) {
+        // 0. 로그인 안한 경우 - PUBLIC 레벨 (제안 요약만 조회)
+        if (user == null) {
+            List<EstimateProposal> proposals = proposalRepository.findByRequestAndStatusNotWithdrawn(estimateRequest);
+
+            List<ProposalSummaryResponse> summaries = proposals.stream()
+                    .map(ProposalSummaryResponse::from)
+                    .toList();
+
+            return ProposalsInfo.builder()
+                    .totalCount(proposals.size())
+                    .viewedCount(null)
+                    .items(summaries)
+                    .accessLevel("PUBLIC")
+                    .build();
+        }
+
         // 1. 견적 요청자 본인인 경우 - 모든 제안 조회 (WITHDRAWN 제외)
         if (estimateRequest.getUser().getId().equals(user.getId())) {
             List<EstimateProposal> proposals = proposalRepository.findByRequestAndStatusNotWithdrawn(estimateRequest);
@@ -537,8 +557,7 @@ public class EstimateRequestService {
     // ===== 첨부파일 처리 메서드 (V30 Migration) =====
 
     /**
-     * 첨부파일 리스트 처리 (URL → File ID 변환 및 조인 테이블 저장)
-     * Company 패턴 참고
+     * 첨부파일 리스트 처리 (UUID → File ID 변환 및 조인 테이블 저장)
      */
     private void processAttachments(EstimateRequest estimateRequest, List<AttachmentRequest> attachmentRequests) {
         log.info("첨부파일 처리 시작: requestId={}, count={}", estimateRequest.getId(), attachmentRequests.size());
@@ -550,8 +569,8 @@ public class EstimateRequestService {
         for (int i = 0; i < attachmentRequests.size(); i++) {
             AttachmentRequest req = attachmentRequests.get(i);
 
-            // URL → File ID 변환
-            Long fileId = convertUrlToFileId(req.getFileUrl());
+            // UUID → File ID 변환
+            Long fileId = convertUuidToFileId(req.getFileUuid());
 
             // Files 테이블의 entityId 업데이트 (스케줄러 삭제 방지)
             File file = fileRepository.findById(fileId)
@@ -610,28 +629,20 @@ public class EstimateRequestService {
     }
 
     /**
-     * URL을 File ID로 변환
+     * UUID를 File ID로 변환
      */
-    private Long convertUrlToFileId(String url) {
-        if (url == null || url.isBlank()) {
-            return null;
+    private Long convertUuidToFileId(String uuidString) {
+        if (uuidString == null || uuidString.isBlank()) {
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
         }
 
-        return fileRepository.findByFileUrl(url)
-                .map(File::getId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
-    }
-
-    /**
-     * File ID를 URL로 변환
-     */
-    private String convertFileIdToUrl(Long fileId) {
-        if (fileId == null) {
-            return null;
+        try {
+            java.util.UUID uuid = java.util.UUID.fromString(uuidString);
+            return fileRepository.findByUuidAndIsDeletedFalse(uuid)
+                    .map(File::getId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
         }
-
-        return fileRepository.findById(fileId)
-                .map(File::getFileUrl)
-                .orElse(null);
     }
 }

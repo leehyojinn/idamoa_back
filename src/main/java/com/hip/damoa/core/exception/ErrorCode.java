@@ -140,6 +140,8 @@ public enum ErrorCode {
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "F005", "파일 업로드에 실패했습니다"),
     FILE_PRICING_NOT_FOUND(HttpStatus.NOT_FOUND, "F006", "파일 가격 정보를 찾을 수 없습니다"),
     DOWNLOAD_LIMIT_EXCEEDED(HttpStatus.FORBIDDEN, "F007", "다운로드 제한을 초과했습니다"),
+    FILE_ALREADY_PURCHASED(HttpStatus.CONFLICT, "F008", "이미 구매한 파일입니다"),
+    FILE_PURCHASE_REQUIRED(HttpStatus.PAYMENT_REQUIRED, "F009", "파일 구매가 필요합니다"),
 
     // Profile
     PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "PR000", "프로필을 찾을 수 없습니다"),

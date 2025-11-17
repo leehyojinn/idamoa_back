@@ -521,8 +521,7 @@ public class ProposalService {
     // ===== 첨부파일 처리 메서드 (V30 Migration) =====
 
     /**
-     * 첨부파일 리스트 처리 (URL → File ID 변환 및 조인 테이블 저장)
-     * Company 패턴 참고
+     * 첨부파일 리스트 처리 (UUID → File ID 변환 및 조인 테이블 저장)
      */
     private void processAttachments(EstimateProposal proposal, List<AttachmentRequest> attachmentRequests) {
         log.info("첨부파일 처리 시작: proposalId={}, count={}", proposal.getId(), attachmentRequests.size());
@@ -534,8 +533,8 @@ public class ProposalService {
         for (int i = 0; i < attachmentRequests.size(); i++) {
             AttachmentRequest req = attachmentRequests.get(i);
 
-            // URL → File ID 변환
-            Long fileId = convertUrlToFileId(req.getFileUrl());
+            // UUID → File ID 변환
+            Long fileId = convertUuidToFileId(req.getFileUuid());
 
             // Files 테이블의 entityId 업데이트 (스케줄러 삭제 방지)
             File file = fileRepository.findById(fileId)
@@ -594,28 +593,20 @@ public class ProposalService {
     }
 
     /**
-     * URL을 File ID로 변환
+     * UUID를 File ID로 변환
      */
-    private Long convertUrlToFileId(String url) {
-        if (url == null || url.isBlank()) {
-            return null;
+    private Long convertUuidToFileId(String uuidString) {
+        if (uuidString == null || uuidString.isBlank()) {
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
         }
 
-        return fileRepository.findByFileUrl(url)
-                .map(File::getId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
-    }
-
-    /**
-     * File ID를 URL로 변환
-     */
-    private String convertFileIdToUrl(Long fileId) {
-        if (fileId == null) {
-            return null;
+        try {
+            java.util.UUID uuid = java.util.UUID.fromString(uuidString);
+            return fileRepository.findByUuidAndIsDeletedFalse(uuid)
+                    .map(File::getId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
         }
-
-        return fileRepository.findById(fileId)
-                .map(File::getFileUrl)
-                .orElse(null);
     }
 }

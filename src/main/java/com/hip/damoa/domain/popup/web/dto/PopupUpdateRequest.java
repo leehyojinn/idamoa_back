@@ -37,6 +37,22 @@ public class PopupUpdateRequest {
     @Size(max = 500, message = "링크 URL은 500자 이내여야 합니다")
     private String linkUrl;
 
+    @Schema(description = "팝업 너비 (px)", example = "600")
+    private Integer width;
+
+    @Schema(description = "팝업 높이 (px)", example = "800")
+    private Integer height;
+
+    @Schema(description = "팝업 위치", example = "CENTER",
+            allowableValues = {"CENTER", "TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CUSTOM"})
+    private String position;
+
+    @Schema(description = "X축 오프셋 (px, CUSTOM 위치일 때 사용)", example = "0")
+    private Integer offsetX;
+
+    @Schema(description = "Y축 오프셋 (px, CUSTOM 위치일 때 사용)", example = "0")
+    private Integer offsetY;
+
     @Schema(description = "노출 시작일시 (null이면 제한 없음)", example = "2025-01-01T00:00:00")
     private LocalDateTime displayStartDate;
 
