@@ -38,6 +38,21 @@ public class PopupResponse {
     @Schema(description = "클릭 시 이동할 URL", example = "https://example.com/event")
     private String linkUrl;
 
+    @Schema(description = "팝업 너비 (px)", example = "600")
+    private Integer width;
+
+    @Schema(description = "팝업 높이 (px)", example = "800")
+    private Integer height;
+
+    @Schema(description = "팝업 위치", example = "CENTER")
+    private String position;
+
+    @Schema(description = "X축 오프셋 (px)", example = "0")
+    private Integer offsetX;
+
+    @Schema(description = "Y축 오프셋 (px)", example = "0")
+    private Integer offsetY;
+
     @Schema(description = "노출 시작일시", example = "2025-01-01T00:00:00")
     private LocalDateTime displayStartDate;
 
@@ -86,6 +101,11 @@ public class PopupResponse {
                 .imageUuid(popup.getImageUuid())
                 .imageUrl(imageUrl)
                 .linkUrl(popup.getLinkUrl())
+                .width(popup.getWidth())
+                .height(popup.getHeight())
+                .position(popup.getPosition())
+                .offsetX(popup.getOffsetX())
+                .offsetY(popup.getOffsetY())
                 .displayStartDate(popup.getDisplayStartDate())
                 .displayEndDate(popup.getDisplayEndDate())
                 .displayOrder(popup.getDisplayOrder())

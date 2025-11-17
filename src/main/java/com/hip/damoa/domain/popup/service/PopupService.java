@@ -53,6 +53,11 @@ public class PopupService {
                 .content(request.getContent())
                 .imageUuid(request.getImageUuid())
                 .linkUrl(request.getLinkUrl())
+                .width(request.getWidth())
+                .height(request.getHeight())
+                .position(request.getPosition())
+                .offsetX(request.getOffsetX())
+                .offsetY(request.getOffsetY())
                 .displayStartDate(request.getDisplayStartDate())
                 .displayEndDate(request.getDisplayEndDate())
                 .displayOrder(request.getDisplayOrder())
@@ -92,6 +97,11 @@ public class PopupService {
                 request.getContent(),
                 request.getImageUuid(),
                 request.getLinkUrl(),
+                request.getWidth(),
+                request.getHeight(),
+                request.getPosition(),
+                request.getOffsetX(),
+                request.getOffsetY(),
                 request.getDisplayStartDate(),
                 request.getDisplayEndDate(),
                 request.getDisplayOrder(),

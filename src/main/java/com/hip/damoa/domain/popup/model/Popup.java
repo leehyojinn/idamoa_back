@@ -36,6 +36,21 @@ public class Popup extends BaseEntity {
     @Column(name = "link_url", length = 500)
     private String linkUrl;
 
+    @Column(name = "width")
+    private Integer width;
+
+    @Column(name = "height")
+    private Integer height;
+
+    @Column(name = "position", length = 20)
+    private String position = "CENTER";
+
+    @Column(name = "offset_x")
+    private Integer offsetX = 0;
+
+    @Column(name = "offset_y")
+    private Integer offsetY = 0;
+
     @Column(name = "display_start_date")
     private LocalDateTime displayStartDate;
 
@@ -62,12 +77,18 @@ public class Popup extends BaseEntity {
 
     @Builder
     public Popup(String title, String content, UUID imageUuid, String linkUrl,
+                 Integer width, Integer height, String position, Integer offsetX, Integer offsetY,
                  LocalDateTime displayStartDate, LocalDateTime displayEndDate,
                  Integer displayOrder, Boolean isActive, String createdBy) {
         this.title = title;
         this.content = content;
         this.imageUuid = imageUuid;
         this.linkUrl = linkUrl;
+        this.width = width;
+        this.height = height;
+        this.position = position != null ? position : "CENTER";
+        this.offsetX = offsetX != null ? offsetX : 0;
+        this.offsetY = offsetY != null ? offsetY : 0;
         this.displayStartDate = displayStartDate;
         this.displayEndDate = displayEndDate;
         this.displayOrder = displayOrder != null ? displayOrder : 0;
@@ -83,12 +104,18 @@ public class Popup extends BaseEntity {
      * 팝업 기본 정보 수정
      */
     public void update(String title, String content, UUID imageUuid, String linkUrl,
+                      Integer width, Integer height, String position, Integer offsetX, Integer offsetY,
                       LocalDateTime displayStartDate, LocalDateTime displayEndDate,
                       Integer displayOrder, String updatedBy) {
         this.title = title;
         this.content = content;
         this.imageUuid = imageUuid;
         this.linkUrl = linkUrl;
+        this.width = width;
+        this.height = height;
+        this.position = position != null ? position : "CENTER";
+        this.offsetX = offsetX != null ? offsetX : 0;
+        this.offsetY = offsetY != null ? offsetY : 0;
         this.displayStartDate = displayStartDate;
         this.displayEndDate = displayEndDate;
         this.displayOrder = displayOrder != null ? displayOrder : 0;

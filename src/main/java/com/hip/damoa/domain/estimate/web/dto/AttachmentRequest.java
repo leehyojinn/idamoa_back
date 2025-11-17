@@ -17,9 +17,11 @@ import lombok.NoArgsConstructor;
 @Schema(description = "첨부파일 요청")
 public class AttachmentRequest {
 
-    @Schema(description = "파일 URL (S3 업로드 후 받은 URL, Service에서 File ID로 변환됨)", example = "https://bucket.s3.amazonaws.com/files/xxx.pdf")
-    @NotBlank(message = "파일 URL은 필수입니다")
-    private String fileUrl;
+    @Schema(description = "파일 UUID (파일 업로드 API로 받은 UUID)",
+            example = "550e8400-e29b-41d4-a716-446655440000",
+            requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank(message = "파일 UUID는 필수입니다")
+    private String fileUuid;
 
     @Schema(description = "파일 타입", example = "DRAWING", allowableValues = {"DRAWING", "PHOTO", "DOCUMENT", "ESTIMATE"})
     private String fileType;

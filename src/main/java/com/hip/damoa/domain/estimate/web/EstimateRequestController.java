@@ -61,9 +61,9 @@ public class EstimateRequestController {
     @Operation(summary = "견적 요청 작성",
             description = "새로운 견적 요청을 작성합니다.\n\n" +
                     "**견적 상태 (status)**\n" +
-                    "- 생성 시 기본 상태: DRAFT (작성중)\n" +
-                    "- DRAFT 상태에서는 수정이 가능합니다\n" +
-                    "- 발행(publish) 후에는 수정이 불가능합니다\n\n" +
+                    "- 생성 시 기본 상태: PUBLISHED (발행됨)\n" +
+                    "- 생성 즉시 공개 목록에 노출되어 업체들이 제안 가능\n" +
+                    "- DRAFT 상태는 향후 임시저장 기능을 위해 예약됨\n\n" +
                     "**필수 항목**\n" +
                     "- title: 견적 요청 제목\n" +
                     "- description: 상세 설명\n" +
@@ -143,8 +143,8 @@ public class EstimateRequestController {
     @Operation(summary = "견적 요청 상세 조회",
             description = "견적 요청 상세 정보를 조회합니다 (제안 목록 포함).\n\n" +
                     "**조회 가능 대상**\n" +
-                    "- 공개(isPublic=true) 견적: 누구나 조회 가능\n" +
-                    "- 비공개 견적: 작성자만 조회 가능\n\n" +
+                    "- 공개(isPublic=true) 견적: 누구나 조회 가능 (로그인 불필요)\n" +
+                    "- 비공개 견적: 작성자만 조회 가능 (로그인 필요)\n\n" +
                     "**제안 목록 권한별 필터링**\n" +
                     "- 요청자 본인: 모든 제안의 전체 내용 조회 (가격, 상세 설명 포함)\n" +
                     "- 제안 제출 업체: 본인이 제출한 제안만 전체 내용 조회\n" +
@@ -164,14 +164,16 @@ public class EstimateRequestController {
                     "**부가 기능**\n" +
                     "- 조회 시 viewCount 자동 증가\n" +
                     "- 첨부파일 정보 포함")
-    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/{requestUuid}")
     public ApiResponse<EstimateRequestDetailResponse> getEstimateRequest(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID requestUuid) {
 
+        // 로그인 안 한 경우 null, 로그인한 경우 email
+        String userEmail = userDetails != null ? userDetails.getUsername() : null;
+
         EstimateRequestDetailResponse response = estimateRequestService
-                .getEstimateRequestDetailByUuid(userDetails.getUsername(), requestUuid);
+                .getEstimateRequestDetailByUuid(userEmail, requestUuid);
 
         return ApiResponse.success(response);
     }
@@ -182,12 +184,12 @@ public class EstimateRequestController {
     @Operation(summary = "내 견적 요청 목록",
             description = "내가 작성한 견적 요청 목록을 조회합니다.\n\n" +
                     "**견적 상태 (status)**\n" +
-                    "- DRAFT: 작성중 (임시 저장)\n" +
-                    "- PUBLISHED: 공개됨 (업체 제안 가능)\n" +
+                    "- PUBLISHED: 공개됨 (업체 제안 가능) - 생성 시 기본 상태\n" +
                     "- IN_PROGRESS: 진행중 (제안 검토 중)\n" +
                     "- MATCHED: 매칭됨 (업체 선정 완료)\n" +
                     "- COMPLETED: 완료 (프로젝트 완료)\n" +
-                    "- CANCELLED: 취소됨\n\n" +
+                    "- CANCELLED: 취소됨\n" +
+                    "- DRAFT: 작성중 (임시 저장, 향후 기능)\n\n" +
                     "**정렬**\n" +
                     "- 최신순 정렬 (createdAt DESC)")
     @SecurityRequirement(name = "bearerAuth")

@@ -9,6 +9,13 @@ CREATE TABLE popups (
     image_uuid UUID, -- files 테이블 uuid 참조 (S3 이미지)
     link_url VARCHAR(500),
 
+    -- 팝업 크기 및 위치
+    width INTEGER, -- 팝업 너비 (px)
+    height INTEGER, -- 팝업 높이 (px)
+    position VARCHAR(20) DEFAULT 'CENTER', -- CENTER, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT, CUSTOM
+    offset_x INTEGER DEFAULT 0, -- X축 오프셋 (px)
+    offset_y INTEGER DEFAULT 0, -- Y축 오프셋 (px)
+
     -- 노출 기간
     display_start_date TIMESTAMP,
     display_end_date TIMESTAMP,
@@ -46,6 +53,11 @@ COMMENT ON COLUMN popups.title IS '팝업 제목';
 COMMENT ON COLUMN popups.content IS '팝업 내용 (HTML 지원)';
 COMMENT ON COLUMN popups.image_uuid IS 'files 테이블 uuid (팝업 이미지)';
 COMMENT ON COLUMN popups.link_url IS '클릭 시 이동할 URL';
+COMMENT ON COLUMN popups.width IS '팝업 너비 (px)';
+COMMENT ON COLUMN popups.height IS '팝업 높이 (px)';
+COMMENT ON COLUMN popups.position IS '팝업 위치: CENTER, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT, CUSTOM';
+COMMENT ON COLUMN popups.offset_x IS 'X축 오프셋 (px, CUSTOM 위치일 때 사용)';
+COMMENT ON COLUMN popups.offset_y IS 'Y축 오프셋 (px, CUSTOM 위치일 때 사용)';
 COMMENT ON COLUMN popups.display_start_date IS '노출 시작일시 (null이면 제한 없음)';
 COMMENT ON COLUMN popups.display_end_date IS '노출 종료일시 (null이면 제한 없음)';
 COMMENT ON COLUMN popups.display_order IS '노출 순서 (낮을수록 먼저 표시)';
