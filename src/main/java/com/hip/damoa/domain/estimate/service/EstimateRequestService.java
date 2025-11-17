@@ -151,11 +151,6 @@ public class EstimateRequestService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        // 상태 확인 (DRAFT 상태만 수정 가능)
-        if (estimateRequest.getStatus() != EstimateStatus.DRAFT) {
-            throw new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_EDITABLE);
-        }
-
         // Requirements JSONB 업데이트
         Map<String, Object> requirements = estimateRequest.getRequirements() != null
             ? new HashMap<>(estimateRequest.getRequirements())
