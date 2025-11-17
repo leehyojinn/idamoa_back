@@ -95,9 +95,8 @@ public class EstimateRequestController {
     @Operation(summary = "견적 요청 수정",
             description = "내 견적 요청을 수정합니다.\n\n" +
                     "**중요**\n" +
-                    "- DRAFT 상태인 견적만 수정 가능합니다\n" +
-                    "- 발행(PUBLISHED) 후에는 수정이 불가능합니다\n" +
-                    "- 본인이 작성한 견적만 수정 가능합니다\n\n" +
+                    "- 본인이 작성한 견적만 수정 가능합니다\n" +
+                    "- 모든 상태(PUBLISHED, IN_PROGRESS 등)에서 수정 가능합니다\n\n" +
                     "**수정 가능한 필드**\n" +
                     "- 모든 필드 수정 가능 (null인 필드는 변경되지 않음)")
     @SecurityRequirement(name = "bearerAuth")
