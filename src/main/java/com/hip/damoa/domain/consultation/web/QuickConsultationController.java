@@ -26,7 +26,7 @@ import java.util.UUID;
 /**
  * 빠른상담 사용자 API 컨트롤러
  */
-@Tag(name = "14. Quick Consultation", description = "빠른상담 관련 API")
+@Tag(name = "16. Quick Consultation", description = "빠른상담 관련 API")
 @Slf4j
 @RestController
 @RequiredArgsConstructor
