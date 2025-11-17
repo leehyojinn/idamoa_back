@@ -127,9 +127,10 @@ public class CompanyReviewService {
         review.updateReview(request.getRating(), request.getTitle(), request.getContent(), imageFileIds);
         review = reviewRepository.save(review);
 
-        // ✅ OneToMany 기반 이미지 업데이트
+        // ✅ OneToMany 기반 이미지 업데이트 (기존 이미지 먼저 삭제)
         if (request.getImages() != null) {
-            reviewImageRepository.deleteByReview(review);
+            // 즉시 삭제 (@Modifying with flushAutomatically)
+            reviewImageRepository.deleteByReviewId(review.getId());
             processReviewImages(review, request.getImages());
         }
 

@@ -177,7 +177,12 @@ public enum ErrorCode {
     PLANNER_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "PA001", "플래너 신청서를 찾을 수 없습니다"),
     PLANNER_APPLICATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "PA002", "플래너 신청서에 접근할 수 없습니다"),
     PLANNER_APPLICATION_INVALID_STATUS(HttpStatus.BAD_REQUEST, "PA003", "유효하지 않은 플래너 신청서 상태입니다"),
-    PLANNER_APPLICATION_FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "PA004", "첨부파일 전체 크기가 100MB를 초과했습니다");
+    PLANNER_APPLICATION_FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "PA004", "첨부파일 전체 크기가 100MB를 초과했습니다"),
+
+    // Popup
+    POPUP_NOT_FOUND(HttpStatus.NOT_FOUND, "POP001", "팝업을 찾을 수 없습니다"),
+    POPUP_CANNOT_BE_UPDATED(HttpStatus.BAD_REQUEST, "POP002", "팝업을 수정할 수 없습니다"),
+    POPUP_CANNOT_BE_DELETED(HttpStatus.BAD_REQUEST, "POP003", "팝업을 삭제할 수 없습니다");
 
     private final HttpStatus status;
     private final String code;

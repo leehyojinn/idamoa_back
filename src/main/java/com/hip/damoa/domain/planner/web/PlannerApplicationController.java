@@ -27,7 +27,7 @@ import java.util.UUID;
  * 플래너 신청서 API (사용자용)
  */
 @Slf4j
-@Tag(name = "12. Planner Application", description = "플래너 신청서 API")
+@Tag(name = "13. Planner Application", description = "플래너 신청서 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor
