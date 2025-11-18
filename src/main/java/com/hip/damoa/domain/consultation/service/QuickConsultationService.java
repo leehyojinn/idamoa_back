@@ -8,6 +8,7 @@ import com.hip.damoa.domain.consultation.model.ConsultationStatus;
 import com.hip.damoa.domain.consultation.model.QuickConsultation;
 import com.hip.damoa.domain.consultation.repository.QuickConsultationRepository;
 import com.hip.damoa.domain.consultation.web.dto.*;
+import com.hip.damoa.domain.notification.service.NotificationService;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,6 +33,7 @@ public class QuickConsultationService {
     private final QuickConsultationRepository consultationRepository;
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
+    private final NotificationService notificationService;
 
     /**
      * 상담 신청 (비회원/회원 모두 가능)
@@ -409,6 +411,13 @@ public class QuickConsultationService {
 
         consultation.respond(request.getResponseMessage(), admin);
         consultationRepository.save(consultation);
+
+        // 상담 신청자에게 알림 전송
+        notificationService.notifyConsultationResponse(
+                consultation.getEmail(),
+                consultationUuid,
+                request.getResponseMessage()
+        );
 
         log.info("상담 답변 작성 완료: consultationUuid={}", consultationUuid);
     }

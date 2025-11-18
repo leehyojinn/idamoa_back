@@ -166,6 +166,8 @@ public enum ErrorCode {
 
     // Notification
     TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "NT001", "알림 템플릿을 찾을 수 없습니다"),
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "NT002", "알림을 찾을 수 없습니다"),
+    NOTIFICATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "NT003", "알림에 접근할 권한이 없습니다"),
 
     // Quick Consultation
     CONSULTATION_NOT_FOUND(HttpStatus.NOT_FOUND, "QC001", "상담을 찾을 수 없습니다"),
@@ -184,7 +186,13 @@ public enum ErrorCode {
     // Popup
     POPUP_NOT_FOUND(HttpStatus.NOT_FOUND, "POP001", "팝업을 찾을 수 없습니다"),
     POPUP_CANNOT_BE_UPDATED(HttpStatus.BAD_REQUEST, "POP002", "팝업을 수정할 수 없습니다"),
-    POPUP_CANNOT_BE_DELETED(HttpStatus.BAD_REQUEST, "POP003", "팝업을 삭제할 수 없습니다");
+    POPUP_CANNOT_BE_DELETED(HttpStatus.BAD_REQUEST, "POP003", "팝업을 삭제할 수 없습니다"),
+
+    // Chat
+    CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CH001", "채팅방을 찾을 수 없습니다"),
+    CHAT_MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CH002", "채팅 메시지를 찾을 수 없습니다"),
+    CHAT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CH003", "채팅방에 접근할 권한이 없습니다"),
+    CHAT_MESSAGE_EMPTY(HttpStatus.BAD_REQUEST, "CH004", "메시지 내용이 비어있습니다");
 
     private final HttpStatus status;
     private final String code;

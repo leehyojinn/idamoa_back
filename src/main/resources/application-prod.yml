@@ -13,6 +13,9 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+      metrics:
+        enabled: true
+      leak-detection-threshold: 60000  # 60 seconds
   jpa:
     hibernate:
       ddl-auto: validate  # Never use create or update in production
@@ -36,6 +39,27 @@ spring:
           max-active: 8
           max-idle: 8
           min-idle: 0
+# Performance Optimization
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+
+# Cache Configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000  # 1 hour
+      cache-null-values: false
+
+# Database Connection Pool Monitoring
+
 
 # Logging Configuration for Production
 logging:
@@ -84,7 +108,6 @@ server:
   forward-headers-strategy: native  # For proxy/load balancer
 
 # Security Headers
-server:
   servlet:
     session:
       cookie:
@@ -114,34 +137,7 @@ springdoc:
   swagger-ui:
     enabled: false
 
-# Performance Optimization
-spring:
-  jackson:
-    serialization:
-      write-dates-as-timestamps: false
-    deserialization:
-      fail-on-unknown-properties: false
-  mvc:
-    throw-exception-if-no-handler-found: true
-  web:
-    resources:
-      add-mappings: false
 
-# Cache Configuration
-spring:
-  cache:
-    type: redis
-    redis:
-      time-to-live: 3600000  # 1 hour
-      cache-null-values: false
-
-# Database Connection Pool Monitoring
-spring:
-  datasource:
-    hikari:
-      metrics:
-        enabled: true
-      leak-detection-threshold: 60000  # 60 seconds
 
 # CORS Configuration for Production
 cors:

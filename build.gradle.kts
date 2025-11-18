@@ -46,6 +46,9 @@ dependencies {
     // Email notification
     implementation("org.springframework.boot:spring-boot-starter-mail")
 
+    // WebSocket for real-time notifications
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
+
     // Gmail API (Service Account + Domain-wide Delegation)
     implementation("com.google.apis:google-api-services-gmail:v1-rev20250630-2.0.0")
     implementation("com.google.auth:google-auth-library-oauth2-http:1.40.0")

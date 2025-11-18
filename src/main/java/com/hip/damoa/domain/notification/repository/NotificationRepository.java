@@ -11,9 +11,20 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
+
+    // Find by UUID
+    Optional<Notification> findByUuidAndIsDeletedFalse(UUID uuid);
+
+    // Find by recipient email
+    List<Notification> findByRecipientEmailAndIsDeletedFalseOrderByCreatedAtDesc(String recipientEmail);
+
+    // Count unread by recipient email
+    long countByRecipientEmailAndIsReadFalseAndIsDeletedFalse(String recipientEmail);
 
     // Find by recipient
     List<Notification> findByRecipient(User recipient);
