@@ -163,42 +163,32 @@ public class ProposalService {
             throw new BusinessException(ErrorCode.PROPOSAL_CANNOT_BE_UPDATED);
         }
 
-        // 제안 수정
-        if (request.getPrice() != null || request.getDescription() != null || request.getTitle() != null) {
-            // 일정 정보를 timeline Map으로 구성 (선택사항)
-            Map<String, Object> timeline = request.getTimeline();
-            if (timeline == null && (request.getProposedStartDate() != null || request.getProposedEndDate() != null)) {
-                timeline = new HashMap<>();
-                if (request.getProposedStartDate() != null) {
-                    timeline.put("startDate", request.getProposedStartDate().toString());
-                }
-                if (request.getProposedEndDate() != null) {
-                    timeline.put("endDate", request.getProposedEndDate().toString());
-                }
+        // 제안 수정 (기존 엔티티 필드 직접 수정 - UPDATE 쿼리)
+        // 일정 정보를 timeline Map으로 구성 (선택사항)
+        Map<String, Object> timeline = request.getTimeline();
+        if (timeline == null && (request.getProposedStartDate() != null || request.getProposedEndDate() != null)) {
+            timeline = new HashMap<>();
+            if (request.getProposedStartDate() != null) {
+                timeline.put("startDate", request.getProposedStartDate().toString());
             }
-
-            proposal = EstimateProposal.builder()
-                    .request(proposal.getRequest())
-                    .company(proposal.getCompany())
-                    .title(request.getTitle() != null ? request.getTitle() : proposal.getTitle())
-                    .description(request.getDescription() != null ? request.getDescription() : proposal.getDescription())
-                    .price(request.getPrice() != null ? request.getPrice() : proposal.getPrice())
-                    .validUntil(request.getValidUntil() != null ? request.getValidUntil() : proposal.getValidUntil())
-                    .pricingDetails(request.getPricingDetails() != null ? request.getPricingDetails() : proposal.getPricingDetails())
-                    .timeline(timeline != null ? timeline : proposal.getTimeline())
-                    .status(proposal.getStatus())
-                    .isSelected(proposal.getIsSelected())
-                    .selectedAt(proposal.getSelectedAt())
-                    .build();
-
-            proposal = proposalRepository.save(proposal);
-
-            // 첨부파일 처리 (V30: 조인 테이블)
-            if (request.getAttachments() != null) {
-                processAttachments(proposal, request.getAttachments());
-                // cascade로 첨부파일 저장을 위해 다시 save
-                proposal = proposalRepository.save(proposal);
+            if (request.getProposedEndDate() != null) {
+                timeline.put("endDate", request.getProposedEndDate().toString());
             }
+        }
+
+        // Entity의 update 메서드 사용 (JPA dirty checking으로 UPDATE 쿼리 실행)
+        proposal.update(
+                request.getTitle(),
+                request.getDescription(),
+                request.getPrice(),
+                request.getValidUntil(),
+                request.getPricingDetails(),
+                timeline
+        );
+
+        // 첨부파일 처리 (V30: 조인 테이블)
+        if (request.getAttachments() != null) {
+            processAttachments(proposal, request.getAttachments());
         }
 
         log.info("제안 수정 완료: id={}", proposal.getId());
@@ -285,8 +275,15 @@ public class ProposalService {
 
             if (company != null) {
                 List<EstimateProposal> proposals = new ArrayList<>();
-                proposalRepository.findByRequestAndCompanyAndIsDeletedFalse(estimateRequest, company)
-                        .ifPresent(proposals::add);
+                try {
+                    proposalRepository.findByRequestAndCompanyAndIsDeletedFalse(estimateRequest, company)
+                            .ifPresent(proposals::add);
+                } catch (org.springframework.dao.IncorrectResultSizeDataAccessException e) {
+                    // 버그: 같은 업체가 여러 제안을 제출한 경우
+                    log.error("데이터 정합성 오류: 업체 {}가 견적 요청 {}에 여러 개의 제안을 제출했습니다.",
+                            company.getId(), estimateRequest.getId());
+                    throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+                }
                 return proposals;
             }
         }

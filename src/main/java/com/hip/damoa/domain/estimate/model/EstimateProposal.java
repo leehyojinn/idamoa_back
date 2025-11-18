@@ -159,4 +159,30 @@ public class EstimateProposal extends BaseEntity {
     public void clearAttachments() {
         this.attachments.clear();
     }
+
+    /**
+     * 제안 내용 수정
+     */
+    public void update(String title, String description, BigDecimal price,
+                       LocalDate validUntil, Map<String, Object> pricingDetails,
+                       Map<String, Object> timeline) {
+        if (title != null) {
+            this.title = title;
+        }
+        if (description != null) {
+            this.description = description;
+        }
+        if (price != null) {
+            this.price = price;
+        }
+        if (validUntil != null) {
+            this.validUntil = validUntil;
+        }
+        if (pricingDetails != null) {
+            this.pricingDetails = pricingDetails;
+        }
+        if (timeline != null) {
+            this.timeline = timeline;
+        }
+    }
 }
