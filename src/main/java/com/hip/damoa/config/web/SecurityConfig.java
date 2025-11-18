@@ -104,7 +104,8 @@ public class SecurityConfig {
                                 "/favicon.ico",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/v3/api-docs/**",
+                                "/ws/**"  // WebSocket endpoint
                         ).permitAll()
                         // Quick Consultation - public (non-member consultation)
                         .requestMatchers(HttpMethod.GET, "/api/consultations").permitAll()  // List (public)
@@ -141,6 +142,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/planner/requests/**").authenticated()  // Planner requests (user)
                         .requestMatchers("/api/planner/admin/**").authenticated()  // Planner admin endpoints
                         .requestMatchers("/api/boards/admin/**").authenticated()  // Board admin endpoints
+                        .requestMatchers("/api/notifications/**").authenticated()  // Notification endpoints
+                        .requestMatchers("/api/chats/**").authenticated()  // Chat endpoints
                         .requestMatchers("/api/admin/**").authenticated()  // Admin endpoints
                         .requestMatchers("/api/files/**").authenticated()  // File upload endpoints
                         .anyRequest().authenticated())

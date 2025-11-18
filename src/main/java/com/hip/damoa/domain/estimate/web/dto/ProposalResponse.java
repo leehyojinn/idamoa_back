@@ -50,6 +50,7 @@ public class ProposalResponse {
 
     // 업체 정보
     private Long companyId;
+    private UUID companyUuid;
     private String companyName;
 
     // 견적 요청 정보
@@ -76,6 +77,7 @@ public class ProposalResponse {
                 .pricingDetails(proposal.getPricingDetails())
                 .timeline(proposal.getTimeline())
                 .companyId(proposal.getCompany().getId())
+                .companyUuid(proposal.getCompany().getUuid())
                 .companyName(proposal.getCompany().getName())
                 .requestId(proposal.getRequest().getId())
                 .requestUuid(proposal.getRequest().getUuid())

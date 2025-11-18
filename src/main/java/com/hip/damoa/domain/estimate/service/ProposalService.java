@@ -17,6 +17,7 @@ import com.hip.damoa.domain.estimate.web.dto.ProposalCreateRequest;
 import com.hip.damoa.domain.estimate.web.dto.ProposalUpdateRequest;
 import com.hip.damoa.domain.file.model.File;
 import com.hip.damoa.domain.file.repository.FileRepository;
+import com.hip.damoa.domain.notification.service.NotificationService;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,7 @@ public class ProposalService {
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
     private final FileRepository fileRepository;
+    private final NotificationService notificationService;
 
     // ========== 업체용 메서드 ==========
 
@@ -119,6 +121,15 @@ public class ProposalService {
         // 견적 요청의 제안 수 증가
         estimateRequest.incrementProposalCount();
         estimateRequestRepository.save(estimateRequest);
+
+        // 견적 요청 작성자에게 알림 전송
+        String requestOwnerEmail = estimateRequest.getUser().getEmail();
+        notificationService.notifyNewProposal(
+                requestOwnerEmail,
+                estimateRequest.getUuid(),
+                company.getName(),
+                proposal.getTitle()
+        );
 
         log.info("제안 제출 완료: id={}, companyId={}, attachments={}",
                  proposal.getId(), company.getId(), proposal.getAttachments().size());
@@ -288,7 +299,7 @@ public class ProposalService {
     }
 
     /**
-     * 제안 조회 및 확인 처리 (요청자)
+     * 제안 조회 및 확인 처리 (요청자 또는 제안 업체)
      */
     @Transactional
     public EstimateProposal viewProposal(String userEmail, Long proposalId) {
@@ -298,14 +309,29 @@ public class ProposalService {
         EstimateProposal proposal = proposalRepository.findById(proposalId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROPOSAL_NOT_FOUND));
 
-        // 권한 확인 (요청자 본인만)
-        if (!proposal.getRequest().getUser().getId().equals(user.getId())) {
+        // 권한 확인 (견적 요청자 또는 제안 작성 업체)
+        boolean isRequestOwner = proposal.getRequest().getUser().getId().equals(user.getId());
+        boolean isProposalOwner = false;
+
+        // 업체 소유자인지 확인
+        if (!isRequestOwner) {
+            Company userCompany = companyRepository.findByOwnerAndIsDeletedFalse(user).orElse(null);
+            if (userCompany != null) {
+                isProposalOwner = proposal.getCompany().getId().equals(userCompany.getId());
+            }
+        }
+
+        // 권한이 없는 경우
+        if (!isRequestOwner && !isProposalOwner) {
+            log.warn("제안 조회 권한 없음: userEmail={}, proposalId={}", userEmail, proposalId);
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        // 확인 처리
-        proposal.markAsViewed();
-        proposalRepository.save(proposal);
+        // 확인 처리 (요청자만)
+        if (isRequestOwner) {
+            proposal.markAsViewed();
+            proposalRepository.save(proposal);
+        }
 
         return proposal;
     }
