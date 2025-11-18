@@ -356,10 +356,16 @@ public class ProposalService {
             throw new BusinessException(ErrorCode.PROPOSAL_CANNOT_BE_ACCEPTED);
         }
 
+        // 제안 수락 처리
         proposal.select();
         proposalRepository.save(proposal);
 
-        log.info("제안 수락 완료: id={}", proposalId);
+        // 견적 요청 상태를 MATCHED로 변경
+        EstimateRequest estimateRequest = proposal.getRequest();
+        estimateRequest.match();
+        estimateRequestRepository.save(estimateRequest);
+
+        log.info("제안 수락 완료: id={}, 견적 요청 상태 MATCHED로 변경", proposalId);
 
         return proposal;
     }
