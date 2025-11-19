@@ -1,5 +1,7 @@
 package com.hip.damoa.domain.board.web;
 
+import com.hip.damoa.core.exception.BusinessException;
+import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.board.service.BoardBookmarkService;
 import com.hip.damoa.domain.board.service.GalleryBoardService;
@@ -70,6 +72,10 @@ public class GalleryBoardController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody GalleryCreateRequest request) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         log.info("Gallery 게시글 생성 요청: userEmail={}", userDetails.getUsername());
 
         GalleryResponse response = galleryBoardService.createGallery(
@@ -109,10 +115,15 @@ public class GalleryBoardController {
 
     @Operation(summary = "Gallery 게시글 검색 (통합)",
             description = "사진 게시판 검색 및 목록 조회 통합 API입니다.\n\n" +
-                    "**검색 조건 (모두 선택):**\n" +
+                    "**검색 조건 (모두 선택적, 복합 검색 가능):**\n" +
                     "- keyword: 제목, 내용, 태그에서 검색\n" +
                     "- filterOptionIds: 필터 옵션 ID 배열 (예: 업종, 전문영역)\n" +
-                    "- onlyBookmarked: true 설정 시 북마크한 게시글만 조회 (로그인 필요)\n\n" +
+                    "- onlyBookmarked: true 설정 시 북마크한 게시글만 조회 (로그인 필요)\n" +
+                    "- onlyMyPosts: true 설정 시 내가 작성한 게시글만 조회 (로그인 필요)\n\n" +
+                    "**복합 검색 예시:**\n" +
+                    "- keyword + filterOptionIds: 특정 키워드와 필터 옵션을 모두 만족하는 게시글\n" +
+                    "- keyword + onlyMyPosts: 내가 작성한 게시글 중 키워드를 포함하는 게시글\n" +
+                    "- 모든 조건 조합 가능 (AND 연산)\n\n" +
                     "**페이지네이션:**\n" +
                     "- size: 페이지당 항목 수 (기본 20)\n" +
                     "- page: 페이지 번호 (0부터 시작)\n" +
@@ -128,23 +139,25 @@ public class GalleryBoardController {
                     "**활용:**\n" +
                     "- 사진 게시판 메인 페이지\n" +
                     "- 필터링된 갤러리 목록\n" +
-                    "- 내가 북마크한 갤러리")
+                    "- 내가 북마크한 갤러리\n" +
+                    "- 내가 작성한 갤러리")
     @GetMapping("/search")
     public ApiResponse<Page<GalleryResponse>> searchGalleries(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) List<Long> filterOptionIds,
             @RequestParam(required = false) Boolean onlyBookmarked,
+            @RequestParam(required = false) Boolean onlyMyPosts,
             @AuthenticationPrincipal(errorOnInvalidType = false) UserDetails userDetails,
             @PageableDefault(size = 20, sort = "publishedAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
 
         String userEmail = userDetails != null ? userDetails.getUsername() : null;
 
-        log.info("Gallery 게시글 검색 요청: keyword={}, filterOptionIds={}, onlyBookmarked={}, userEmail={}",
-                 keyword, filterOptionIds, onlyBookmarked, userEmail);
+        log.info("Gallery 게시글 검색 요청: keyword={}, filterOptionIds={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
+                 keyword, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
 
         Page<GalleryResponse> response = galleryBoardService.searchGalleries(
-                keyword, filterOptionIds, onlyBookmarked, userEmail, pageable);
+                keyword, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail, pageable);
 
         return ApiResponse.success(response);
     }
@@ -173,6 +186,10 @@ public class GalleryBoardController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody GalleryUpdateRequest request) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         log.info("Gallery 게시글 수정 요청: uuid={}, userEmail={}", uuid, userDetails.getUsername());
 
         GalleryResponse response = galleryBoardService.updateGallery(
@@ -200,6 +217,10 @@ public class GalleryBoardController {
     public ApiResponse<Void> deleteGallery(
             @PathVariable UUID uuid,
             @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         log.info("Gallery 게시글 삭제 요청: uuid={}, userEmail={}", uuid, userDetails.getUsername());
 
@@ -230,6 +251,45 @@ public class GalleryBoardController {
 //        return ApiResponse.success(response);
 //    }
 
+    @Operation(summary = "내가 작성한 Gallery 목록 (마이페이지)",
+            description = "로그인한 사용자가 작성한 사진 게시글 목록을 조회합니다.\n\n" +
+                    "**조회 대상:**\n" +
+                    "- 본인이 작성한 Gallery 게시글만 조회\n" +
+                    "- 삭제되지 않은 게시글만 포함\n" +
+                    "- 공개/비공개 상태 모두 포함\n\n" +
+                    "**페이지네이션:**\n" +
+                    "- size: 페이지당 항목 수 (기본 20)\n" +
+                    "- page: 페이지 번호 (0부터 시작)\n" +
+                    "- sort: 정렬 기준 (기본: createdAt,DESC - 최신 작성순)\n\n" +
+                    "**응답 정보:**\n" +
+                    "- 게시글 목록 (제목, 이미지, 조회수 등)\n" +
+                    "- 북마크 여부 포함\n" +
+                    "- 필터 옵션 정보\n\n" +
+                    "**권한:**\n" +
+                    "- 로그인 필수\n\n" +
+                    "**활용:**\n" +
+                    "- 마이페이지 - 내가 올린 사진\n" +
+                    "- 포트폴리오 관리\n" +
+                    "- 게시글 수정/삭제 전 목록 확인")
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/my")
+    public ApiResponse<Page<GalleryResponse>> getMyGalleries(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
+        log.info("내 Gallery 목록 조회 요청: userEmail={}", userDetails.getUsername());
+
+        Page<GalleryResponse> response = galleryBoardService.getMyGalleries(
+                userDetails.getUsername(), pageable);
+
+        return ApiResponse.success(response);
+    }
+
     @Operation(summary = "Gallery 북마크 토글",
             description = "사진 게시글 북마크를 추가하거나 제거합니다.\n\n" +
                     "**동작:**\n" +
@@ -248,6 +308,10 @@ public class GalleryBoardController {
     public ApiResponse<Boolean> toggleBookmark(
             @PathVariable UUID uuid,
             @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         log.info("Gallery 북마크 토글 요청: uuid={}, userEmail={}", uuid, userDetails.getUsername());
 
@@ -271,6 +335,10 @@ public class GalleryBoardController {
     public ApiResponse<Boolean> checkBookmark(
             @PathVariable UUID uuid,
             @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         log.info("Gallery 북마크 확인 요청: uuid={}, userEmail={}", uuid, userDetails.getUsername());
 

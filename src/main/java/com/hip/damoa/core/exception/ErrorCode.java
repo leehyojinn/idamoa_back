@@ -22,6 +22,7 @@ public enum ErrorCode {
     ACCOUNT_DISABLED(HttpStatus.FORBIDDEN, "U005", "비활성화된 계정입니다"),
     ACCOUNT_LOCKED(HttpStatus.FORBIDDEN, "U006", "잠긴 계정입니다"),
     ACCOUNT_DELETED(HttpStatus.FORBIDDEN, "U007", "삭제된 계정입니다"),
+    AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "U008", "로그인이 필요합니다"),
 
     // Verification
     VERIFICATION_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "V001", "인증 코드가 만료되었습니다"),

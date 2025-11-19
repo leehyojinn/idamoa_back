@@ -1,5 +1,7 @@
 package com.hip.damoa.domain.estimate.web;
 
+import com.hip.damoa.core.exception.BusinessException;
+import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.estimate.model.EstimateProposal;
 import com.hip.damoa.domain.estimate.service.ProposalService;
@@ -87,6 +89,10 @@ public class ProposalController {
             @PathVariable UUID requestUuid,
             @Valid @RequestBody ProposalCreateRequest request) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         EstimateProposal proposal = proposalService.createProposalByUuid(
                 userDetails.getUsername(), requestUuid, request);
 
@@ -115,6 +121,10 @@ public class ProposalController {
             @PathVariable UUID proposalUuid,
             @Valid @RequestBody ProposalUpdateRequest request) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         EstimateProposal proposal = proposalService.updateProposalByUuid(
                 userDetails.getUsername(), proposalUuid, request);
 
@@ -142,6 +152,10 @@ public class ProposalController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID proposalUuid) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         proposalService.withdrawProposalByUuid(userDetails.getUsername(), proposalUuid);
 
         return ApiResponse.success();
@@ -168,6 +182,10 @@ public class ProposalController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         Page<EstimateProposal> proposals = proposalService.getCompanyProposals(
                 userDetails.getUsername(), pageable);
@@ -201,6 +219,10 @@ public class ProposalController {
     public ApiResponse<?> getProposalsByRequest(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID requestUuid) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         Object result = proposalService.getProposalsByRequestUuid(
                 userDetails.getUsername(), requestUuid);
@@ -240,6 +262,10 @@ public class ProposalController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID proposalUuid) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         EstimateProposal proposal = proposalService.viewProposalByUuid(
                 userDetails.getUsername(), proposalUuid);
 
@@ -268,6 +294,10 @@ public class ProposalController {
     public ApiResponse<ProposalResponse> acceptProposal(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID proposalUuid) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         EstimateProposal proposal = proposalService.acceptProposalByUuid(
                 userDetails.getUsername(), proposalUuid);
@@ -299,6 +329,10 @@ public class ProposalController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID proposalUuid,
             @RequestParam(required = false) String reason) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         EstimateProposal proposal = proposalService.rejectProposalByUuid(
                 userDetails.getUsername(), proposalUuid, reason);

@@ -1,5 +1,7 @@
 package com.hip.damoa.domain.estimate.web;
 
+import com.hip.damoa.core.exception.BusinessException;
+import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.estimate.model.EstimateRequest;
 import com.hip.damoa.domain.estimate.service.EstimateRequestService;
@@ -83,6 +85,10 @@ public class EstimateRequestController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody EstimateRequestCreateRequest request) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         EstimateRequest estimateRequest = estimateRequestService.createEstimateRequest(
                 userDetails.getUsername(), request);
 
@@ -105,6 +111,10 @@ public class EstimateRequestController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID requestUuid,
             @Valid @RequestBody EstimateRequestUpdateRequest request) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         EstimateRequest estimateRequest = estimateRequestService.updateEstimateRequestByUuid(
                 userDetails.getUsername(), requestUuid, request);
@@ -129,6 +139,10 @@ public class EstimateRequestController {
     public ApiResponse<EstimateRequestResponse> publishEstimateRequest(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID requestUuid) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         EstimateRequest estimateRequest = estimateRequestService.publishEstimateRequestByUuid(
                 userDetails.getUsername(), requestUuid);
@@ -198,6 +212,10 @@ public class EstimateRequestController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         Page<EstimateRequest> requests = estimateRequestService.getUserEstimateRequests(
                 userDetails.getUsername(), pageable);
 
@@ -248,6 +266,10 @@ public class EstimateRequestController {
     public ApiResponse<Void> deleteEstimateRequest(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID requestUuid) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         estimateRequestService.deleteEstimateRequestByUuid(userDetails.getUsername(), requestUuid);
 
