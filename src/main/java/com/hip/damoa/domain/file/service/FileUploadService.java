@@ -59,8 +59,28 @@ public class FileUploadService {
     private static final Duration UPLOAD_METADATA_TTL = Duration.ofMinutes(30);
     private static final String UPLOAD_METADATA_PREFIX = "file:upload:";
 
-    private static final List<String> ALLOWED_IMAGE_TYPES = List.of(
-            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
+    private static final List<String> ALLOWED_FILE_TYPES = List.of(
+            // 이미지
+            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
+            // PDF
+            "application/pdf",
+            // Microsoft Office
+            "application/vnd.ms-excel",                                                      // .xls
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",           // .xlsx
+            "application/msword",                                                           // .doc
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",     // .docx
+            "application/vnd.ms-powerpoint",                                                // .ppt
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",   // .pptx
+            // HWP
+            "application/x-hwp", "application/haansofthwp", "application/vnd.hancom.hwp",
+            // CAD 파일
+            "application/acad", "application/x-acad", "application/autocad_dwg",           // .dwg
+            "image/vnd.dwg", "image/x-dwg",                                                 // .dwg
+            "application/dxf", "application/x-dxf",                                         // .dxf
+            "image/vnd.dxf", "image/x-dxf",                                                 // .dxf
+            "model/vnd.dwf", "drawing/x-dwf",                                               // .dwf
+            // 텍스트
+            "text/plain"
     );
 
     /**
@@ -237,7 +257,7 @@ public class FileUploadService {
         }
 
         String mimeType = request.getMimeType();
-        if (mimeType != null && !ALLOWED_IMAGE_TYPES.contains(mimeType.toLowerCase())) {
+        if (mimeType != null && !ALLOWED_FILE_TYPES.contains(mimeType.toLowerCase())) {
             throw new BusinessException(ErrorCode.FILE_TYPE_NOT_ALLOWED);
         }
     }

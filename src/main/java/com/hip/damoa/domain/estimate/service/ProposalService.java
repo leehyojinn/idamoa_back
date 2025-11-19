@@ -616,6 +616,7 @@ public class ProposalService {
 
                     return AttachmentResponse.from(
                         attachment,
+                        file.getUuid(),
                         file.getFileUrl(),
                         file.getOriginalFilename(),
                         file.getMimeType(),
