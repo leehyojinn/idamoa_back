@@ -217,8 +217,8 @@ public class ProposalService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        // 철회 가능한 상태 확인
-        if ("ACCEPTED".equals(proposal.getStatus())) {
+        // 철회 가능한 상태 확인 (수락된 제안은 철회 불가)
+        if ("SELECTED".equals(proposal.getStatus())) {
             throw new BusinessException(ErrorCode.PROPOSAL_CANNOT_BE_UPDATED);
         }
 
@@ -429,6 +429,11 @@ public class ProposalService {
 
         EstimateProposal proposal = proposalRepository.findById(proposalId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROPOSAL_NOT_FOUND));
+
+        // 수락된 제안은 삭제 불가
+        if ("SELECTED".equals(proposal.getStatus())) {
+            throw new BusinessException(ErrorCode.PROPOSAL_CANNOT_BE_DELETED);
+        }
 
         proposalRepository.delete(proposal);
 
