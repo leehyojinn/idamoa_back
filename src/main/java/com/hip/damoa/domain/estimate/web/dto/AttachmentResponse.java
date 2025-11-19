@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * 첨부파일 응답 DTO (EstimateRequest/Proposal 공통)
@@ -22,6 +23,9 @@ public class AttachmentResponse {
 
     @Schema(description = "첨부파일 ID", example = "1")
     private Long id;
+
+    @Schema(description = "파일 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
+    private UUID fileUuid;
 
     @Schema(description = "파일 URL (File ID → URL 변환)", example = "https://bucket.s3.amazonaws.com/files/xxx.pdf")
     private String fileUrl;
@@ -51,10 +55,11 @@ public class AttachmentResponse {
     /**
      * EstimateRequestAttachment → AttachmentResponse 변환 (File 정보 포함)
      */
-    public static AttachmentResponse from(EstimateRequestAttachment attachment, String fileUrl,
+    public static AttachmentResponse from(EstimateRequestAttachment attachment, UUID fileUuid, String fileUrl,
                                           String originalFilename, String mimeType, Long fileSize) {
         return AttachmentResponse.builder()
             .id(attachment.getId())
+            .fileUuid(fileUuid)
             .fileUrl(fileUrl)
             .fileType(attachment.getFileType())
             .fileDescription(attachment.getFileDescription())
@@ -69,10 +74,11 @@ public class AttachmentResponse {
     /**
      * EstimateProposalAttachment → AttachmentResponse 변환 (File 정보 포함)
      */
-    public static AttachmentResponse from(EstimateProposalAttachment attachment, String fileUrl,
+    public static AttachmentResponse from(EstimateProposalAttachment attachment, UUID fileUuid, String fileUrl,
                                           String originalFilename, String mimeType, Long fileSize) {
         return AttachmentResponse.builder()
             .id(attachment.getId())
+            .fileUuid(fileUuid)
             .fileUrl(fileUrl)
             .fileType(attachment.getFileType())
             .fileDescription(attachment.getFileDescription())

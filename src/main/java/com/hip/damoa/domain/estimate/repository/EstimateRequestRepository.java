@@ -32,9 +32,9 @@ public interface EstimateRequestRepository extends JpaRepository<EstimateRequest
     // Find by status
     Page<EstimateRequest> findByStatusAndIsDeletedFalse(EstimateStatus status, Pageable pageable);
 
-    // Find by status and isPublic
-    @Query("SELECT e FROM EstimateRequest e WHERE e.status = :status AND e.isPublic = :isPublic AND e.isDeleted = false")
-    Page<EstimateRequest> findByStatusAndVisibilityAndIsDeletedFalse(@Param("status") EstimateStatus status, @Param("isPublic") boolean isPublic, Pageable pageable);
+    // Find by visibility (공개 견적 요청 - 모든 상태)
+    @Query("SELECT e FROM EstimateRequest e WHERE e.isPublic = :isPublic AND e.isDeleted = false")
+    Page<EstimateRequest> findByIsPublicAndIsDeletedFalse(@Param("isPublic") boolean isPublic, Pageable pageable);
 
     // Find public requests (for companies to browse)
     @Query("SELECT e FROM EstimateRequest e WHERE e.isPublic = true AND e.isDeleted = false " +

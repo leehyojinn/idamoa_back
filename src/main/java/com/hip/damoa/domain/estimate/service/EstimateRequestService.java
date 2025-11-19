@@ -326,12 +326,12 @@ public class EstimateRequestService {
     }
 
     /**
-     * 공개 견적 요청 목록 조회
+     * 공개 견적 요청 목록 조회 (모든 상태)
      */
     @Transactional(readOnly = true)
     public Page<EstimateRequest> getPublicEstimateRequests(Pageable pageable) {
-        log.info("공개 견적 요청 목록 조회");
-        return estimateRequestRepository.findByStatusAndVisibilityAndIsDeletedFalse(EstimateStatus.PUBLISHED, true, pageable);
+        log.info("공개 견적 요청 목록 조회 (모든 상태)");
+        return estimateRequestRepository.findByIsPublicAndIsDeletedFalse(true, pageable);
     }
 
     /**
@@ -629,6 +629,7 @@ public class EstimateRequestService {
 
                     return AttachmentResponse.from(
                         attachment,
+                        file.getUuid(),
                         file.getFileUrl(),
                         file.getOriginalFilename(),
                         file.getMimeType(),
