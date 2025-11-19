@@ -151,6 +151,11 @@ public class EstimateRequestService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
+        // 매칭된 견적 요청은 수정 불가
+        if (estimateRequest.getStatus() == EstimateStatus.MATCHED) {
+            throw new BusinessException(ErrorCode.ESTIMATE_REQUEST_ALREADY_MATCHED);
+        }
+
         // Requirements JSONB 업데이트
         Map<String, Object> requirements = estimateRequest.getRequirements() != null
             ? new HashMap<>(estimateRequest.getRequirements())
@@ -345,6 +350,17 @@ public class EstimateRequestService {
         // 권한 확인
         if (!estimateRequest.getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        // 매칭된 견적 요청은 삭제 불가
+        if (estimateRequest.getStatus() == EstimateStatus.MATCHED) {
+            throw new BusinessException(ErrorCode.ESTIMATE_REQUEST_ALREADY_MATCHED);
+        }
+
+        // 제안이 있는지 확인
+        long proposalCount = proposalRepository.countByRequestAndIsDeletedFalse(estimateRequest);
+        if (proposalCount > 0) {
+            throw new BusinessException(ErrorCode.ESTIMATE_REQUEST_HAS_PROPOSALS);
         }
 
         // Soft Delete

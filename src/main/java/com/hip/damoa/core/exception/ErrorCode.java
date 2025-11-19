@@ -70,11 +70,14 @@ public enum ErrorCode {
     ESTIMATE_REQUEST_CLOSED(HttpStatus.BAD_REQUEST, "E005", "종료된 견적 요청입니다"),
     ESTIMATE_REQUEST_NOT_EDITABLE(HttpStatus.BAD_REQUEST, "E006", "수정할 수 없는 견적 요청입니다"),
     ESTIMATE_REQUEST_ALREADY_PUBLISHED(HttpStatus.BAD_REQUEST, "E007", "이미 게시된 견적 요청입니다"),
+    ESTIMATE_REQUEST_HAS_PROPOSALS(HttpStatus.BAD_REQUEST, "E008", "제안이 있는 견적 요청은 삭제할 수 없습니다"),
+    ESTIMATE_REQUEST_ALREADY_MATCHED(HttpStatus.BAD_REQUEST, "E009", "이미 매칭된 견적 요청은 수정하거나 삭제할 수 없습니다"),
 
     PROPOSAL_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "제안서를 찾을 수 없습니다"),
     PROPOSAL_ALREADY_EXISTS(HttpStatus.CONFLICT, "P002", "이미 이 요청에 대한 제안서가 존재합니다"),
     PROPOSAL_CANNOT_BE_UPDATED(HttpStatus.BAD_REQUEST, "P003", "제안서를 수정할 수 없습니다"),
     PROPOSAL_CANNOT_BE_ACCEPTED(HttpStatus.BAD_REQUEST, "P004", "제안서를 수락할 수 없습니다"),
+    PROPOSAL_CANNOT_BE_DELETED(HttpStatus.BAD_REQUEST, "P007", "수락된 제안서는 삭제할 수 없습니다"),
     INSUFFICIENT_SUBSCRIPTION_QUOTA(HttpStatus.BAD_REQUEST, "P005", "구독 한도가 부족합니다"),
     INSUFFICIENT_CREDITS(HttpStatus.BAD_REQUEST, "P006", "크레딧이 부족합니다"),
 
