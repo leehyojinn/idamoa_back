@@ -1,5 +1,7 @@
 package com.hip.damoa.domain.company.web;
 
+import com.hip.damoa.core.exception.BusinessException;
+import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.company.model.Company;
 import com.hip.damoa.domain.company.model.CompanyImage;
@@ -77,6 +79,10 @@ public class CompanyController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CompanyCreateRequest request) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         Company company = companyService.createCompany(userDetails.getUsername(), request);
         return ApiResponse.success(CompanyResponse.from(company));
     }
@@ -104,6 +110,10 @@ public class CompanyController {
     @GetMapping("/my")
     public ApiResponse<CompanyResponse> getMyCompany(
             @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         Company company = companyService.getMyCompany(userDetails.getUsername());
         List<CompanyImage> images = companyImageService.getCompanyImages(company.getUuid());
@@ -374,6 +384,10 @@ public class CompanyController {
             @PathVariable UUID companyUuid,
             @Valid @RequestBody CompanyUpdateRequest request) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         Company company = companyService.updateCompany(
                 userDetails.getUsername(), companyUuid, request);
         return ApiResponse.success(CompanyResponse.from(company));
@@ -405,6 +419,10 @@ public class CompanyController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID companyUuid) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         companyService.deleteCompany(userDetails.getUsername(), companyUuid);
         return ApiResponse.success();
     }
@@ -431,6 +449,10 @@ public class CompanyController {
     @GetMapping("/check")
     public ApiResponse<Map<String, Boolean>> checkHasCompany(
             @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         boolean hasCompany = companyService.hasCompany(userDetails.getUsername());
         return ApiResponse.success(Map.of("hasCompany", hasCompany));
@@ -460,6 +482,10 @@ public class CompanyController {
     public ApiResponse<Map<String, Object>> toggleLike(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID companyUuid) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         boolean isLiked = companyService.toggleLike(userDetails.getUsername(), companyUuid);
         return ApiResponse.success(Map.of(

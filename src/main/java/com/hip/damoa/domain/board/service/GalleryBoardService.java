@@ -8,6 +8,8 @@ import com.hip.damoa.domain.board.model.BoardFilterOption;
 import com.hip.damoa.domain.board.model.BoardType;
 import com.hip.damoa.domain.board.repository.BoardAttachmentRepository;
 import com.hip.damoa.domain.board.repository.BoardFilterOptionRepository;
+import com.hip.damoa.domain.board.repository.BoardRepository;
+import com.hip.damoa.domain.board.repository.BoardSpecifications;
 import com.hip.damoa.domain.board.web.dto.FileInfo;
 import com.hip.damoa.domain.board.web.dto.GalleryCreateRequest;
 import com.hip.damoa.domain.board.web.dto.GalleryResponse;
@@ -18,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +39,7 @@ public class GalleryBoardService {
 
     private final BoardService boardService;
     private final BoardBookmarkService boardBookmarkService;
+    private final BoardRepository boardRepository;
     private final BoardFilterOptionRepository boardFilterOptionRepository;
     private final BoardAttachmentRepository boardAttachmentRepository;
     private final FileRepository fileRepository;
@@ -120,32 +124,36 @@ public class GalleryBoardService {
      * @param keyword 검색 키워드 (nullable)
      * @param filterOptionIds 필터 옵션 IDs (nullable)
      * @param onlyBookmarked 북마크된 게시글만 조회 (nullable, userEmail 필요)
+     * @param onlyMyPosts 내가 쓴 게시글만 조회 (nullable, userEmail 필요)
      * @param userEmail 사용자 이메일 (북마크 조회 시 필요)
      * @param pageable 페이지 정보
      * @return 검색 결과
      */
     @Transactional(readOnly = true)
     public Page<GalleryResponse> searchGalleries(String keyword, List<Long> filterOptionIds,
-                                                  Boolean onlyBookmarked, String userEmail,
-                                                  Pageable pageable) {
-        Page<Board> boards;
+                                                  Boolean onlyBookmarked, Boolean onlyMyPosts,
+                                                  String userEmail, Pageable pageable) {
 
-        // 북마크된 게시글만 조회
-        if (Boolean.TRUE.equals(onlyBookmarked) && userEmail != null) {
-            boards = boardService.getBookmarkedBoards(BoardType.GALLERY.name(), userEmail, pageable);
+        log.info("Gallery 게시글 검색 시작: keyword={}, filterOptions={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
+                keyword, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
+
+        // 로그인이 필요한 기능 체크
+        if ((Boolean.TRUE.equals(onlyBookmarked) || Boolean.TRUE.equals(onlyMyPosts)) && userEmail == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
-        // 필터 옵션으로 조회
-        else if (filterOptionIds != null && !filterOptionIds.isEmpty()) {
-            boards = boardService.getBoardsByFilterOptions(BoardType.GALLERY.name(), filterOptionIds, pageable);
-        }
-        // 키워드 검색
-        else if (keyword != null && !keyword.isEmpty()) {
-            boards = boardService.searchBoards(BoardType.GALLERY.name(), keyword, pageable);
-        }
-        // 전체 목록 조회
-        else {
-            boards = boardService.getBoardsByType(BoardType.GALLERY.name(), pageable);
-        }
+
+        // Specification 구성 (CompanyService와 동일한 패턴)
+        Specification<Board> spec = BoardSpecifications.searchBoards(
+                BoardType.GALLERY.name(),
+                keyword,
+                filterOptionIds,
+                onlyBookmarked,
+                onlyMyPosts,
+                userEmail
+        );
+
+        // Specification을 사용한 조회
+        Page<Board> boards = boardRepository.findAll(spec, pageable);
 
         // 북마크 여부 확인을 위한 userEmail 존재 여부
         boolean checkBookmark = userEmail != null;
@@ -244,6 +252,33 @@ public class GalleryBoardService {
                     return GalleryResponse.from(board, filterOptions, images, false);
                 })
                 .toList();
+    }
+
+    /**
+     * 내가 작성한 Gallery 목록 (마이페이지)
+     */
+    @Transactional(readOnly = true)
+    public Page<GalleryResponse> getMyGalleries(String userEmail, Pageable pageable) {
+        log.info("내 Gallery 목록 조회: userEmail={}", userEmail);
+
+        // Specification 사용하여 내가 작성한 게시글만 조회
+        Specification<Board> spec = BoardSpecifications.searchBoards(
+                BoardType.GALLERY.name(),
+                null,  // keyword 없음
+                null,  // filterOptions 없음
+                false, // onlyBookmarked = false
+                true,  // onlyMyPosts = true
+                userEmail
+        );
+
+        Page<Board> boards = boardRepository.findAll(spec, pageable);
+
+        return boards.map(board -> {
+            List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
+            List<FileInfo> images = getFileInfos(board);
+            boolean isBookmarked = boardBookmarkService.isBookmarked(board.getUuid(), userEmail);
+            return GalleryResponse.from(board, filterOptions, images, isBookmarked);
+        });
     }
 
     /**

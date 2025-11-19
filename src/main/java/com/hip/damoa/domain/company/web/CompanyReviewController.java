@@ -1,5 +1,7 @@
 package com.hip.damoa.domain.company.web;
 
+import com.hip.damoa.core.exception.BusinessException;
+import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.company.model.CompanyReview;
 import com.hip.damoa.domain.company.service.CompanyReviewService;
@@ -60,6 +62,10 @@ public class CompanyReviewController {
             @PathVariable UUID companyUuid,
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CompanyReviewCreateRequest request) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         log.info("리뷰 작성 API 호출: companyUuid={}, userEmail={}", companyUuid, userDetails.getUsername());
 
@@ -130,6 +136,10 @@ public class CompanyReviewController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CompanyReviewCreateRequest request) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         log.info("리뷰 수정 API 호출: reviewUuid={}, userEmail={}", reviewUuid, userDetails.getUsername());
 
         CompanyReview review = reviewService.updateReview(
@@ -150,6 +160,10 @@ public class CompanyReviewController {
     public ApiResponse<Void> deleteReview(
             @PathVariable UUID reviewUuid,
             @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         log.info("리뷰 삭제 API 호출: reviewUuid={}, userEmail={}", reviewUuid, userDetails.getUsername());
 
@@ -186,6 +200,10 @@ public class CompanyReviewController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CompanyReviewReplyRequest request) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         log.info("업체 답변 작성 API 호출: reviewUuid={}, userEmail={}", reviewUuid, userDetails.getUsername());
 
         CompanyReview review = reviewService.addReply(
@@ -216,6 +234,10 @@ public class CompanyReviewController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CompanyReviewReplyRequest request) {
 
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
         log.info("업체 답변 수정 API 호출: reviewUuid={}, userEmail={}", reviewUuid, userDetails.getUsername());
 
         CompanyReview review = reviewService.updateReply(
@@ -245,6 +267,10 @@ public class CompanyReviewController {
     public ApiResponse<Void> deleteReply(
             @PathVariable UUID reviewUuid,
             @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
 
         log.info("업체 답변 삭제 API 호출: reviewUuid={}, userEmail={}", reviewUuid, userDetails.getUsername());
 

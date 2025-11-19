@@ -9,6 +9,7 @@ import com.hip.damoa.domain.board.model.BoardType;
 import com.hip.damoa.domain.board.repository.BoardAttachmentRepository;
 import com.hip.damoa.domain.board.repository.BoardFilterOptionRepository;
 import com.hip.damoa.domain.board.repository.BoardRepository;
+import com.hip.damoa.domain.board.repository.BoardSpecifications;
 import com.hip.damoa.domain.board.web.dto.DocumentCreateRequest;
 import com.hip.damoa.domain.board.web.dto.DocumentResponse;
 import com.hip.damoa.domain.board.web.dto.DocumentUpdateRequest;
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -179,32 +181,36 @@ public class DocumentBoardService {
      * @param keyword 검색 키워드 (nullable)
      * @param filterOptionIds 필터 옵션 IDs (nullable)
      * @param onlyBookmarked 북마크된 게시글만 조회 (nullable, userEmail 필요)
+     * @param onlyMyPosts 내가 쓴 게시글만 조회 (nullable, userEmail 필요)
      * @param userEmail 사용자 이메일 (북마크 조회 시 필요)
      * @param pageable 페이지 정보
      * @return 검색 결과
      */
     @Transactional(readOnly = true)
     public Page<DocumentResponse> searchDocuments(String keyword, List<Long> filterOptionIds,
-                                                   Boolean onlyBookmarked, String userEmail,
-                                                   Pageable pageable) {
-        Page<Board> boards;
+                                                   Boolean onlyBookmarked, Boolean onlyMyPosts,
+                                                   String userEmail, Pageable pageable) {
 
-        // 북마크된 게시글만 조회
-        if (Boolean.TRUE.equals(onlyBookmarked) && userEmail != null) {
-            boards = boardService.getBookmarkedBoards(BoardType.DOCUMENT.name(), userEmail, pageable);
+        log.info("Document 게시글 검색 시작: keyword={}, filterOptions={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
+                keyword, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
+
+        // 로그인이 필요한 기능 체크
+        if ((Boolean.TRUE.equals(onlyBookmarked) || Boolean.TRUE.equals(onlyMyPosts)) && userEmail == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
-        // 필터 옵션으로 조회
-        else if (filterOptionIds != null && !filterOptionIds.isEmpty()) {
-            boards = boardService.getBoardsByFilterOptions(BoardType.DOCUMENT.name(), filterOptionIds, pageable);
-        }
-        // 키워드 검색
-        else if (keyword != null && !keyword.isEmpty()) {
-            boards = boardService.searchBoards(BoardType.DOCUMENT.name(), keyword, pageable);
-        }
-        // 전체 목록 조회
-        else {
-            boards = boardService.getBoardsByType(BoardType.DOCUMENT.name(), pageable);
-        }
+
+        // Specification 구성 (GalleryBoardService와 동일한 패턴)
+        Specification<Board> spec = BoardSpecifications.searchBoards(
+                BoardType.DOCUMENT.name(),
+                keyword,
+                filterOptionIds,
+                onlyBookmarked,
+                onlyMyPosts,
+                userEmail
+        );
+
+        // Specification을 사용한 조회
+        Page<Board> boards = boardRepository.findAll(spec, pageable);
 
         // 북마크 여부 확인을 위한 userEmail 존재 여부
         boolean checkBookmark = userEmail != null;
@@ -345,6 +351,52 @@ public class DocumentBoardService {
                     return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount);
                 })
                 .toList();
+    }
+
+    /**
+     * 내가 작성한 Document 목록 (마이페이지)
+     */
+    @Transactional(readOnly = true)
+    public Page<DocumentResponse> getMyDocuments(String userEmail, Pageable pageable) {
+        log.info("내 Document 목록 조회: userEmail={}", userEmail);
+
+        // Specification 사용하여 내가 작성한 게시글만 조회
+        Specification<Board> spec = BoardSpecifications.searchBoards(
+                BoardType.DOCUMENT.name(),
+                null,  // keyword 없음
+                null,  // filterOptions 없음
+                false, // onlyBookmarked = false
+                true,  // onlyMyPosts = true
+                userEmail
+        );
+
+        Page<Board> boards = boardRepository.findAll(spec, pageable);
+
+        return boards.map(board -> {
+            List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
+            List<FileInfo> files = getDocumentFileInfos(board);
+            FileInfo thumbnail = getThumbnailFileInfo(board);
+            long downloadCount = getTotalDownloadCount(board);
+
+            boolean isBookmarked = boardBookmarkService.isBookmarked(board.getUuid(), userEmail);
+
+            // hasDownloaded 확인
+            boolean hasDownloaded = false;
+            User user = userRepository.findByEmail(userEmail).orElse(null);
+            if (user != null) {
+                @SuppressWarnings("unchecked")
+                List<String> fileUuids = (List<String>) board.getTypeData().get("files");
+                if (fileUuids != null && !fileUuids.isEmpty()) {
+                    String firstFileUuid = fileUuids.get(0);
+                    File file = fileRepository.findByUuid(UUID.fromString(firstFileUuid)).orElse(null);
+                    if (file != null) {
+                        hasDownloaded = fileDownloadRepository.existsByFileIdAndUserId(file.getId(), user.getId());
+                    }
+                }
+            }
+
+            return DocumentResponse.from(board, filterOptions, files, thumbnail, isBookmarked, hasDownloaded, downloadCount);
+        });
     }
 
     /**
