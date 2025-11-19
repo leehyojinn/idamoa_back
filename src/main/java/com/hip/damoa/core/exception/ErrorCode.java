@@ -70,6 +70,7 @@ public enum ErrorCode {
     ESTIMATE_REQUEST_CLOSED(HttpStatus.BAD_REQUEST, "E005", "종료된 견적 요청입니다"),
     ESTIMATE_REQUEST_NOT_EDITABLE(HttpStatus.BAD_REQUEST, "E006", "수정할 수 없는 견적 요청입니다"),
     ESTIMATE_REQUEST_ALREADY_PUBLISHED(HttpStatus.BAD_REQUEST, "E007", "이미 게시된 견적 요청입니다"),
+    ESTIMATE_REQUEST_HAS_PROPOSALS(HttpStatus.BAD_REQUEST, "E008", "제안이 있는 견적 요청은 삭제할 수 없습니다"),
 
     PROPOSAL_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "제안서를 찾을 수 없습니다"),
     PROPOSAL_ALREADY_EXISTS(HttpStatus.CONFLICT, "P002", "이미 이 요청에 대한 제안서가 존재합니다"),

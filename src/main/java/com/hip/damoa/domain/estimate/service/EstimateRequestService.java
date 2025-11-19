@@ -347,6 +347,12 @@ public class EstimateRequestService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
+        // 제안이 있는지 확인
+        long proposalCount = proposalRepository.countByRequestAndIsDeletedFalse(estimateRequest);
+        if (proposalCount > 0) {
+            throw new BusinessException(ErrorCode.ESTIMATE_REQUEST_HAS_PROPOSALS);
+        }
+
         // Soft Delete
         estimateRequest.softDelete();
         estimateRequestRepository.save(estimateRequest);
