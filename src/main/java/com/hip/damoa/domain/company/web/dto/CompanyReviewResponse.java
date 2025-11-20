@@ -24,6 +24,7 @@ public class CompanyReviewResponse {
     // 작성자 정보
     private Long userId;
     private String userEmail;
+    private String userName;
 
     // 리뷰 내용
     private BigDecimal rating;
@@ -47,10 +48,10 @@ public class CompanyReviewResponse {
     private LocalDateTime updatedAt;
 
     public static CompanyReviewResponse from(CompanyReview review) {
-        return from(review, null);
+        return from(review, null, review.getUser() != null ? review.getUser().getEmail() : null);
     }
 
-    public static CompanyReviewResponse from(CompanyReview review, String[] imageUrls) {
+    public static CompanyReviewResponse from(CompanyReview review, String[] imageUrls, String userName) {
         return CompanyReviewResponse.builder()
                 .id(review.getId())
                 .uuid(review.getUuid())
@@ -58,6 +59,7 @@ public class CompanyReviewResponse {
                 .companyName(review.getCompany().getName())
                 .userId(review.getUser().getId())
                 .userEmail(review.getUser().getEmail())
+                .userName(userName != null ? userName : review.getUser().getEmail())
                 .rating(review.getRating())
                 .title(review.getTitle())
                 .content(review.getContent())

@@ -74,30 +74,18 @@ public class BoardSpecifications {
                 return cb.conjunction();
             }
 
-            // PostgreSQL의 text[] 배열에서 특정 텍스트 포함 여부 확인
-            // SQL: keyword = ANY(tags) OR EXISTS (SELECT 1 FROM unnest(tags) t WHERE t ILIKE '%keyword%')
+            // PostgreSQL의 텍스트 검색 연산자 사용
+            // tags::text LIKE '%keyword%'
+            // 배열을 텍스트로 캐스팅하면 {tag1,tag2,tag3} 형식이 됨
+            String pattern = "%" + keyword.toLowerCase() + "%";
 
-            // 정확히 일치하는 태그 검색
-            Predicate exactMatch = cb.isNotNull(
-                cb.function("array_position", Integer.class,
-                    root.get("tags"),
-                    cb.literal(keyword)
-                )
-            );
-
-            // 부분 일치하는 태그 검색 (ILIKE 사용)
-            // PostgreSQL 함수 사용: array_to_string(tags, ',') ILIKE '%keyword%'
-            Predicate partialMatch = cb.like(
+            // SQL: LOWER(CAST(tags AS text)) LIKE '%keyword%'
+            return cb.like(
                 cb.lower(
-                    cb.function("array_to_string", String.class,
-                        root.get("tags"),
-                        cb.literal(",")
-                    )
+                    cb.function("text", String.class, root.get("tags"))
                 ),
-                "%" + keyword.toLowerCase() + "%"
+                pattern
             );
-
-            return cb.or(exactMatch, partialMatch);
         };
     }
 
@@ -204,12 +192,53 @@ public class BoardSpecifications {
     }
 
     /**
+     * 특정 태그들을 포함하는 게시글 필터 (정확히 일치)
+     */
+    public static Specification<Board> hasTags(String[] tags) {
+        return (root, query, cb) -> {
+            if (tags == null || tags.length == 0) {
+                return cb.conjunction();
+            }
+
+            // 여러 태그 중 하나라도 포함하는 게시글 (OR 조건)
+            // PostgreSQL: tags && ARRAY['tag1','tag2']::text[]
+            // 배열을 텍스트로 변환하여 LIKE로 검색
+            Predicate[] predicates = new Predicate[tags.length];
+            for (int i = 0; i < tags.length; i++) {
+                String tag = tags[i].toLowerCase();
+                predicates[i] = cb.like(
+                    cb.lower(
+                        cb.function("text", String.class, root.get("tags"))
+                    ),
+                    "%{%" + tag + "%}%"  // {tag1,tag2} 형식에서 검색
+                );
+            }
+
+            return cb.or(predicates);
+        };
+    }
+
+    /**
+     * 복합 검색을 위한 종합 메서드 (tags 파라미터 없는 버전 - 하위 호환성)
+     */
+    public static Specification<Board> searchBoards(
+            String boardType,
+            String keyword,
+            List<Long> filterOptionIds,
+            Boolean onlyBookmarked,
+            Boolean onlyMyPosts,
+            String userEmail) {
+        return searchBoards(boardType, keyword, null, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
+    }
+
+    /**
      * 복합 검색을 위한 종합 메서드
      * 모든 조건을 AND로 결합
      */
     public static Specification<Board> searchBoards(
             String boardType,
             String keyword,
+            String[] tags,
             List<Long> filterOptionIds,
             Boolean onlyBookmarked,
             Boolean onlyMyPosts,
@@ -222,6 +251,11 @@ public class BoardSpecifications {
         // 키워드 검색 (제목, 내용, 태그)
         if (keyword != null && !keyword.trim().isEmpty()) {
             spec = spec.and(hasKeyword(keyword));
+        }
+
+        // 태그 필터 (정확한 태그 매칭)
+        if (tags != null && tags.length > 0) {
+            spec = spec.and(hasTags(tags));
         }
 
         // 필터 옵션

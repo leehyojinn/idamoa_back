@@ -43,6 +43,7 @@ public class GalleryBoardService {
     private final BoardFilterOptionRepository boardFilterOptionRepository;
     private final BoardAttachmentRepository boardAttachmentRepository;
     private final FileRepository fileRepository;
+    private final com.hip.damoa.domain.user.repository.UserProfileRepository userProfileRepository;
 
     /**
      * Gallery 게시글 생성
@@ -83,7 +84,8 @@ public class GalleryBoardService {
         // Response 생성
         List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
         List<FileInfo> images = getFileInfos(board);
-        return GalleryResponse.from(board, filterOptions, images, false);
+        String userName = getUserName(board);
+        return GalleryResponse.from(board, filterOptions, images, false, userName);
     }
 
     /**
@@ -115,13 +117,15 @@ public class GalleryBoardService {
             isBookmarked = boardBookmarkService.isBookmarked(uuid, userEmail);
         }
 
-        return GalleryResponse.from(board, filterOptions, images, isBookmarked);
+        String userName = getUserName(board);
+        return GalleryResponse.from(board, filterOptions, images, isBookmarked, userName);
     }
 
     /**
      * Gallery 게시글 검색 (통합)
      *
      * @param keyword 검색 키워드 (nullable)
+     * @param tags 태그 필터 (nullable)
      * @param filterOptionIds 필터 옵션 IDs (nullable)
      * @param onlyBookmarked 북마크된 게시글만 조회 (nullable, userEmail 필요)
      * @param onlyMyPosts 내가 쓴 게시글만 조회 (nullable, userEmail 필요)
@@ -130,12 +134,12 @@ public class GalleryBoardService {
      * @return 검색 결과
      */
     @Transactional(readOnly = true)
-    public Page<GalleryResponse> searchGalleries(String keyword, List<Long> filterOptionIds,
+    public Page<GalleryResponse> searchGalleries(String keyword, String[] tags, List<Long> filterOptionIds,
                                                   Boolean onlyBookmarked, Boolean onlyMyPosts,
                                                   String userEmail, Pageable pageable) {
 
-        log.info("Gallery 게시글 검색 시작: keyword={}, filterOptions={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
-                keyword, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
+        log.info("Gallery 게시글 검색 시작: keyword={}, tags={}, filterOptions={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
+                keyword, tags != null ? String.join(",", tags) : null, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
 
         // 로그인이 필요한 기능 체크
         if ((Boolean.TRUE.equals(onlyBookmarked) || Boolean.TRUE.equals(onlyMyPosts)) && userEmail == null) {
@@ -146,6 +150,7 @@ public class GalleryBoardService {
         Specification<Board> spec = BoardSpecifications.searchBoards(
                 BoardType.GALLERY.name(),
                 keyword,
+                tags,
                 filterOptionIds,
                 onlyBookmarked,
                 onlyMyPosts,
@@ -162,7 +167,8 @@ public class GalleryBoardService {
             List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
             List<FileInfo> images = getFileInfos(board);
             boolean isBookmarked = checkBookmark && boardBookmarkService.isBookmarked(board.getUuid(), userEmail);
-            return GalleryResponse.from(board, filterOptions, images, isBookmarked);
+            String userName = getUserName(board);
+            return GalleryResponse.from(board, filterOptions, images, isBookmarked, userName);
         });
     }
 
@@ -209,7 +215,8 @@ public class GalleryBoardService {
         List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
         List<FileInfo> images = getFileInfos(board);
         boolean isBookmarked = boardBookmarkService.isBookmarked(uuid, userEmail);
-        return GalleryResponse.from(board, filterOptions, images, isBookmarked);
+        String userName = getUserName(board);
+        return GalleryResponse.from(board, filterOptions, images, isBookmarked, userName);
     }
 
     /**
@@ -233,7 +240,8 @@ public class GalleryBoardService {
                 .map(board -> {
                     List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
                     List<FileInfo> images = getFileInfos(board);
-                    return GalleryResponse.from(board, filterOptions, images, false);
+                    String userName = getUserName(board);
+                    return GalleryResponse.from(board, filterOptions, images, false, userName);
                 })
                 .toList();
     }
@@ -249,7 +257,8 @@ public class GalleryBoardService {
                 .map(board -> {
                     List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
                     List<FileInfo> images = getFileInfos(board);
-                    return GalleryResponse.from(board, filterOptions, images, false);
+                    String userName = getUserName(board);
+                    return GalleryResponse.from(board, filterOptions, images, false, userName);
                 })
                 .toList();
     }
@@ -277,7 +286,8 @@ public class GalleryBoardService {
             List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
             List<FileInfo> images = getFileInfos(board);
             boolean isBookmarked = boardBookmarkService.isBookmarked(board.getUuid(), userEmail);
-            return GalleryResponse.from(board, filterOptions, images, isBookmarked);
+            String userName = getUserName(board);
+            return GalleryResponse.from(board, filterOptions, images, isBookmarked, userName);
         });
     }
 
@@ -313,6 +323,10 @@ public class GalleryBoardService {
         File file = fileRepository.findByUuidAndIsDeletedFalse(imageUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
 
+        // Files 테이블의 entityId 업데이트 (스케줄러 삭제 방지)
+        file.updateEntityInfo("BOARD_IMAGE", board.getId());
+        fileRepository.save(file);
+
         // BoardAttachment 생성
         BoardAttachment attachment = BoardAttachment.builder()
                 .board(board)
@@ -339,5 +353,19 @@ public class GalleryBoardService {
                 })
                 .filter(fileInfo -> fileInfo != null)
                 .toList();
+    }
+
+    /**
+     * Board의 User로부터 userName 조회
+     * UserProfile이 있으면 name 반환, 없으면 email 반환
+     */
+    private String getUserName(Board board) {
+        if (board.getUser() == null) {
+            return null;
+        }
+
+        return userProfileRepository.findByUserId(board.getUser().getId())
+                .map(com.hip.damoa.domain.user.model.UserProfile::getName)
+                .orElse(board.getUser().getEmail());
     }
 }

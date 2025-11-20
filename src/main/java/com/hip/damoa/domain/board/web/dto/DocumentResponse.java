@@ -73,7 +73,7 @@ public class DocumentResponse {
      * Entity to DTO
      */
     public static DocumentResponse from(Board board) {
-        return from(board, List.of(), List.of(), null, false, false, 0L);
+        return from(board, List.of(), List.of(), null, false, false, 0L, board.getUser() != null ? board.getUser().getEmail() : null);
     }
 
     /**
@@ -81,7 +81,7 @@ public class DocumentResponse {
      */
     public static DocumentResponse from(Board board, List<BoardFilterOption> filterOptions,
                                         List<FileInfo> files, FileInfo thumbnail,
-                                        boolean isBookmarked, boolean hasDownloaded, Long downloadCount) {
+                                        boolean isBookmarked, boolean hasDownloaded, Long downloadCount, String userName) {
         Map<String, Object> typeData = board.getTypeData();
 
         // typeData에서 가격 정보 추출
@@ -126,7 +126,7 @@ public class DocumentResponse {
                 .tags(board.getTags())
                 .userId(board.getUser().getId())
                 .userEmail(board.getUser().getEmail())
-                .userName(board.getUser().getEmail())
+                .userName(userName != null ? userName : board.getUser().getEmail())
                 .createdAt(board.getCreatedAt())
                 .updatedAt(board.getUpdatedAt())
                 .isBookmarked(isBookmarked)

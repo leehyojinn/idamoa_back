@@ -144,6 +144,7 @@ public class GalleryBoardController {
     @GetMapping("/search")
     public ApiResponse<Page<GalleryResponse>> searchGalleries(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String[] tags,
             @RequestParam(required = false) List<Long> filterOptionIds,
             @RequestParam(required = false) Boolean onlyBookmarked,
             @RequestParam(required = false) Boolean onlyMyPosts,
@@ -153,11 +154,11 @@ public class GalleryBoardController {
 
         String userEmail = userDetails != null ? userDetails.getUsername() : null;
 
-        log.info("Gallery 게시글 검색 요청: keyword={}, filterOptionIds={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
-                 keyword, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
+        log.info("Gallery 게시글 검색 요청: keyword={}, tags={}, filterOptionIds={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
+                 keyword, tags != null ? String.join(",", tags) : null, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
 
         Page<GalleryResponse> response = galleryBoardService.searchGalleries(
-                keyword, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail, pageable);
+                keyword, tags, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail, pageable);
 
         return ApiResponse.success(response);
     }

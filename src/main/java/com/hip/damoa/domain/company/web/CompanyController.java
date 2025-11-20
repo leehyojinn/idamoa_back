@@ -62,12 +62,12 @@ public class CompanyController {
                     "- businessInfo: 사업자 정보 (JSON)\n" +
                     "- businessHours: 영업 시간 (JSON)\n" +
                     "- address, postalCode, latitude, longitude: 위치 정보\n" +
-                    "- logoImageUrl, coverImageUrl, galleryImageUrls: 이미지 파일 ID\n\n" +
+                    "- logoImageUuid, coverImageUuid, galleryImageUuids: 이미지 파일 UUID\n\n" +
                     "**이미지 업로드 프로세스:**\n" +
                     "1. `/api/files/presigned` 호출하여 Presigned URL 획득\n" +
                     "2. S3로 파일 업로드\n" +
-                    "3. `/api/files/complete` 호출하여 파일 ID 획득\n" +
-                    "4. 획득한 파일 ID를 logoImageUrl 등에 입력\n\n" +
+                    "3. `/api/files/complete` 호출하여 파일 UUID 획득\n" +
+                    "4. 획득한 파일 UUID를 logoImageUuid 등에 입력\n\n" +
                     "**응답:**\n" +
                     "- 생성된 업체 정보\n" +
                     "- uuid: 업체 고유 식별자\n" +

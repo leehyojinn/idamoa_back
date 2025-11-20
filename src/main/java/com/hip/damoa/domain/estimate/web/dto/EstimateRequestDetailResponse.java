@@ -40,6 +40,9 @@ public class EstimateRequestDetailResponse {
     @Schema(description = "작성자 이메일")
     private String userEmail;
 
+    @Schema(description = "작성자 이름")
+    private String userName;
+
     @Schema(description = "제목")
     private String title;
 
@@ -134,12 +137,13 @@ public class EstimateRequestDetailResponse {
     /**
      * EstimateRequest → DetailResponse 변환
      */
-    public static EstimateRequestDetailResponse from(EstimateRequest request) {
+    public static EstimateRequestDetailResponse from(EstimateRequest request, String userName) {
         return EstimateRequestDetailResponse.builder()
                 .id(request.getId())
                 .uuid(request.getUuid())
                 .userId(request.getUser().getId())
                 .userEmail(request.getUser().getEmail())
+                .userName(userName != null ? userName : request.getUser().getEmail())
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .requirements(request.getRequirements())

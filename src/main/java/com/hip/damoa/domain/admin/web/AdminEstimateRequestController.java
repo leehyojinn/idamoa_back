@@ -39,6 +39,21 @@ public class AdminEstimateRequestController {
     private final EstimateRequestService estimateRequestService;
     private final EstimateRequestRepository estimateRequestRepository;
     private final UserRepository userRepository;
+    private final com.hip.damoa.domain.user.repository.UserProfileRepository userProfileRepository;
+
+    /**
+     * EstimateRequest의 User로부터 userName 조회
+     * UserProfile이 있으면 name 반환, 없으면 email 반환
+     */
+    private String getUserName(EstimateRequest request) {
+        if (request.getUser() == null) {
+            return null;
+        }
+
+        return userProfileRepository.findByUserId(request.getUser().getId())
+                .map(com.hip.damoa.domain.user.model.UserProfile::getName)
+                .orElse(request.getUser().getEmail());
+    }
 
     /**
      * 관리자 - 모든 견적 요청 조회 (상태 무관)
@@ -96,7 +111,8 @@ public class AdminEstimateRequestController {
         EstimateRequest estimateRequest = estimateRequestRepository.findById(requestId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND));
 
-        return ApiResponse.success(AdminEstimateRequestResponse.from(estimateRequest));
+        String userName = getUserName(estimateRequest);
+        return ApiResponse.success(AdminEstimateRequestResponse.from(estimateRequest, userName));
     }
 
     /**
@@ -174,6 +190,7 @@ public class AdminEstimateRequestController {
 
         log.info("관리자 견적 요청 상태 변경 완료: id={}, status={}", requestId, status);
 
-        return ApiResponse.success(AdminEstimateRequestResponse.from(estimateRequest));
+        String userName = getUserName(estimateRequest);
+        return ApiResponse.success(AdminEstimateRequestResponse.from(estimateRequest, userName));
     }
 }

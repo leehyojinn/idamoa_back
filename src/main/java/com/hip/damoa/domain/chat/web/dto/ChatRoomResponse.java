@@ -35,6 +35,9 @@ public class ChatRoomResponse {
     @Schema(description = "사용자 이메일", example = "user@example.com")
     private String userEmail;
 
+    @Schema(description = "사용자 이름", example = "홍길동")
+    private String userName;
+
     @Schema(description = "업체 ID", example = "10")
     private Long companyId;
 
@@ -62,13 +65,14 @@ public class ChatRoomResponse {
     /**
      * Entity → DTO 변환
      */
-    public static ChatRoomResponse from(ChatRoom chatRoom) {
+    public static ChatRoomResponse from(ChatRoom chatRoom, String userName) {
         return ChatRoomResponse.builder()
                 .uuid(chatRoom.getUuid())
                 .estimateRequestUuid(chatRoom.getEstimateRequest().getUuid())
                 .estimateRequestTitle(chatRoom.getEstimateRequest().getTitle())
                 .userId(chatRoom.getUser().getId())
                 .userEmail(chatRoom.getUser().getEmail())
+                .userName(userName != null ? userName : chatRoom.getUser().getEmail())
                 .companyId(chatRoom.getCompany().getId())
                 .companyUuid(chatRoom.getCompany().getUuid())
                 .companyName(chatRoom.getCompany().getName())

@@ -110,14 +110,14 @@ public class CompanyService {
         processFilterOptions(company, request.getFilterOptionIds());
 
         // 이미지 처리
-        processCompanyImages(company, request.getLogoImageUrl(),
-                request.getCoverImageUrl(), request.getGalleryImageUrls());
+        processCompanyImages(company, request.getLogoImageUuid(),
+                request.getCoverImageUuid(), request.getGalleryImageUuids());
 
         log.info("업체 등록 완료: id={}, name={}, logo={}, cover={}, gallery={}",
                 company.getId(), company.getName(),
-                request.getLogoImageUrl() != null,
-                request.getCoverImageUrl() != null,
-                request.getGalleryImageUrls() != null ? request.getGalleryImageUrls().length : 0);
+                request.getLogoImageUuid() != null,
+                request.getCoverImageUuid() != null,
+                request.getGalleryImageUuids() != null ? request.getGalleryImageUuids().length : 0);
 
         return company;
     }
@@ -181,14 +181,14 @@ public class CompanyService {
         processFilterOptions(company, request.getFilterOptionIds());
 
         // 이미지 처리
-        processCompanyImages(company, request.getLogoImageUrl(),
-                request.getCoverImageUrl(), request.getGalleryImageUrls());
+        processCompanyImages(company, request.getLogoImageUuid(),
+                request.getCoverImageUuid(), request.getGalleryImageUuids());
 
         log.info("업체 등록 완료 (관리자): id={}, name={}, logo={}, cover={}, gallery={}",
                 company.getId(), company.getName(),
-                request.getLogoImageUrl() != null,
-                request.getCoverImageUrl() != null,
-                request.getGalleryImageUrls() != null ? request.getGalleryImageUrls().length : 0);
+                request.getLogoImageUuid() != null,
+                request.getCoverImageUuid() != null,
+                request.getGalleryImageUuids() != null ? request.getGalleryImageUuids().length : 0);
 
         return company;
     }
@@ -301,13 +301,13 @@ public class CompanyService {
         }
 
         // 이미지 업데이트 (새로운 이미지가 있는 경우에만 처리)
-        if (request.getLogoImageUrl() != null || request.getCoverImageUrl() != null ||
-                (request.getGalleryImageUrls() != null && request.getGalleryImageUrls().length > 0)) {
+        if (request.getLogoImageUuid() != null || request.getCoverImageUuid() != null ||
+                (request.getGalleryImageUuids() != null && request.getGalleryImageUuids().length > 0)) {
             // 기존 이미지 삭제 (soft delete)
             deleteCompanyImages(company.getId());
             // 새 이미지 저장
-            processCompanyImages(company, request.getLogoImageUrl(),
-                    request.getCoverImageUrl(), request.getGalleryImageUrls());
+            processCompanyImages(company, request.getLogoImageUuid(),
+                    request.getCoverImageUuid(), request.getGalleryImageUuids());
         }
 
         log.info("업체 수정 완료: id={}", company.getId());
@@ -351,13 +351,13 @@ public class CompanyService {
         }
 
         // 이미지 업데이트 (새로운 이미지가 있는 경우에만 처리)
-        if (request.getLogoImageUrl() != null || request.getCoverImageUrl() != null ||
-                (request.getGalleryImageUrls() != null && request.getGalleryImageUrls().length > 0)) {
+        if (request.getLogoImageUuid() != null || request.getCoverImageUuid() != null ||
+                (request.getGalleryImageUuids() != null && request.getGalleryImageUuids().length > 0)) {
             // 기존 이미지 삭제 (soft delete)
             deleteCompanyImages(company.getId());
             // 새 이미지 저장
-            processCompanyImages(company, request.getLogoImageUrl(),
-                    request.getCoverImageUrl(), request.getGalleryImageUrls());
+            processCompanyImages(company, request.getLogoImageUuid(),
+                    request.getCoverImageUuid(), request.getGalleryImageUuids());
         }
 
         log.info("업체 수정 완료 (관리자): id={}", company.getId());
@@ -598,38 +598,56 @@ public class CompanyService {
     }
 
     /**
-     * 업체 이미지 처리
+     * UUID를 File ID로 변환
+     */
+    private Long convertUuidToFileId(String uuidString) {
+        if (uuidString == null || uuidString.isBlank()) {
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
+        }
+
+        try {
+            java.util.UUID uuid = java.util.UUID.fromString(uuidString);
+            return fileRepository.findByUuidAndIsDeletedFalse(uuid)
+                    .map(File::getId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
+        }
+    }
+
+    /**
+     * 업체 이미지 처리 (UUID 기반)
      * - files 테이블의 entity 정보 업데이트
      * - company_images 테이블에 이미지 정보 저장
      */
-    private void processCompanyImages(Company company, String logoImageUrl,
-                                      String coverImageUrl, String[] galleryImageUrls) {
+    private void processCompanyImages(Company company, String logoImageUuid,
+                                      String coverImageUuid, String[] galleryImageUuids) {
         log.info("업체 이미지 처리 시작: companyId={}, logo={}, cover={}, gallery={}",
                 company.getId(),
-                logoImageUrl != null,
-                coverImageUrl != null,
-                galleryImageUrls != null ? galleryImageUrls.length : 0);
+                logoImageUuid != null,
+                coverImageUuid != null,
+                galleryImageUuids != null ? galleryImageUuids.length : 0);
 
         int displayOrder = 0;
         int savedCount = 0;
 
         // 로고 이미지 처리
-        if (logoImageUrl != null && !logoImageUrl.isEmpty()) {
-            saveCompanyImage(company, logoImageUrl, "LOGO", true, displayOrder++);
+        if (logoImageUuid != null && !logoImageUuid.isEmpty()) {
+            saveCompanyImage(company, logoImageUuid, "LOGO", true, displayOrder++);
             savedCount++;
         }
 
         // 커버 이미지 처리
-        if (coverImageUrl != null && !coverImageUrl.isEmpty()) {
-            saveCompanyImage(company, coverImageUrl, "COVER", false, displayOrder++);
+        if (coverImageUuid != null && !coverImageUuid.isEmpty()) {
+            saveCompanyImage(company, coverImageUuid, "COVER", false, displayOrder++);
             savedCount++;
         }
 
         // 갤러리 이미지 처리
-        if (galleryImageUrls != null && galleryImageUrls.length > 0) {
-            for (String galleryImageUrl : galleryImageUrls) {
-                if (galleryImageUrl != null && !galleryImageUrl.isEmpty()) {
-                    saveCompanyImage(company, galleryImageUrl, "GALLERY", false, displayOrder++);
+        if (galleryImageUuids != null && galleryImageUuids.length > 0) {
+            for (String galleryImageUuid : galleryImageUuids) {
+                if (galleryImageUuid != null && !galleryImageUuid.isEmpty()) {
+                    saveCompanyImage(company, galleryImageUuid, "GALLERY", false, displayOrder++);
                     savedCount++;
                 }
             }
@@ -639,12 +657,15 @@ public class CompanyService {
     }
 
     /**
-     * 단일 업체 이미지 저장
+     * 단일 업체 이미지 저장 (UUID 기반)
      */
-    private void saveCompanyImage(Company company, String imageUrl, String imageType,
+    private void saveCompanyImage(Company company, String imageUuid, String imageType,
                                   boolean isPrimary, int displayOrder) {
-        // files 테이블에서 URL로 파일 조회
-        File file = fileRepository.findByFileUrl(imageUrl)
+        // UUID → File ID 변환
+        Long fileId = convertUuidToFileId(imageUuid);
+
+        // files 테이블에서 파일 조회
+        File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
 
         // files 테이블의 entity 정보 업데이트
@@ -654,7 +675,7 @@ public class CompanyService {
         // company_images 테이블에 저장
         CompanyImage companyImage = CompanyImage.builder()
                 .company(company)
-                .fileId(file.getId())  // URL → File ID 변환
+                .fileId(file.getId())  // UUID → File ID 변환 완료
                 .imageType(imageType)
                 .isPrimary(isPrimary)
                 .displayOrder(displayOrder)
@@ -665,8 +686,8 @@ public class CompanyService {
 
         companyImageRepository.save(companyImage);
 
-        log.info("이미지 저장 완료: companyId={}, imageType={}, displayOrder={}, url={}",
-                company.getId(), imageType, displayOrder, imageUrl);
+        log.info("이미지 저장 완료: companyId={}, imageType={}, displayOrder={}, uuid={}",
+                company.getId(), imageType, displayOrder, imageUuid);
     }
 
     /**

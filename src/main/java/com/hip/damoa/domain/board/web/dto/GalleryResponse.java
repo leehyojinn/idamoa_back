@@ -100,14 +100,14 @@ public class GalleryResponse {
      * Entity to DTO (필터 옵션 없이)
      */
     public static GalleryResponse from(Board board) {
-        return from(board, List.of(), List.of(), false);
+        return from(board, List.of(), List.of(), false, board.getUser() != null ? board.getUser().getEmail() : null);
     }
 
     /**
      * Entity to DTO (전체 정보 포함)
      */
     public static GalleryResponse from(Board board, List<BoardFilterOption> filterOptions,
-                                       List<FileInfo> images, boolean isBookmarked) {
+                                       List<FileInfo> images, boolean isBookmarked, String userName) {
         Map<String, Object> typeData = board.getTypeData();
 
         // typeData에서 링크, 저작권 정보 추출
@@ -157,7 +157,7 @@ public class GalleryResponse {
                 .tags(board.getTags())
                 .userId(board.getUser().getId())
                 .userEmail(board.getUser().getEmail())
-                .userName(board.getUser().getEmail())
+                .userName(userName != null ? userName : board.getUser().getEmail())
                 .createdAt(board.getCreatedAt())
                 .updatedAt(board.getUpdatedAt())
                 .isBookmarked(isBookmarked)
