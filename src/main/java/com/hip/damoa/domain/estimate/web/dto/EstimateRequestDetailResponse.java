@@ -83,7 +83,7 @@ public class EstimateRequestDetailResponse {
     private BigDecimal longitude;
 
     @Schema(description = "이미지 목록")
-    private String[] images;
+    private List<EstimateImageDto> images;
 
     @Schema(description = "상태")
     private String status;
@@ -135,9 +135,16 @@ public class EstimateRequestDetailResponse {
     private ProposalsInfo proposals;
 
     /**
-     * EstimateRequest → DetailResponse 변환
+     * EstimateRequest → DetailResponse 변환 (backward compatibility)
      */
     public static EstimateRequestDetailResponse from(EstimateRequest request, String userName) {
+        return from(request, userName, List.of());
+    }
+
+    /**
+     * EstimateRequest → DetailResponse 변환
+     */
+    public static EstimateRequestDetailResponse from(EstimateRequest request, String userName, List<EstimateImageDto> images) {
         return EstimateRequestDetailResponse.builder()
                 .id(request.getId())
                 .uuid(request.getUuid())
@@ -157,7 +164,7 @@ public class EstimateRequestDetailResponse {
                 .address(request.getAddress())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
-                .images(request.getImages())
+                .images(images != null ? images : List.of())
                 .status(request.getStatusString())
                 .visibility(request.getVisibility())
                 .viewCount(request.getViewCount())

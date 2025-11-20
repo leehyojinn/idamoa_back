@@ -43,7 +43,7 @@ public class EstimateRequestResponse {
     private String address;
     private BigDecimal latitude;
     private BigDecimal longitude;
-    private String[] images;
+    private List<EstimateImageDto> images;
     private String status;
     private String visibility;
     private Integer proposalCount;
@@ -62,7 +62,12 @@ public class EstimateRequestResponse {
     private LocalDateTime submissionDeadline; // 제안 마감일
     private List<AttachmentResponse> attachments; // 첨부파일 목록 (V30: 조인 테이블)
 
+    // Backward compatibility: old signature without images parameter
     public static EstimateRequestResponse from(EstimateRequest request, String userName) {
+        return from(request, userName, List.of());
+    }
+
+    public static EstimateRequestResponse from(EstimateRequest request, String userName, List<EstimateImageDto> images) {
         return EstimateRequestResponse.builder()
                 .id(request.getId())
                 .uuid(request.getUuid())
@@ -82,7 +87,7 @@ public class EstimateRequestResponse {
                 .address(request.getAddress())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
-                .images(request.getImages())
+                .images(images != null ? images : List.of())
                 .status(request.getStatusString())
                 .visibility(request.getVisibility())
                 .proposalCount(request.getProposalCount())

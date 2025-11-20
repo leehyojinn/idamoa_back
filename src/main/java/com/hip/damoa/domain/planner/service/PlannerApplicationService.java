@@ -38,6 +38,31 @@ public class PlannerApplicationService {
     private static final long MAX_TOTAL_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
     /**
+     * 첨부파일 ID 배열을 AttachmentDto 리스트로 변환
+     */
+    private List<AttachmentDto> convertToAttachmentDtos(Long[] fileIds) {
+        if (fileIds == null || fileIds.length == 0) {
+            return List.of();
+        }
+
+        List<File> files = fileRepository.findAllById(Arrays.asList(fileIds));
+
+        return Arrays.stream(fileIds)
+                .map(fileId -> files.stream()
+                        .filter(f -> f.getId().equals(fileId))
+                        .findFirst()
+                        .map(file -> AttachmentDto.of(
+                                file.getId(),
+                                file.getUuid(),
+                                file.getFileUrl(),
+                                file.getOriginalFilename()
+                        ))
+                        .orElse(null))
+                .filter(dto -> dto != null)
+                .collect(Collectors.<AttachmentDto>toList());
+    }
+
+    /**
      * 플래너 신청서 생성 (USER만 가능)
      */
     @Transactional
@@ -81,7 +106,10 @@ public class PlannerApplicationService {
         application = plannerApplicationRepository.save(application);
         log.info("플래너 신청서 생성 완료: id={}, uuid={}", application.getId(), application.getUuid());
 
-        return PlannerApplicationResponse.from(application);
+        // 첨부파일 정보 변환
+        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+
+        return PlannerApplicationResponse.from(application, attachments);
     }
 
     /**
@@ -156,7 +184,10 @@ public class PlannerApplicationService {
             throw new BusinessException(ErrorCode.PLANNER_APPLICATION_ACCESS_DENIED);
         }
 
-        return PlannerApplicationResponse.from(application);
+        // 첨부파일 정보 변환
+        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+
+        return PlannerApplicationResponse.from(application, attachments);
     }
 
     /**
@@ -191,7 +222,10 @@ public class PlannerApplicationService {
                 .findByUuidAndIsDeletedFalse(applicationUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PLANNER_APPLICATION_NOT_FOUND));
 
-        return PlannerApplicationResponse.from(application);
+        // 첨부파일 정보 변환
+        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+
+        return PlannerApplicationResponse.from(application, attachments);
     }
 
     /**
@@ -212,7 +246,10 @@ public class PlannerApplicationService {
 
         log.info("플래너 신청서 상태 변경 완료: uuid={}, status={}", applicationUuid, application.getStatus());
 
-        return PlannerApplicationResponse.from(application);
+        // 첨부파일 정보 변환
+        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+
+        return PlannerApplicationResponse.from(application, attachments);
     }
 
     /**
@@ -233,7 +270,10 @@ public class PlannerApplicationService {
 
         log.info("플래너 신청서 답변 등록 완료: uuid={}", applicationUuid);
 
-        return PlannerApplicationResponse.from(application);
+        // 첨부파일 정보 변환
+        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+
+        return PlannerApplicationResponse.from(application, attachments);
     }
 
     /**
@@ -254,7 +294,10 @@ public class PlannerApplicationService {
 
         log.info("플래너 신청서 메모 등록 완료: uuid={}", applicationUuid);
 
-        return PlannerApplicationResponse.from(application);
+        // 첨부파일 정보 변환
+        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+
+        return PlannerApplicationResponse.from(application, attachments);
     }
 
     /**
@@ -278,6 +321,9 @@ public class PlannerApplicationService {
 
         log.info("플래너 신청서 담당자 배정 완료: uuid={}, adminId={}", applicationUuid, admin.getId());
 
-        return PlannerApplicationResponse.from(application);
+        // 첨부파일 정보 변환
+        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+
+        return PlannerApplicationResponse.from(application, attachments);
     }
 }

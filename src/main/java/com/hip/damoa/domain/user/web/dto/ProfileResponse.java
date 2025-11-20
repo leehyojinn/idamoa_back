@@ -33,6 +33,8 @@ public class ProfileResponse {
 
     // USER 전용 필드 (COMPANY일 때 null)
     private String nickname;
+    private Long avatarFileId;
+    private java.util.UUID avatarFileUuid;  // 파일 UUID (수정 시 사용)
     private String avatarUrl;
     private String profileVisibility;  // PUBLIC, PRIVATE, FRIENDS_ONLY
 
@@ -56,32 +58,20 @@ public class ProfileResponse {
      * @param user User 엔티티 (email 정보 필요)
      */
     public static ProfileResponse from(UserProfile profile, User user) {
-        return ProfileResponse.builder()
-                .profileType(profile.getProfileType())
-                .id(profile.getId())
-                .name(profile.getName())
-                .phone(profile.getPhone())
-                .email(user.getEmail())
-                .address(profile.getAddress())
-                .postalCode(profile.getPostalCode())
-                .nickname(profile.getNickname())
-                .avatarUrl(profile.getAvatarUrl())
-                .profileVisibility(profile.getProfileVisibility())
-                .bio(profile.getBio())
-                .socialLinks(profile.getSocialLinks())
-                .termsAgreed(user.getTermsAgreed())
-                .privacyAgreed(user.getPrivacyAgreed())
-                .marketingAgreed(user.getMarketingAgreed())
-                .build();
+        return from(profile, user, null, null, null, null);
     }
 
     /**
-     * UserProfile + TokenInfo → ProfileResponse 변환
-     * @param profile UserProfile 엔티티
-     * @param user User 엔티티
-     * @param tokenInfo JWT 토큰 정보
+     * UserProfile + Avatar 파일 정보 → ProfileResponse 변환
      */
-    public static ProfileResponse from(UserProfile profile, User user, TokenInfo tokenInfo) {
+    public static ProfileResponse from(UserProfile profile, User user, Long avatarFileId, java.util.UUID avatarFileUuid, String avatarUrl) {
+        return from(profile, user, avatarFileId, avatarFileUuid, avatarUrl, null);
+    }
+
+    /**
+     * UserProfile + Avatar 파일 정보 + TokenInfo → ProfileResponse 변환
+     */
+    public static ProfileResponse from(UserProfile profile, User user, Long avatarFileId, java.util.UUID avatarFileUuid, String avatarUrl, TokenInfo tokenInfo) {
         return ProfileResponse.builder()
                 .profileType(profile.getProfileType())
                 .id(profile.getId())
@@ -91,7 +81,9 @@ public class ProfileResponse {
                 .address(profile.getAddress())
                 .postalCode(profile.getPostalCode())
                 .nickname(profile.getNickname())
-                .avatarUrl(profile.getAvatarUrl())
+                .avatarFileId(avatarFileId)
+                .avatarFileUuid(avatarFileUuid)
+                .avatarUrl(avatarUrl != null ? avatarUrl : profile.getAvatarUrl())
                 .profileVisibility(profile.getProfileVisibility())
                 .bio(profile.getBio())
                 .socialLinks(profile.getSocialLinks())
@@ -100,5 +92,15 @@ public class ProfileResponse {
                 .marketingAgreed(user.getMarketingAgreed())
                 .tokenInfo(tokenInfo)
                 .build();
+    }
+
+    /**
+     * UserProfile + TokenInfo → ProfileResponse 변환 (레거시 호환)
+     * @param profile UserProfile 엔티티
+     * @param user User 엔티티
+     * @param tokenInfo JWT 토큰 정보
+     */
+    public static ProfileResponse from(UserProfile profile, User user, TokenInfo tokenInfo) {
+        return from(profile, user, null, null, null, tokenInfo);
     }
 }

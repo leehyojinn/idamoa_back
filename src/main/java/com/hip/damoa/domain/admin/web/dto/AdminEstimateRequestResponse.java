@@ -2,6 +2,7 @@ package com.hip.damoa.domain.admin.web.dto;
 
 import com.hip.damoa.domain.estimate.model.EstimateRequest;
 import com.hip.damoa.domain.estimate.web.dto.AttachmentResponse;
+import com.hip.damoa.domain.estimate.web.dto.EstimateImageDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -42,7 +43,7 @@ public class AdminEstimateRequestResponse {
     private String address;
     private BigDecimal latitude;
     private BigDecimal longitude;
-    private String[] images;
+    private List<EstimateImageDto> images;
     private String status;
     private Boolean isPublic;
     private Integer proposalCount;
@@ -65,7 +66,12 @@ public class AdminEstimateRequestResponse {
     private Boolean isDeleted;
     private LocalDateTime deletedAt;
 
+    // Backward compatibility: old signature without images parameter
     public static AdminEstimateRequestResponse from(EstimateRequest request, String userName) {
+        return from(request, userName, List.of());
+    }
+
+    public static AdminEstimateRequestResponse from(EstimateRequest request, String userName, List<EstimateImageDto> images) {
         return AdminEstimateRequestResponse.builder()
                 .id(request.getId())
                 .uuid(request.getUuid())
@@ -86,7 +92,7 @@ public class AdminEstimateRequestResponse {
                 .address(request.getAddress())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
-                .images(request.getImages())
+                .images(images != null ? images : List.of())
                 .status(request.getStatusString())
                 .isPublic(request.getIsPublic())
                 .proposalCount(request.getProposalCount())
