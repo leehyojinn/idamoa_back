@@ -23,6 +23,8 @@ public class UserProfileResponse {
     private String nickname;
     private String phone;
     private String bio;
+    private Long avatarFileId;
+    private java.util.UUID avatarFileUuid;  // 파일 UUID (수정 시 사용)
     private String avatarUrl;
     private String address;
     private String postalCode;
@@ -43,13 +45,22 @@ public class UserProfileResponse {
      * Entity → DTO 변환
      */
     public static UserProfileResponse from(UserProfile profile) {
+        return from(profile, null, null, null);
+    }
+
+    /**
+     * Entity + Avatar 파일 정보 → DTO 변환
+     */
+    public static UserProfileResponse from(UserProfile profile, Long avatarFileId, java.util.UUID avatarFileUuid, String avatarUrl) {
         return UserProfileResponse.builder()
                 .id(profile.getId())
                 .name(profile.getName())
                 .nickname(profile.getNickname())
                 .phone(profile.getPhone())
                 .bio(profile.getBio())
-                .avatarUrl(profile.getAvatarUrl())
+                .avatarFileId(avatarFileId)
+                .avatarFileUuid(avatarFileUuid)
+                .avatarUrl(avatarUrl != null ? avatarUrl : profile.getAvatarUrl())
                 .address(profile.getAddress())
                 .postalCode(profile.getPostalCode())
                 .profileVisibility(profile.getProfileVisibility())
@@ -64,13 +75,22 @@ public class UserProfileResponse {
      * Entity + TokenInfo → DTO 변환
      */
     public static UserProfileResponse from(UserProfile profile, TokenInfo tokenInfo) {
+        return from(profile, null, null, null, tokenInfo);
+    }
+
+    /**
+     * Entity + Avatar 파일 정보 + TokenInfo → DTO 변환
+     */
+    public static UserProfileResponse from(UserProfile profile, Long avatarFileId, java.util.UUID avatarFileUuid, String avatarUrl, TokenInfo tokenInfo) {
         return UserProfileResponse.builder()
                 .id(profile.getId())
                 .name(profile.getName())
                 .nickname(profile.getNickname())
                 .phone(profile.getPhone())
                 .bio(profile.getBio())
-                .avatarUrl(profile.getAvatarUrl())
+                .avatarFileId(avatarFileId)
+                .avatarFileUuid(avatarFileUuid)
+                .avatarUrl(avatarUrl != null ? avatarUrl : profile.getAvatarUrl())
                 .address(profile.getAddress())
                 .postalCode(profile.getPostalCode())
                 .profileVisibility(profile.getProfileVisibility())

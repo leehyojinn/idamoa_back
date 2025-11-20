@@ -284,13 +284,13 @@ public class CompanyReviewService {
     }
 
     /**
-     * CompanyReview 엔티티를 Response DTO로 변환 (File ID → URL 변환 포함)
+     * CompanyReview 엔티티를 Response DTO로 변환 (File ID → URL, UUID 변환 포함)
      */
     public com.hip.damoa.domain.company.web.dto.CompanyReviewResponse toResponse(CompanyReview review) {
-        // ✅ OneToMany 기반 이미지 URL 조회 사용
-        List<String> imageUrls = getReviewImageUrls(review);
+        // ✅ OneToMany 기반 이미지 조회 사용 (UUID 포함)
+        List<com.hip.damoa.domain.company.web.dto.ReviewImageDto> imageDtos = getReviewImageDtos(review);
         String userName = getUserName(review);
-        return com.hip.damoa.domain.company.web.dto.CompanyReviewResponse.from(review, imageUrls.toArray(new String[0]), userName);
+        return com.hip.damoa.domain.company.web.dto.CompanyReviewResponse.from(review, imageDtos, userName);
     }
 
     /**
@@ -342,6 +342,29 @@ public class CompanyReviewService {
                         .map(File::getFileUrl)
                         .orElse(null))
                 .filter(url -> url != null)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 리뷰 이미지 조회 (File ID → DTO 변환, UUID 포함)
+     */
+    public List<com.hip.damoa.domain.company.web.dto.ReviewImageDto> getReviewImageDtos(CompanyReview review) {
+        List<CompanyReviewImage> images = reviewImageRepository
+                .findByReviewOrderByDisplayOrder(review);
+
+        return images.stream()
+                .map(image -> {
+                    File file = fileRepository.findById(image.getFileId()).orElse(null);
+                    if (file == null) {
+                        return null;
+                    }
+                    return com.hip.damoa.domain.company.web.dto.ReviewImageDto.from(
+                            image,
+                            file.getFileUrl(),
+                            file.getUuid()
+                    );
+                })
+                .filter(dto -> dto != null)
                 .collect(Collectors.toList());
     }
 

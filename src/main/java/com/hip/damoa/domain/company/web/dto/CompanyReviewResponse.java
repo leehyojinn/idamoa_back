@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -30,7 +31,7 @@ public class CompanyReviewResponse {
     private BigDecimal rating;
     private String title;
     private String content;
-    private String[] images;
+    private List<ReviewImageDto> images;
 
     // 업체 답변
     private String reply;
@@ -51,7 +52,7 @@ public class CompanyReviewResponse {
         return from(review, null, review.getUser() != null ? review.getUser().getEmail() : null);
     }
 
-    public static CompanyReviewResponse from(CompanyReview review, String[] imageUrls, String userName) {
+    public static CompanyReviewResponse from(CompanyReview review, List<ReviewImageDto> images, String userName) {
         return CompanyReviewResponse.builder()
                 .id(review.getId())
                 .uuid(review.getUuid())
@@ -63,7 +64,7 @@ public class CompanyReviewResponse {
                 .rating(review.getRating())
                 .title(review.getTitle())
                 .content(review.getContent())
-                .images(imageUrls != null ? imageUrls : new String[0])
+                .images(images != null ? images : List.of())
                 .reply(review.getReply())
                 .repliedAt(review.getRepliedAt())
                 .likeCount(review.getLikeCount())

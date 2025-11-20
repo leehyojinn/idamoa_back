@@ -6,6 +6,8 @@ import com.hip.damoa.core.jwt.JwtTokenProvider;
 import com.hip.damoa.core.jwt.TokenInfo;
 import com.hip.damoa.domain.company.model.Company;
 import com.hip.damoa.domain.company.repository.CompanyRepository;
+import com.hip.damoa.domain.file.model.File;
+import com.hip.damoa.domain.file.repository.FileRepository;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.model.UserProfile;
 import com.hip.damoa.domain.user.repository.UserProfileRepository;
@@ -15,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 /**
  * 프로필 관리 비즈니스 로직
@@ -28,6 +32,26 @@ public class ProfileService {
     private final UserProfileRepository userProfileRepository;
     private final CompanyRepository companyRepository;
     private final JwtTokenProvider jwtTokenProvider;
+    private final FileRepository fileRepository;
+
+    /**
+     * Avatar 파일 정보 추출 헬퍼 메서드
+     * @param avatarUrl 프로필 avatar URL
+     * @return [fileId, fileUuid, avatarUrl] 배열 (avatarUrl이 없으면 [null, null, null])
+     */
+    private Object[] getAvatarFileInfo(String avatarUrl) {
+        if (avatarUrl == null || avatarUrl.isEmpty()) {
+            return new Object[]{null, null, null};
+        }
+
+        File file = fileRepository.findByFileUrl(avatarUrl).orElse(null);
+        if (file == null) {
+            // File이 없으면 URL만 반환
+            return new Object[]{null, null, avatarUrl};
+        }
+
+        return new Object[]{file.getId(), file.getUuid(), avatarUrl};
+    }
 
     /**
      * 프로필 상태 조회
@@ -108,7 +132,13 @@ public class ProfileService {
         log.info("새로운 토큰 발급: userId={}, profileCompleted={}, currentRole={}",
                 user.getId(), tokenInfo.isProfileCompleted(), tokenInfo.getCurrentRole());
 
-        return UserProfileResponse.from(userProfile, tokenInfo);
+        // Avatar 파일 정보 추출
+        Object[] avatarInfo = getAvatarFileInfo(userProfile.getAvatarUrl());
+        Long avatarFileId = (Long) avatarInfo[0];
+        UUID avatarFileUuid = (UUID) avatarInfo[1];
+        String avatarUrl = (String) avatarInfo[2];
+
+        return UserProfileResponse.from(userProfile, avatarFileId, avatarFileUuid, avatarUrl, tokenInfo);
     }
 
     /**
@@ -191,7 +221,13 @@ public class ProfileService {
         UserProfile profile = userProfileRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
 
-        return ProfileResponse.from(profile, user);
+        // Avatar 파일 정보 추출
+        Object[] avatarInfo = getAvatarFileInfo(profile.getAvatarUrl());
+        Long avatarFileId = (Long) avatarInfo[0];
+        UUID avatarFileUuid = (UUID) avatarInfo[1];
+        String avatarUrl = (String) avatarInfo[2];
+
+        return ProfileResponse.from(profile, user, avatarFileId, avatarFileUuid, avatarUrl);
     }
 
     /**
@@ -207,7 +243,13 @@ public class ProfileService {
         UserProfile userProfile = userProfileRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
 
-        return UserProfileResponse.from(userProfile);
+        // Avatar 파일 정보 추출
+        Object[] avatarInfo = getAvatarFileInfo(userProfile.getAvatarUrl());
+        Long avatarFileId = (Long) avatarInfo[0];
+        UUID avatarFileUuid = (UUID) avatarInfo[1];
+        String avatarUrl = (String) avatarInfo[2];
+
+        return UserProfileResponse.from(userProfile, avatarFileId, avatarFileUuid, avatarUrl);
     }
 
     /**
@@ -275,7 +317,13 @@ public class ProfileService {
         userProfile = userProfileRepository.save(userProfile);
         log.info("USER 프로필 수정 완료: id={}, userId={}", userProfile.getId(), user.getId());
 
-        return UserProfileResponse.from(userProfile);
+        // Avatar 파일 정보 추출
+        Object[] avatarInfo = getAvatarFileInfo(userProfile.getAvatarUrl());
+        Long avatarFileId = (Long) avatarInfo[0];
+        UUID avatarFileUuid = (UUID) avatarInfo[1];
+        String avatarUrl = (String) avatarInfo[2];
+
+        return UserProfileResponse.from(userProfile, avatarFileId, avatarFileUuid, avatarUrl);
     }
 
     /**

@@ -44,7 +44,7 @@ public class PlannerApplicationResponse {
     private String businessType;
 
     // 첨부파일
-    private List<Long> attachmentFileIds;
+    private List<AttachmentDto> attachments;
 
     // 희망 일정
     private List<PreferredDateDto> preferredDates;
@@ -61,15 +61,18 @@ public class PlannerApplicationResponse {
     private LocalDateTime updatedAt;
 
     /**
-     * Entity → DTO 변환
+     * Entity → DTO 변환 (레거시 호환 - 첨부파일 정보 없음)
      */
     public static PlannerApplicationResponse from(PlannerApplication entity) {
+        return from(entity, List.of());
+    }
+
+    /**
+     * Entity + 첨부파일 정보 → DTO 변환
+     */
+    public static PlannerApplicationResponse from(PlannerApplication entity, List<AttachmentDto> attachments) {
         List<String> requestTypes = entity.getRequestTypes() != null
                 ? Arrays.asList(entity.getRequestTypes())
-                : List.of();
-
-        List<Long> attachmentFileIds = entity.getAttachmentFileIds() != null
-                ? Arrays.asList(entity.getAttachmentFileIds())
                 : List.of();
 
         List<PreferredDateDto> preferredDates = entity.getPreferredDates().stream()
@@ -90,7 +93,7 @@ public class PlannerApplicationResponse {
                 .businessAddress(entity.getBusinessAddress())
                 .businessAreaSize(entity.getBusinessAreaSize())
                 .businessType(entity.getBusinessType())
-                .attachmentFileIds(attachmentFileIds)
+                .attachments(attachments != null ? attachments : List.of())
                 .preferredDates(preferredDates)
                 .status(entity.getStatus())
                 .adminResponse(entity.getAdminResponse())
