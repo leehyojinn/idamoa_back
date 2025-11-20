@@ -178,19 +178,35 @@ public class CompanyImageService {
     }
 
     /**
-     * CompanyImage 엔티티를 Response DTO로 변환 (File ID → URL 변환 포함)
+     * CompanyImage 엔티티를 Response DTO로 변환 (File ID → URL, UUID 변환 포함)
      */
     public com.hip.damoa.domain.company.web.dto.CompanyImageResponse toResponse(CompanyImage image) {
-        String imageUrl = convertFileIdToUrl(image.getFileId());
-        return com.hip.damoa.domain.company.web.dto.CompanyImageResponse.from(image, imageUrl);
+        if (image.getFileId() == null) {
+            return com.hip.damoa.domain.company.web.dto.CompanyImageResponse.from(image, null, null);
+        }
+
+        // File 한 번만 조회해서 URL과 UUID 모두 가져오기
+        File file = fileRepository.findById(image.getFileId()).orElse(null);
+        String imageUrl = (file != null) ? file.getFileUrl() : null;
+        UUID fileUuid = (file != null) ? file.getUuid() : null;
+
+        return com.hip.damoa.domain.company.web.dto.CompanyImageResponse.from(image, imageUrl, fileUuid);
     }
 
     /**
-     * CompanyImage 엔티티를 DTO로 변환 (File ID → URL 변환 포함)
+     * CompanyImage 엔티티를 DTO로 변환 (File ID → URL, UUID 변환 포함)
      */
     public com.hip.damoa.domain.company.web.dto.CompanyImageDto toDto(CompanyImage image) {
-        String imageUrl = convertFileIdToUrl(image.getFileId());
-        return com.hip.damoa.domain.company.web.dto.CompanyImageDto.from(image, imageUrl);
+        if (image.getFileId() == null) {
+            return com.hip.damoa.domain.company.web.dto.CompanyImageDto.from(image, null, null);
+        }
+
+        // File 한 번만 조회해서 URL과 UUID 모두 가져오기
+        File file = fileRepository.findById(image.getFileId()).orElse(null);
+        String imageUrl = (file != null) ? file.getFileUrl() : null;
+        UUID fileUuid = (file != null) ? file.getUuid() : null;
+
+        return com.hip.damoa.domain.company.web.dto.CompanyImageDto.from(image, imageUrl, fileUuid);
     }
 
     /**
