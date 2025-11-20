@@ -68,7 +68,7 @@ public class CompanyImageController {
         CompanyImage image = companyImageService.addCompanyImage(
                 userDetails.getUsername(), companyUuid, request);
 
-        return ApiResponse.success(CompanyImageResponse.from(image));
+        return ApiResponse.success(companyImageService.toResponse(image));
     }
 
     /**
@@ -89,7 +89,7 @@ public class CompanyImageController {
         List<CompanyImage> images = companyImageService.getCompanyImages(companyUuid);
 
         List<CompanyImageResponse> response = images.stream()
-                .map(CompanyImageResponse::from)
+                .map(companyImageService::toResponse)
                 .collect(Collectors.toList());
 
         return ApiResponse.success(response);
@@ -120,7 +120,7 @@ public class CompanyImageController {
         List<CompanyImage> images = companyImageService.getCompanyImagesByType(companyUuid, imageType);
 
         List<CompanyImageResponse> response = images.stream()
-                .map(CompanyImageResponse::from)
+                .map(companyImageService::toResponse)
                 .collect(Collectors.toList());
 
         return ApiResponse.success(response);
@@ -147,7 +147,7 @@ public class CompanyImageController {
             @PathVariable UUID imageUuid) {
 
         CompanyImage image = companyImageService.setPrimaryImage(userDetails.getUsername(), imageUuid);
-        return ApiResponse.success(CompanyImageResponse.from(image));
+        return ApiResponse.success(companyImageService.toResponse(image));
     }
 
     /**

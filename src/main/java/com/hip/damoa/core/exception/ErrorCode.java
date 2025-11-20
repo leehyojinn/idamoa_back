@@ -196,7 +196,10 @@ public enum ErrorCode {
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CH001", "채팅방을 찾을 수 없습니다"),
     CHAT_MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CH002", "채팅 메시지를 찾을 수 없습니다"),
     CHAT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CH003", "채팅방에 접근할 권한이 없습니다"),
-    CHAT_MESSAGE_EMPTY(HttpStatus.BAD_REQUEST, "CH004", "메시지 내용이 비어있습니다");
+    CHAT_MESSAGE_EMPTY(HttpStatus.BAD_REQUEST, "CH004", "메시지 내용이 비어있습니다"),
+
+    // Inquiry
+    INQUIRY_NOT_FOUND(HttpStatus.NOT_FOUND, "IQ001", "문의를 찾을 수 없습니다");
 
     private final HttpStatus status;
     private final String code;
