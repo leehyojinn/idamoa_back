@@ -38,6 +38,21 @@ public class CompanyReviewService {
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
     private final FileRepository fileRepository;
+    private final com.hip.damoa.domain.user.repository.UserProfileRepository userProfileRepository;
+
+    /**
+     * CompanyReview의 User로부터 userName 조회
+     * UserProfile이 있으면 name 반환, 없으면 email 반환
+     */
+    private String getUserName(CompanyReview review) {
+        if (review.getUser() == null) {
+            return null;
+        }
+
+        return userProfileRepository.findByUserId(review.getUser().getId())
+                .map(com.hip.damoa.domain.user.model.UserProfile::getName)
+                .orElse(review.getUser().getEmail());
+    }
 
     /**
      * 리뷰 작성
@@ -274,7 +289,8 @@ public class CompanyReviewService {
     public com.hip.damoa.domain.company.web.dto.CompanyReviewResponse toResponse(CompanyReview review) {
         // ✅ OneToMany 기반 이미지 URL 조회 사용
         List<String> imageUrls = getReviewImageUrls(review);
-        return com.hip.damoa.domain.company.web.dto.CompanyReviewResponse.from(review, imageUrls.toArray(new String[0]));
+        String userName = getUserName(review);
+        return com.hip.damoa.domain.company.web.dto.CompanyReviewResponse.from(review, imageUrls.toArray(new String[0]), userName);
     }
 
     /**

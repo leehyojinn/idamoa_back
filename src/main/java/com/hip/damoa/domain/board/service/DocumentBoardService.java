@@ -48,6 +48,7 @@ public class DocumentBoardService {
     private final FileRepository fileRepository;
     private final FileDownloadRepository fileDownloadRepository;
     private final UserRepository userRepository;
+    private final com.hip.damoa.domain.user.repository.UserProfileRepository userProfileRepository;
 
     /**
      * Document 게시글 생성
@@ -89,7 +90,8 @@ public class DocumentBoardService {
         List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
         List<FileInfo> files = getDocumentFileInfos(board);
         FileInfo thumbnail = getThumbnailFileInfo(board);
-        return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, 0L);
+        String userName = getUserName(board);
+        return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, 0L, userName);
     }
 
     /**
@@ -139,8 +141,9 @@ public class DocumentBoardService {
         // 파일 정보 조회
         List<FileInfo> files = getDocumentFileInfos(board);
         FileInfo thumbnail = getThumbnailFileInfo(board);
+        String userName = getUserName(board);
 
-        return DocumentResponse.from(board, filterOptions, files, thumbnail, isBookmarked, hasDownloaded, totalDownloadCount);
+        return DocumentResponse.from(board, filterOptions, files, thumbnail, isBookmarked, hasDownloaded, totalDownloadCount, userName);
     }
 
     /**
@@ -155,7 +158,8 @@ public class DocumentBoardService {
             List<FileInfo> files = getDocumentFileInfos(board);
             FileInfo thumbnail = getThumbnailFileInfo(board);
             long downloadCount = getTotalDownloadCount(board);
-            return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount);
+            String userName = getUserName(board);
+            return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount, userName);
         });
     }
 
@@ -171,7 +175,8 @@ public class DocumentBoardService {
             List<FileInfo> files = getDocumentFileInfos(board);
             FileInfo thumbnail = getThumbnailFileInfo(board);
             long downloadCount = getTotalDownloadCount(board);
-            return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount);
+            String userName = getUserName(board);
+            return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount, userName);
         });
     }
 
@@ -179,6 +184,7 @@ public class DocumentBoardService {
      * Document 게시글 검색 (통합)
      *
      * @param keyword 검색 키워드 (nullable)
+     * @param tags 태그 필터 (nullable)
      * @param filterOptionIds 필터 옵션 IDs (nullable)
      * @param onlyBookmarked 북마크된 게시글만 조회 (nullable, userEmail 필요)
      * @param onlyMyPosts 내가 쓴 게시글만 조회 (nullable, userEmail 필요)
@@ -187,12 +193,12 @@ public class DocumentBoardService {
      * @return 검색 결과
      */
     @Transactional(readOnly = true)
-    public Page<DocumentResponse> searchDocuments(String keyword, List<Long> filterOptionIds,
+    public Page<DocumentResponse> searchDocuments(String keyword, String[] tags, List<Long> filterOptionIds,
                                                    Boolean onlyBookmarked, Boolean onlyMyPosts,
                                                    String userEmail, Pageable pageable) {
 
-        log.info("Document 게시글 검색 시작: keyword={}, filterOptions={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
-                keyword, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
+        log.info("Document 게시글 검색 시작: keyword={}, tags={}, filterOptions={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
+                keyword, tags != null ? String.join(",", tags) : null, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
 
         // 로그인이 필요한 기능 체크
         if ((Boolean.TRUE.equals(onlyBookmarked) || Boolean.TRUE.equals(onlyMyPosts)) && userEmail == null) {
@@ -203,6 +209,7 @@ public class DocumentBoardService {
         Specification<Board> spec = BoardSpecifications.searchBoards(
                 BoardType.DOCUMENT.name(),
                 keyword,
+                tags,
                 filterOptionIds,
                 onlyBookmarked,
                 onlyMyPosts,
@@ -240,7 +247,8 @@ public class DocumentBoardService {
                 }
             }
 
-            return DocumentResponse.from(board, filterOptions, files, thumbnail, isBookmarked, hasDownloaded, downloadCount);
+            String userName = getUserName(board);
+            return DocumentResponse.from(board, filterOptions, files, thumbnail, isBookmarked, hasDownloaded, downloadCount, userName);
         });
     }
 
@@ -304,7 +312,8 @@ public class DocumentBoardService {
             }
         }
 
-        return DocumentResponse.from(board, filterOptions, files, thumbnail, isBookmarked, hasDownloaded, downloadCount);
+        String userName = getUserName(board);
+        return DocumentResponse.from(board, filterOptions, files, thumbnail, isBookmarked, hasDownloaded, downloadCount, userName);
     }
 
     /**
@@ -330,7 +339,8 @@ public class DocumentBoardService {
                     List<FileInfo> files = getDocumentFileInfos(board);
                     FileInfo thumbnail = getThumbnailFileInfo(board);
                     long downloadCount = getTotalDownloadCount(board);
-                    return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount);
+                    String userName = getUserName(board);
+                    return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount, userName);
                 })
                 .toList();
     }
@@ -348,7 +358,8 @@ public class DocumentBoardService {
                     List<FileInfo> files = getDocumentFileInfos(board);
                     FileInfo thumbnail = getThumbnailFileInfo(board);
                     long downloadCount = getTotalDownloadCount(board);
-                    return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount);
+                    String userName = getUserName(board);
+                    return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount, userName);
                 })
                 .toList();
     }
@@ -395,7 +406,8 @@ public class DocumentBoardService {
                 }
             }
 
-            return DocumentResponse.from(board, filterOptions, files, thumbnail, isBookmarked, hasDownloaded, downloadCount);
+            String userName = getUserName(board);
+            return DocumentResponse.from(board, filterOptions, files, thumbnail, isBookmarked, hasDownloaded, downloadCount, userName);
         });
     }
 
@@ -470,6 +482,11 @@ public class DocumentBoardService {
         File file = fileRepository.findByUuidAndIsDeletedFalse(fileUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
 
+        // Files 테이블의 entityId 업데이트 (스케줄러 삭제 방지)
+        String entityType = (type == BoardAttachment.AttachmentType.THUMBNAIL) ? "BOARD_THUMBNAIL" : "BOARD_DOCUMENT";
+        file.updateEntityInfo(entityType, board.getId());
+        fileRepository.save(file);
+
         // BoardAttachment 생성
         BoardAttachment attachment = BoardAttachment.builder()
                 .board(board)
@@ -515,5 +532,19 @@ public class DocumentBoardService {
                 .orElse(null);
 
         return file != null ? FileInfo.from(file) : null;
+    }
+
+    /**
+     * Board의 User로부터 userName 조회
+     * UserProfile이 있으면 name 반환, 없으면 email 반환
+     */
+    private String getUserName(Board board) {
+        if (board.getUser() == null) {
+            return null;
+        }
+
+        return userProfileRepository.findByUserId(board.getUser().getId())
+                .map(com.hip.damoa.domain.user.model.UserProfile::getName)
+                .orElse(board.getUser().getEmail());
     }
 }

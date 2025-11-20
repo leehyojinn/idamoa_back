@@ -41,6 +41,21 @@ import java.util.UUID;
 public class ChatController {
 
     private final ChatService chatService;
+    private final com.hip.damoa.domain.user.repository.UserProfileRepository userProfileRepository;
+
+    /**
+     * ChatRoom의 User로부터 userName 조회
+     * UserProfile이 있으면 name 반환, 없으면 email 반환
+     */
+    private String getUserName(ChatRoom chatRoom) {
+        if (chatRoom.getUser() == null) {
+            return null;
+        }
+
+        return userProfileRepository.findByUserId(chatRoom.getUser().getId())
+                .map(com.hip.damoa.domain.user.model.UserProfile::getName)
+                .orElse(chatRoom.getUser().getEmail());
+    }
 
     /**
      * 채팅방 목록 조회
@@ -61,7 +76,7 @@ public class ChatController {
 
         List<ChatRoom> chatRooms = chatService.getChatRooms(userEmail);
         List<ChatRoomResponse> responses = chatRooms.stream()
-                .map(ChatRoomResponse::from)
+                .map(chatRoom -> ChatRoomResponse.from(chatRoom, getUserName(chatRoom)))
                 .toList();
 
         return ApiResponse.success(responses);
@@ -90,7 +105,8 @@ public class ChatController {
                 estimateRequestUuid, companyUuid, userEmail);
 
         ChatRoom chatRoom = chatService.getOrCreateChatRoom(estimateRequestUuid, companyUuid, userEmail);
-        ChatRoomResponse response = ChatRoomResponse.from(chatRoom);
+        String userName = getUserName(chatRoom);
+        ChatRoomResponse response = ChatRoomResponse.from(chatRoom, userName);
 
         return ApiResponse.success(response);
     }
@@ -115,7 +131,8 @@ public class ChatController {
         log.info("채팅방 상세 조회 API: chatRoomUuid={}, userEmail={}", chatRoomUuid, userEmail);
 
         ChatRoom chatRoom = chatService.getChatRoom(chatRoomUuid, userEmail);
-        ChatRoomResponse response = ChatRoomResponse.from(chatRoom);
+        String userName = getUserName(chatRoom);
+        ChatRoomResponse response = ChatRoomResponse.from(chatRoom, userName);
 
         return ApiResponse.success(response);
     }

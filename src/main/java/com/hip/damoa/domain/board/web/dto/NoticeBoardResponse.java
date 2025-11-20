@@ -61,13 +61,13 @@ public class NoticeBoardResponse {
      * Entity to DTO (기본 - 썸네일 없음)
      */
     public static NoticeBoardResponse from(Board board) {
-        return from(board, null);
+        return from(board, null, board.getUser() != null ? board.getUser().getEmail() : null);
     }
 
     /**
      * Entity to DTO (썸네일 포함)
      */
-    public static NoticeBoardResponse from(Board board, FileInfo thumbnail) {
+    public static NoticeBoardResponse from(Board board, FileInfo thumbnail, String userName) {
         // typeData에서 이벤트 날짜 추출
         Map<String, Object> typeData = board.getTypeData();
         LocalDateTime eventStartDate = null;
@@ -106,7 +106,7 @@ public class NoticeBoardResponse {
                 .tags(board.getTags())
                 .userId(board.getUser().getId())
                 .userEmail(board.getUser().getEmail())
-                .userName(board.getUser().getEmail())
+                .userName(userName != null ? userName : board.getUser().getEmail())
                 .createdAt(board.getCreatedAt())
                 .updatedAt(board.getUpdatedAt())
                 .build();

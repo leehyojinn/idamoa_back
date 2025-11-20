@@ -27,6 +27,7 @@ public class AdminEstimateRequestResponse {
     private UUID uuid;
     private Long userId;
     private String userEmail;
+    private String userName;
     private String title;
     private String description;
     private String category;
@@ -64,12 +65,13 @@ public class AdminEstimateRequestResponse {
     private Boolean isDeleted;
     private LocalDateTime deletedAt;
 
-    public static AdminEstimateRequestResponse from(EstimateRequest request) {
+    public static AdminEstimateRequestResponse from(EstimateRequest request, String userName) {
         return AdminEstimateRequestResponse.builder()
                 .id(request.getId())
                 .uuid(request.getUuid())
                 .userId(request.getUser().getId())
                 .userEmail(request.getUser().getEmail())
+                .userName(userName != null ? userName : request.getUser().getEmail())
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .category(request.getCategory())

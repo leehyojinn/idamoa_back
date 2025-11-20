@@ -45,16 +45,32 @@ public class EstimateRequestController {
 
     private final EstimateRequestService estimateRequestService;
     private final FileRepository fileRepository;
+    private final com.hip.damoa.domain.user.repository.UserProfileRepository userProfileRepository;
 
     /**
      * 견적 요청에 첨부파일 정보 추가 (V30: 조인 테이블 방식)
      */
     private EstimateRequestResponse enrichWithFiles(EstimateRequest estimateRequest) {
-        EstimateRequestResponse response = EstimateRequestResponse.from(estimateRequest);
+        String userName = getUserName(estimateRequest);
+        EstimateRequestResponse response = EstimateRequestResponse.from(estimateRequest, userName);
         // Service의 getAttachmentResponses 호출하여 첨부파일 목록 설정
         List<AttachmentResponse> attachments = estimateRequestService.getAttachmentResponses(estimateRequest);
         response.setAttachments(attachments);
         return response;
+    }
+
+    /**
+     * EstimateRequest의 User로부터 userName 조회
+     * UserProfile이 있으면 name 반환, 없으면 email 반환
+     */
+    private String getUserName(EstimateRequest request) {
+        if (request.getUser() == null) {
+            return null;
+        }
+
+        return userProfileRepository.findByUserId(request.getUser().getId())
+                .map(com.hip.damoa.domain.user.model.UserProfile::getName)
+                .orElse(request.getUser().getEmail());
     }
 
     /**

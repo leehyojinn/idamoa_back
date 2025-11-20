@@ -42,6 +42,7 @@ public class NoticeBoardService {
     private final BoardRepository boardRepository;
     private final BoardAttachmentRepository boardAttachmentRepository;
     private final FileRepository fileRepository;
+    private final com.hip.damoa.domain.user.repository.UserProfileRepository userProfileRepository;
 
     // 공지사항 관련 타입 (NOTICE, EVENT, FAQ)
     private static final List<String> NOTICE_BOARD_TYPES = Arrays.asList("NOTICE", "EVENT", "FAQ");
@@ -108,7 +109,8 @@ public class NoticeBoardService {
 
         // 썸네일과 함께 응답 생성
         FileInfo thumbnail = loadThumbnail(board);
-        return NoticeBoardResponse.from(board, thumbnail);
+        String userName = getUserName(board);
+        return NoticeBoardResponse.from(board, thumbnail, userName);
     }
 
     /**
@@ -130,7 +132,8 @@ public class NoticeBoardService {
 
         // 썸네일과 함께 응답
         FileInfo thumbnail = loadThumbnail(board);
-        return NoticeBoardResponse.from(board, thumbnail);
+        String userName = getUserName(board);
+        return NoticeBoardResponse.from(board, thumbnail, userName);
     }
 
     /**
@@ -151,7 +154,8 @@ public class NoticeBoardService {
         // 각 게시글의 썸네일 로드
         Page<NoticeBoardResponse> responses = boards.map(board -> {
             FileInfo thumbnail = loadThumbnail(board);
-            return NoticeBoardResponse.from(board, thumbnail);
+            String userName = getUserName(board);
+            return NoticeBoardResponse.from(board, thumbnail, userName);
         });
 
         // EventStatus 필터링
@@ -183,7 +187,8 @@ public class NoticeBoardService {
         // 각 게시글의 썸네일 로드
         Page<NoticeBoardResponse> responses = boards.map(board -> {
             FileInfo thumbnail = loadThumbnail(board);
-            return NoticeBoardResponse.from(board, thumbnail);
+            String userName = getUserName(board);
+            return NoticeBoardResponse.from(board, thumbnail, userName);
         });
 
         // EventStatus 필터링
@@ -290,7 +295,8 @@ public class NoticeBoardService {
 
         // 썸네일과 함께 응답
         FileInfo thumbnail = loadThumbnail(board);
-        return NoticeBoardResponse.from(board, thumbnail);
+        String userName = getUserName(board);
+        return NoticeBoardResponse.from(board, thumbnail, userName);
     }
 
     /**
@@ -321,8 +327,23 @@ public class NoticeBoardService {
         return boards.stream()
                 .map(board -> {
                     FileInfo thumbnail = loadThumbnail(board);
-                    return NoticeBoardResponse.from(board, thumbnail);
+                    String userName = getUserName(board);
+                    return NoticeBoardResponse.from(board, thumbnail, userName);
                 })
                 .toList();
+    }
+
+    /**
+     * Board의 User로부터 userName 조회
+     * UserProfile이 있으면 name 반환, 없으면 email 반환
+     */
+    private String getUserName(Board board) {
+        if (board.getUser() == null) {
+            return null;
+        }
+
+        return userProfileRepository.findByUserId(board.getUser().getId())
+                .map(com.hip.damoa.domain.user.model.UserProfile::getName)
+                .orElse(board.getUser().getEmail());
     }
 }

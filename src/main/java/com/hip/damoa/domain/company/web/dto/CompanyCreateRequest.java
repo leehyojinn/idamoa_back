@@ -113,14 +113,15 @@ public class CompanyCreateRequest {
     @Schema(description = "경도 (선택)", example = "127.123456")
     private BigDecimal longitude;
 
-    @Schema(description = "로고 이미지 파일 ID (파일 업로드 후 받은 ID - 선택)", example = "123")
-    @Size(max = 1000, message = "로고 이미지 URL은 1000자를 초과할 수 없습니다")
-    private String logoImageUrl;
+    @Schema(description = "로고 이미지 파일 UUID (파일 업로드 API로 받은 UUID - 선택)",
+            example = "550e8400-e29b-41d4-a716-446655440001")
+    private String logoImageUuid;
 
-    @Schema(description = "커버 이미지 파일 ID (파일 업로드 후 받은 ID - 선택)", example = "456")
-    @Size(max = 1000, message = "커버 이미지 URL은 1000자를 초과할 수 없습니다")
-    private String coverImageUrl;
+    @Schema(description = "커버 이미지 파일 UUID (파일 업로드 API로 받은 UUID - 선택)",
+            example = "550e8400-e29b-41d4-a716-446655440002")
+    private String coverImageUuid;
 
-    @Schema(description = "갤러리 이미지 파일 ID 배열 (선택)", example = "[\"789\", \"101\", \"112\"]")
-    private String[] galleryImageUrls;
+    @Schema(description = "갤러리 이미지 파일 UUID 배열 (선택)",
+            example = "[\"550e8400-e29b-41d4-a716-446655440003\", \"550e8400-e29b-41d4-a716-446655440004\"]")
+    private String[] galleryImageUuids;
 }

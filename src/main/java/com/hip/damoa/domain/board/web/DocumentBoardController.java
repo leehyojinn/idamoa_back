@@ -152,6 +152,7 @@ public class DocumentBoardController {
     @GetMapping("/search")
     public ApiResponse<Page<DocumentResponse>> searchDocuments(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String[] tags,
             @RequestParam(required = false) List<Long> filterOptionIds,
             @RequestParam(required = false) Boolean onlyBookmarked,
             @RequestParam(required = false) Boolean onlyMyPosts,
@@ -161,11 +162,11 @@ public class DocumentBoardController {
 
         String userEmail = userDetails != null ? userDetails.getUsername() : null;
 
-        log.info("Document 게시글 검색 요청: keyword={}, filterOptionIds={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
-                 keyword, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
+        log.info("Document 게시글 검색 요청: keyword={}, tags={}, filterOptionIds={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
+                 keyword, tags != null ? String.join(",", tags) : null, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
 
         Page<DocumentResponse> response = documentBoardService.searchDocuments(
-                keyword, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail, pageable);
+                keyword, tags, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail, pageable);
 
         return ApiResponse.success(response);
     }

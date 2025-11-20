@@ -29,6 +29,7 @@ public class EstimateRequestResponse {
     private UUID uuid;
     private Long userId;
     private String userEmail;
+    private String userName;
     private String title;
     private String description;
     private Map<String, Object> requirements;
@@ -61,12 +62,13 @@ public class EstimateRequestResponse {
     private LocalDateTime submissionDeadline; // 제안 마감일
     private List<AttachmentResponse> attachments; // 첨부파일 목록 (V30: 조인 테이블)
 
-    public static EstimateRequestResponse from(EstimateRequest request) {
+    public static EstimateRequestResponse from(EstimateRequest request, String userName) {
         return EstimateRequestResponse.builder()
                 .id(request.getId())
                 .uuid(request.getUuid())
                 .userId(request.getUser().getId())
                 .userEmail(request.getUser().getEmail())
+                .userName(userName != null ? userName : request.getUser().getEmail())
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .requirements(request.getRequirements())
