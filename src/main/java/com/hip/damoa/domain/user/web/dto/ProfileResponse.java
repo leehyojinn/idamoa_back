@@ -8,6 +8,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 /**
  * 통합 프로필 응답 DTO
  * USER와 COMPANY 프로필을 모두 처리
@@ -37,6 +39,14 @@ public class ProfileResponse {
     // 공통 필드 (용도가 다름)
     private String bio;  // USER: 자기소개, COMPANY: 업체 소개 ✅ DB 컬럼명 통일 (description 아님!)
 
+    // 소셜 링크
+    private Map<String, Object> socialLinks;
+
+    // 약관 동의
+    private Boolean termsAgreed;
+    private Boolean privacyAgreed;
+    private Boolean marketingAgreed;
+
     // 프로필 생성 후 새로운 JWT 토큰 (선택적)
     private TokenInfo tokenInfo;
 
@@ -58,6 +68,10 @@ public class ProfileResponse {
                 .avatarUrl(profile.getAvatarUrl())
                 .profileVisibility(profile.getProfileVisibility())
                 .bio(profile.getBio())
+                .socialLinks(profile.getSocialLinks())
+                .termsAgreed(user.getTermsAgreed())
+                .privacyAgreed(user.getPrivacyAgreed())
+                .marketingAgreed(user.getMarketingAgreed())
                 .build();
     }
 
@@ -80,6 +94,10 @@ public class ProfileResponse {
                 .avatarUrl(profile.getAvatarUrl())
                 .profileVisibility(profile.getProfileVisibility())
                 .bio(profile.getBio())
+                .socialLinks(profile.getSocialLinks())
+                .termsAgreed(user.getTermsAgreed())
+                .privacyAgreed(user.getPrivacyAgreed())
+                .marketingAgreed(user.getMarketingAgreed())
                 .tokenInfo(tokenInfo)
                 .build();
     }

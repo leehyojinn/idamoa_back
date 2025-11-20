@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 /**
  * USER 프로필 응답 DTO
  */
@@ -26,6 +28,14 @@ public class UserProfileResponse {
     private String postalCode;
     private String profileVisibility;
 
+    // 소셜 링크
+    private Map<String, Object> socialLinks;
+
+    // 약관 동의
+    private Boolean termsAgreed;
+    private Boolean privacyAgreed;
+    private Boolean marketingAgreed;
+
     // 프로필 생성 후 새로운 JWT 토큰 (profileCompleted=true, currentRole 업데이트)
     private TokenInfo tokenInfo;
 
@@ -43,6 +53,10 @@ public class UserProfileResponse {
                 .address(profile.getAddress())
                 .postalCode(profile.getPostalCode())
                 .profileVisibility(profile.getProfileVisibility())
+                .socialLinks(profile.getSocialLinks())
+                .termsAgreed(profile.getUser().getTermsAgreed())
+                .privacyAgreed(profile.getUser().getPrivacyAgreed())
+                .marketingAgreed(profile.getUser().getMarketingAgreed())
                 .build();
     }
 
@@ -60,6 +74,10 @@ public class UserProfileResponse {
                 .address(profile.getAddress())
                 .postalCode(profile.getPostalCode())
                 .profileVisibility(profile.getProfileVisibility())
+                .socialLinks(profile.getSocialLinks())
+                .termsAgreed(profile.getUser().getTermsAgreed())
+                .privacyAgreed(profile.getUser().getPrivacyAgreed())
+                .marketingAgreed(profile.getUser().getMarketingAgreed())
                 .tokenInfo(tokenInfo)
                 .build();
     }
