@@ -3,6 +3,7 @@ package com.hip.damoa.config.web;
 import com.hip.damoa.core.jwt.JwtAuthenticationFilter;
 import com.hip.damoa.core.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,6 +24,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -168,17 +170,34 @@ public class SecurityConfig {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
+    @Value("${cors.allowed-origins:}")
+    private String corsAllowedOrigins;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 허용할 오리진 설정
-        configuration.setAllowedOriginPatterns(Arrays.asList(
+        // 기본 허용 오리진
+        List<String> allowedOrigins = new java.util.ArrayList<>(Arrays.asList(
                 "http://localhost:*",
                 "http://127.0.0.1:*",
                 "http://192.168.0.217:*",
                 "http://192.168.0.217"
         ));
+
+        // 환경변수로 추가 오리진 설정 (쉼표로 구분)
+        if (corsAllowedOrigins != null && !corsAllowedOrigins.isEmpty()) {
+            String[] additionalOrigins = corsAllowedOrigins.split(",");
+            for (String origin : additionalOrigins) {
+                String trimmedOrigin = origin.trim();
+                if (!trimmedOrigin.isEmpty()) {
+                    allowedOrigins.add(trimmedOrigin);
+                }
+            }
+        }
+
+        // 허용할 오리진 설정
+        configuration.setAllowedOriginPatterns(allowedOrigins);
 
         // 허용할 HTTP 메서드
         configuration.setAllowedMethods(Arrays.asList(
