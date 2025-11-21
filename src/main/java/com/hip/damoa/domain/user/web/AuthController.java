@@ -15,7 +15,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -33,21 +35,38 @@ public class AuthController {
     private final AuthService authService;
     private final VerificationService verificationService;
 
+    @Value("${spring.profiles.active:local}")
+    private String activeProfile;
+
     // Refresh Token 쿠키 설정 상수
     private static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
     private static final int REFRESH_TOKEN_COOKIE_MAX_AGE = 14 * 24 * 60 * 60; // 14일 (초 단위)
 
     /**
-     * HttpOnly 쿠키에 Refresh Token 설정
+     * HttpOnly 쿠키에 Refresh Token 설정 (환경별 Secure, SameSite 분리)
      */
     private void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
-        Cookie cookie = new Cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken);
-        cookie.setHttpOnly(true);  // XSS 방지
-        cookie.setSecure(false);   // TODO: production에서는 true로 설정 (HTTPS only)
-        cookie.setPath("/");       // 모든 경로에서 쿠키 전송
-        cookie.setMaxAge(REFRESH_TOKEN_COOKIE_MAX_AGE);  // 14일
-        response.addCookie(cookie);
-        log.debug("Refresh Token 쿠키 설정 완료");
+        // dev, prod 환경은 HTTPS (Secure=true, SameSite=None)
+        // local 환경은 HTTP (Secure=false, SameSite 미설정)
+        boolean isSecureEnvironment = "dev".equals(activeProfile) || "prod".equals(activeProfile);
+
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie
+                .from(REFRESH_TOKEN_COOKIE_NAME, refreshToken)
+                .path("/")
+                .maxAge(REFRESH_TOKEN_COOKIE_MAX_AGE)
+                .httpOnly(true);
+
+        if (isSecureEnvironment) {
+            // HTTPS 환경: Secure + SameSite=None (크로스 도메인 지원)
+            cookieBuilder.secure(true).sameSite("None");
+            log.debug("Refresh Token 쿠키 설정 완료 (HTTPS, Secure=true, SameSite=None)");
+        } else {
+            // HTTP 환경 (local): Secure=false, 프록시 사용 권장
+            log.debug("Refresh Token 쿠키 설정 완료 (HTTP, Secure=false)");
+        }
+
+        ResponseCookie cookie = cookieBuilder.build();
+        response.addHeader("Set-Cookie", cookie.toString());
     }
 
     /**
