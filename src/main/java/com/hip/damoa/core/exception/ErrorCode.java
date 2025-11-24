@@ -62,6 +62,7 @@ public enum ErrorCode {
     OAUTH_PROVIDER_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "O008", "지원하지 않는 OAuth 제공자입니다"),
     OAUTH_EMAIL_NOT_PROVIDED(HttpStatus.BAD_REQUEST, "O009", "OAuth 제공자로부터 이메일을 받지 못했습니다"),
     EMAIL_ALREADY_REGISTERED(HttpStatus.CONFLICT, "O010", "이미 가입된 이메일입니다. 이메일/비밀번호로 로그인하거나 비밀번호 찾기를 이용해주세요"),
+    OAUTH_CODE_INVALID(HttpStatus.BAD_REQUEST, "O011", "유효하지 않거나 만료된 OAuth 코드입니다"),
 
     // Estimate/Bidding
     ESTIMATE_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "E001", "견적 요청을 찾을 수 없습니다"),
@@ -186,6 +187,8 @@ public enum ErrorCode {
     PLANNER_APPLICATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "PA002", "플래너 신청서에 접근할 수 없습니다"),
     PLANNER_APPLICATION_INVALID_STATUS(HttpStatus.BAD_REQUEST, "PA003", "유효하지 않은 플래너 신청서 상태입니다"),
     PLANNER_APPLICATION_FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "PA004", "첨부파일 전체 크기가 100MB를 초과했습니다"),
+    PLANNER_APPLICATION_CANNOT_MODIFY(HttpStatus.BAD_REQUEST, "PA005", "대기중 상태에서만 수정할 수 있습니다"),
+    PLANNER_APPLICATION_CANNOT_DELETE(HttpStatus.BAD_REQUEST, "PA006", "대기중 상태에서만 삭제할 수 있습니다"),
 
     // Popup
     POPUP_NOT_FOUND(HttpStatus.NOT_FOUND, "POP001", "팝업을 찾을 수 없습니다"),

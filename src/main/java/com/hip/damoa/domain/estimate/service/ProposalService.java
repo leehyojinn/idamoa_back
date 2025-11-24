@@ -562,45 +562,82 @@ public class ProposalService {
 
     /**
      * 첨부파일 리스트 처리 (UUID → File ID 변환 및 조인 테이블 저장)
+     * 기존 첨부파일과 비교하여 변경된 것만 처리:
+     * - 유지할 파일: 그대로 둠
+     * - 삭제할 파일: soft delete
+     * - 추가할 파일: insert
      */
     private void processAttachments(EstimateProposal proposal, List<AttachmentRequest> attachmentRequests) {
         log.info("첨부파일 처리 시작: proposalId={}, count={}", proposal.getId(), attachmentRequests.size());
 
-        // 기존 첨부파일 제거 (orphanRemoval = true이므로 자동 삭제됨)
-        proposal.clearAttachments();
+        // 1. 기존 첨부파일 조회 (삭제되지 않은 것만)
+        List<EstimateProposalAttachment> existingAttachments = attachmentRepository
+                .findByEstimateProposalIdAndIsDeletedFalseOrderByDisplayOrderAsc(proposal.getId());
 
-        // 새로운 첨부파일 추가
-        for (int i = 0; i < attachmentRequests.size(); i++) {
-            AttachmentRequest req = attachmentRequests.get(i);
+        // 기존 첨부파일의 File ID Set
+        java.util.Set<Long> existingFileIds = existingAttachments.stream()
+                .map(EstimateProposalAttachment::getFileId)
+                .collect(java.util.stream.Collectors.toSet());
 
-            // UUID → File ID 변환
-            Long fileId = convertUuidToFileId(req.getFileUuid());
+        // 2. 새 첨부파일 UUID를 File ID로 변환
+        java.util.Set<Long> newFileIds = new java.util.HashSet<>();
+        java.util.Map<Long, AttachmentRequest> fileIdToRequestMap = new java.util.HashMap<>();
 
-            // Files 테이블의 entityId 업데이트 (스케줄러 삭제 방지)
-            File file = fileRepository.findById(fileId)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
-            file.updateEntityInfo("PROPOSAL_ATTACHMENT", proposal.getId());
-            fileRepository.save(file);
-
-            // displayOrder가 null이면 인덱스 사용
-            Integer displayOrder = req.getDisplayOrder() != null ? req.getDisplayOrder() : i;
-
-            // EstimateProposalAttachment 엔티티 생성
-            EstimateProposalAttachment attachment = EstimateProposalAttachment.builder()
-                    .estimateProposal(proposal)
-                    .fileId(fileId)
-                    .fileType(req.getFileType())
-                    .fileDescription(req.getFileDescription())
-                    .displayOrder(displayOrder)
-                    .build();
-
-            // 부모 엔티티에 추가 (cascade로 자동 저장됨)
-            proposal.addAttachment(attachment);
-
-            log.debug("첨부파일 추가: fileId={}, type={}, order={}", fileId, req.getFileType(), displayOrder);
+        for (AttachmentRequest req : attachmentRequests) {
+            if (req.getFileUuid() != null && !req.getFileUuid().isEmpty()) {
+                Long fileId = convertUuidToFileId(req.getFileUuid());
+                newFileIds.add(fileId);
+                fileIdToRequestMap.put(fileId, req);
+            }
         }
 
-        log.info("첨부파일 처리 완료: proposalId={}, count={}", proposal.getId(), attachmentRequests.size());
+        // 3. 삭제할 첨부파일 처리 (기존에 있지만 새 목록에 없는 것)
+        int deletedCount = 0;
+        for (EstimateProposalAttachment existing : existingAttachments) {
+            if (!newFileIds.contains(existing.getFileId())) {
+                existing.softDelete();
+                attachmentRepository.save(existing);
+                deletedCount++;
+            }
+        }
+        log.info("삭제된 첨부파일 수: {}", deletedCount);
+
+        // 4. 추가할 첨부파일 처리 (새 목록에 있지만 기존에 없는 것)
+        int addedCount = 0;
+        int displayOrder = 0;
+
+        for (AttachmentRequest req : attachmentRequests) {
+            if (req.getFileUuid() != null && !req.getFileUuid().isEmpty()) {
+                Long fileId = convertUuidToFileId(req.getFileUuid());
+
+                // 기존에 없는 파일만 추가
+                if (!existingFileIds.contains(fileId)) {
+                    // Files 테이블의 entityId 업데이트 (스케줄러 삭제 방지)
+                    File file = fileRepository.findById(fileId)
+                            .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+                    file.updateEntityInfo("PROPOSAL_ATTACHMENT", proposal.getId());
+                    fileRepository.save(file);
+
+                    // displayOrder가 null이면 인덱스 사용
+                    Integer order = req.getDisplayOrder() != null ? req.getDisplayOrder() : displayOrder;
+
+                    // EstimateProposalAttachment 엔티티 생성
+                    EstimateProposalAttachment attachment = EstimateProposalAttachment.builder()
+                            .estimateProposal(proposal)
+                            .fileId(fileId)
+                            .fileType(req.getFileType())
+                            .fileDescription(req.getFileDescription())
+                            .displayOrder(order)
+                            .build();
+
+                    attachmentRepository.save(attachment);
+                    addedCount++;
+                }
+                displayOrder++;
+            }
+        }
+        log.info("추가된 첨부파일 수: {}", addedCount);
+        log.info("첨부파일 처리 완료: proposalId={}, 삭제={}, 추가={}", proposal.getId(), deletedCount, addedCount);
     }
 
     /**

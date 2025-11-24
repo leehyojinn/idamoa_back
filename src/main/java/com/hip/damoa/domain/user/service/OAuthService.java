@@ -49,6 +49,8 @@ public class OAuthService {
     private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(14);
     private static final String OAUTH_STATE_PREFIX = "oauth:state:";
     private static final Duration OAUTH_STATE_TTL = Duration.ofMinutes(10);
+    private static final String OAUTH_CODE_PREFIX = "oauth:code:";
+    private static final Duration OAUTH_CODE_TTL = Duration.ofSeconds(30);
 
     /**
      * OAuth 인가 URL 생성
@@ -244,5 +246,73 @@ public class OAuthService {
     private void saveRefreshToken(Long userId, String refreshToken) {
         String redisKey = REFRESH_TOKEN_PREFIX + userId;
         redisService.setValues(redisKey, refreshToken, REFRESH_TOKEN_TTL);
+    }
+
+    /**
+     * OAuth 임시 코드 생성 및 Redis에 토큰 정보 저장
+     * @param callbackResponse OAuth 콜백 응답 (토큰 정보 포함)
+     * @return 임시 코드 (30초 TTL)
+     */
+    public String generateOAuthCode(OAuthCallbackResponse callbackResponse) {
+        String code = UUID.randomUUID().toString();
+        String codeKey = OAUTH_CODE_PREFIX + code;
+
+        // TokenInfo를 JSON 문자열로 저장
+        String tokenData = String.format(
+                "%s|%s|%b|%s|%b|%s|%s",
+                callbackResponse.getTokenInfo().getAccessToken(),
+                callbackResponse.getTokenInfo().getRefreshToken(),
+                callbackResponse.getTokenInfo().isProfileCompleted(),
+                callbackResponse.getTokenInfo().getCurrentRole(),
+                callbackResponse.isNewUser(),
+                callbackResponse.getProvider(),
+                callbackResponse.getProviderEmail()
+        );
+
+        redisService.setValues(codeKey, tokenData, OAUTH_CODE_TTL);
+        log.info("OAuth 임시 코드 생성: code={}, TTL=30초", code);
+
+        return code;
+    }
+
+    /**
+     * OAuth 임시 코드를 토큰으로 교환
+     * @param code 임시 코드
+     * @return OAuth 콜백 응답 (토큰 정보 포함)
+     */
+    public OAuthCallbackResponse exchangeCodeForToken(String code) {
+        String codeKey = OAUTH_CODE_PREFIX + code;
+        String tokenData = redisService.getValues(codeKey);
+
+        if (tokenData == null) {
+            log.warn("OAuth 임시 코드 만료 또는 존재하지 않음: code={}", code);
+            throw new BusinessException(ErrorCode.OAUTH_CODE_INVALID);
+        }
+
+        // 코드 사용 후 즉시 삭제 (1회용)
+        redisService.deleteValues(codeKey);
+
+        // 토큰 데이터 파싱
+        String[] parts = tokenData.split("\\|");
+        if (parts.length < 7) {
+            log.error("OAuth 토큰 데이터 파싱 실패: data={}", tokenData);
+            throw new BusinessException(ErrorCode.OAUTH_CODE_INVALID);
+        }
+
+        TokenInfo tokenInfo = TokenInfo.builder()
+                .accessToken(parts[0])
+                .refreshToken(parts[1])
+                .profileCompleted(Boolean.parseBoolean(parts[2]))
+                .currentRole(parts[3])
+                .build();
+
+        log.info("OAuth 임시 코드 교환 완료: code={}", code);
+
+        return OAuthCallbackResponse.builder()
+                .isNewUser(Boolean.parseBoolean(parts[4]))
+                .tokenInfo(tokenInfo)
+                .provider(parts[5])
+                .providerEmail(parts[6])
+                .build();
     }
 }

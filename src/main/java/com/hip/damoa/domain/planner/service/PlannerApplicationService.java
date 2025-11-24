@@ -6,11 +6,15 @@ import com.hip.damoa.domain.file.model.File;
 import com.hip.damoa.domain.file.repository.FileRepository;
 import com.hip.damoa.domain.planner.model.PlannerApplicationStatus;
 import com.hip.damoa.domain.planner.model.PlannerApplication;
+import com.hip.damoa.domain.planner.model.PlannerApplicationAttachment;
 import com.hip.damoa.domain.planner.model.PlannerPreferredDate;
+import com.hip.damoa.domain.planner.repository.PlannerApplicationAttachmentRepository;
 import com.hip.damoa.domain.planner.repository.PlannerApplicationRepository;
+import com.hip.damoa.domain.planner.repository.PlannerPreferredDateRepository;
 import com.hip.damoa.domain.planner.web.dto.*;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -18,9 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -32,35 +34,57 @@ import java.util.stream.Collectors;
 public class PlannerApplicationService {
 
     private final PlannerApplicationRepository plannerApplicationRepository;
+    private final PlannerApplicationAttachmentRepository attachmentRepository;
+    private final PlannerPreferredDateRepository preferredDateRepository;
     private final UserRepository userRepository;
     private final FileRepository fileRepository;
+    private final EntityManager entityManager;
 
     private static final long MAX_TOTAL_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
+    // ===== 공개 API (비회원 접근 가능) =====
+
     /**
-     * 첨부파일 ID 배열을 AttachmentDto 리스트로 변환
+     * 플래너 신청 목록 조회 (공개)
+     * 민감정보 제외
      */
-    private List<AttachmentDto> convertToAttachmentDtos(Long[] fileIds) {
-        if (fileIds == null || fileIds.length == 0) {
-            return List.of();
+    @Transactional(readOnly = true)
+    public Page<PlannerApplicationSummaryResponse> getPlannerApplications(
+            PlannerApplicationStatus status, Pageable pageable) {
+
+        log.info("플래너 신청 목록 조회 (공개): status={}", status);
+
+        Page<PlannerApplication> applications;
+        if (status != null) {
+            applications = plannerApplicationRepository
+                    .findByStatusAndIsDeletedFalseOrderByCreatedAtDesc(status, pageable);
+        } else {
+            applications = plannerApplicationRepository
+                    .findByIsDeletedFalseOrderByCreatedAtDesc(pageable);
         }
 
-        List<File> files = fileRepository.findAllById(Arrays.asList(fileIds));
-
-        return Arrays.stream(fileIds)
-                .map(fileId -> files.stream()
-                        .filter(f -> f.getId().equals(fileId))
-                        .findFirst()
-                        .map(file -> AttachmentDto.of(
-                                file.getId(),
-                                file.getUuid(),
-                                file.getFileUrl(),
-                                file.getOriginalFilename()
-                        ))
-                        .orElse(null))
-                .filter(dto -> dto != null)
-                .collect(Collectors.<AttachmentDto>toList());
+        return applications.map(PlannerApplicationSummaryResponse::from);
     }
+
+    /**
+     * 플래너 신청 상세 조회 (공개)
+     * 민감정보 제외
+     */
+    @Transactional(readOnly = true)
+    public PlannerApplicationDetailResponse getPlannerApplication(UUID applicationUuid) {
+        log.info("플래너 신청 상세 조회 (공개): uuid={}", applicationUuid);
+
+        PlannerApplication application = plannerApplicationRepository
+                .findByUuidAndIsDeletedFalse(applicationUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PLANNER_APPLICATION_NOT_FOUND));
+
+        // 첨부파일 정보 변환
+        List<AttachmentDto> attachments = convertAttachmentsToDto(application);
+
+        return PlannerApplicationDetailResponse.from(application, attachments);
+    }
+
+    // ===== 사용자 API (인증 필요) =====
 
     /**
      * 플래너 신청서 생성 (USER만 가능)
@@ -73,8 +97,11 @@ public class PlannerApplicationService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        // 파일 UUID -> ID 변환 및 검증
+        List<Long> fileIds = convertUuidsToFileIds(request.getAttachmentFileUuids());
+
         // 파일 크기 검증
-        validateFileSizes(request.getAttachmentFileIds());
+        validateFileSizes(fileIds);
 
         // Entity 생성
         PlannerApplication application = PlannerApplication.builder()
@@ -90,9 +117,6 @@ public class PlannerApplicationService {
                 .businessAddress(request.getBusinessAddress())
                 .businessAreaSize(request.getBusinessAreaSize())
                 .businessType(request.getBusinessType())
-                .attachmentFileIds(request.getAttachmentFileIds() != null
-                        ? request.getAttachmentFileIds().toArray(new Long[0])
-                        : null)
                 .build();
 
         // 희망 일정 추가
@@ -104,41 +128,120 @@ public class PlannerApplicationService {
         }
 
         application = plannerApplicationRepository.save(application);
+
+        // 첨부파일 저장
+        saveAttachments(application, fileIds);
+
         log.info("플래너 신청서 생성 완료: id={}, uuid={}", application.getId(), application.getUuid());
 
         // 첨부파일 정보 변환
-        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+        List<AttachmentDto> attachments = convertAttachmentsToDto(application);
 
         return PlannerApplicationResponse.from(application, attachments);
     }
 
     /**
-     * 파일 크기 검증 (전체 100MB 제한)
+     * 플래너 신청서 수정 (본인, PENDING 상태에서만)
      */
-    private void validateFileSizes(List<Long> fileIds) {
-        if (fileIds == null || fileIds.isEmpty()) {
-            return;
+    @Transactional
+    public PlannerApplicationResponse updateApplication(String userEmail, UUID applicationUuid,
+                                                         PlannerApplicationUpdateRequest request) {
+        log.info("플래너 신청서 수정 시작: userEmail={}, uuid={}", userEmail, applicationUuid);
+
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        PlannerApplication application = plannerApplicationRepository
+                .findByUuidAndIsDeletedFalse(applicationUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PLANNER_APPLICATION_NOT_FOUND));
+
+        // 본인 확인
+        if (!application.isOwnedBy(user.getId())) {
+            throw new BusinessException(ErrorCode.PLANNER_APPLICATION_ACCESS_DENIED);
         }
 
-        log.debug("파일 크기 검증 시작: fileIds={}", fileIds);
-
-        List<File> files = fileRepository.findAllById(fileIds);
-
-        if (files.size() != fileIds.size()) {
-            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
+        // 수정 가능 상태 확인
+        if (!application.canModify()) {
+            throw new BusinessException(ErrorCode.PLANNER_APPLICATION_CANNOT_MODIFY);
         }
 
-        long totalSize = files.stream()
-                .mapToLong(File::getFileSize)
-                .sum();
+        // 파일 UUID -> ID 변환 및 검증
+        List<Long> newFileIds = convertUuidsToFileIds(request.getAttachmentFileUuids());
 
-        log.debug("전체 파일 크기: {}MB", totalSize / (1024 * 1024));
+        // 파일 크기 검증
+        validateFileSizes(newFileIds);
 
-        if (totalSize > MAX_TOTAL_FILE_SIZE) {
-            log.warn("파일 크기 초과: totalSize={}MB, maxSize={}MB",
-                    totalSize / (1024 * 1024), MAX_TOTAL_FILE_SIZE / (1024 * 1024));
-            throw new BusinessException(ErrorCode.PLANNER_APPLICATION_FILE_SIZE_EXCEEDED);
+        // 신청서 정보 수정
+        application.update(
+                request.getTitle(),
+                request.getContent(),
+                request.getConsultationMethod(),
+                request.getRequestTypes().toArray(new String[0]),
+                request.getApplicantName(),
+                request.getApplicantPhone(),
+                request.getApplicantEmail(),
+                request.getBusinessName(),
+                request.getBusinessAddress(),
+                request.getBusinessAreaSize(),
+                request.getBusinessType()
+        );
+
+        // 희망 일정 수정 (기존 삭제 후 새로 추가)
+        // 기존 희망 일정 명시적 삭제 후 flush (unique constraint 회피)
+        preferredDateRepository.deleteByPlannerApplicationId(application.getId());
+        entityManager.flush();
+
+        // 새 희망 일정 추가
+        if (request.getPreferredDates() != null) {
+            for (PreferredDateDto dto : request.getPreferredDates()) {
+                PlannerPreferredDate preferredDate = dto.toEntity();
+                preferredDate.setPlannerApplication(application);
+                preferredDateRepository.save(preferredDate);
+            }
         }
+
+        // 첨부파일 수정 (비교 로직)
+        updateAttachments(application, newFileIds);
+
+        application = plannerApplicationRepository.save(application);
+
+        log.info("플래너 신청서 수정 완료: uuid={}", applicationUuid);
+
+        // 첨부파일 정보 변환
+        List<AttachmentDto> attachments = convertAttachmentsToDto(application);
+
+        return PlannerApplicationResponse.from(application, attachments);
+    }
+
+    /**
+     * 플래너 신청서 삭제 (본인, PENDING 상태에서만)
+     */
+    @Transactional
+    public void deleteApplication(String userEmail, UUID applicationUuid) {
+        log.info("플래너 신청서 삭제 시작: userEmail={}, uuid={}", userEmail, applicationUuid);
+
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        PlannerApplication application = plannerApplicationRepository
+                .findByUuidAndIsDeletedFalse(applicationUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PLANNER_APPLICATION_NOT_FOUND));
+
+        // 본인 확인
+        if (!application.isOwnedBy(user.getId())) {
+            throw new BusinessException(ErrorCode.PLANNER_APPLICATION_ACCESS_DENIED);
+        }
+
+        // 삭제 가능 상태 확인
+        if (!application.canModify()) {
+            throw new BusinessException(ErrorCode.PLANNER_APPLICATION_CANNOT_DELETE);
+        }
+
+        // Soft Delete
+        application.softDelete(user);
+        plannerApplicationRepository.save(application);
+
+        log.info("플래너 신청서 삭제 완료: uuid={}", applicationUuid);
     }
 
     /**
@@ -166,7 +269,7 @@ public class PlannerApplicationService {
     }
 
     /**
-     * 플래너 신청서 상세 조회
+     * 플래너 신청서 상세 조회 (본인)
      */
     @Transactional(readOnly = true)
     public PlannerApplicationResponse getApplication(String userEmail, UUID applicationUuid) {
@@ -185,10 +288,12 @@ public class PlannerApplicationService {
         }
 
         // 첨부파일 정보 변환
-        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+        List<AttachmentDto> attachments = convertAttachmentsToDto(application);
 
         return PlannerApplicationResponse.from(application, attachments);
     }
+
+    // ===== 관리자 API =====
 
     /**
      * 전체 플래너 신청서 목록 조회 (관리자용)
@@ -223,9 +328,30 @@ public class PlannerApplicationService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PLANNER_APPLICATION_NOT_FOUND));
 
         // 첨부파일 정보 변환
-        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+        List<AttachmentDto> attachments = convertAttachmentsToDto(application);
 
         return PlannerApplicationResponse.from(application, attachments);
+    }
+
+    /**
+     * 플래너 신청서 삭제 (관리자, 모든 상태에서 가능)
+     */
+    @Transactional
+    public void deleteApplicationAdmin(String adminEmail, UUID applicationUuid) {
+        log.info("플래너 신청서 삭제 (관리자): adminEmail={}, uuid={}", adminEmail, applicationUuid);
+
+        User admin = userRepository.findByEmail(adminEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        PlannerApplication application = plannerApplicationRepository
+                .findByUuidAndIsDeletedFalse(applicationUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PLANNER_APPLICATION_NOT_FOUND));
+
+        // Soft Delete
+        application.softDelete(admin);
+        plannerApplicationRepository.save(application);
+
+        log.info("플래너 신청서 삭제 완료 (관리자): uuid={}", applicationUuid);
     }
 
     /**
@@ -247,7 +373,7 @@ public class PlannerApplicationService {
         log.info("플래너 신청서 상태 변경 완료: uuid={}, status={}", applicationUuid, application.getStatus());
 
         // 첨부파일 정보 변환
-        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+        List<AttachmentDto> attachments = convertAttachmentsToDto(application);
 
         return PlannerApplicationResponse.from(application, attachments);
     }
@@ -271,7 +397,7 @@ public class PlannerApplicationService {
         log.info("플래너 신청서 답변 등록 완료: uuid={}", applicationUuid);
 
         // 첨부파일 정보 변환
-        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+        List<AttachmentDto> attachments = convertAttachmentsToDto(application);
 
         return PlannerApplicationResponse.from(application, attachments);
     }
@@ -295,7 +421,7 @@ public class PlannerApplicationService {
         log.info("플래너 신청서 메모 등록 완료: uuid={}", applicationUuid);
 
         // 첨부파일 정보 변환
-        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+        List<AttachmentDto> attachments = convertAttachmentsToDto(application);
 
         return PlannerApplicationResponse.from(application, attachments);
     }
@@ -322,8 +448,150 @@ public class PlannerApplicationService {
         log.info("플래너 신청서 담당자 배정 완료: uuid={}, adminId={}", applicationUuid, admin.getId());
 
         // 첨부파일 정보 변환
-        List<AttachmentDto> attachments = convertToAttachmentDtos(application.getAttachmentFileIds());
+        List<AttachmentDto> attachments = convertAttachmentsToDto(application);
 
         return PlannerApplicationResponse.from(application, attachments);
+    }
+
+    // ===== Private Helper Methods =====
+
+    /**
+     * UUID 리스트를 File ID 리스트로 변환
+     */
+    private List<Long> convertUuidsToFileIds(List<String> uuids) {
+        if (uuids == null || uuids.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> fileIds = new ArrayList<>();
+        for (String uuidStr : uuids) {
+            UUID uuid = UUID.fromString(uuidStr);
+            File file = fileRepository.findByUuid(uuid)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+            fileIds.add(file.getId());
+        }
+        return fileIds;
+    }
+
+    /**
+     * 파일 크기 검증 (전체 100MB 제한)
+     */
+    private void validateFileSizes(List<Long> fileIds) {
+        if (fileIds == null || fileIds.isEmpty()) {
+            return;
+        }
+
+        log.debug("파일 크기 검증 시작: fileIds={}", fileIds);
+
+        List<File> files = fileRepository.findAllById(fileIds);
+
+        if (files.size() != fileIds.size()) {
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
+        }
+
+        long totalSize = files.stream()
+                .mapToLong(File::getFileSize)
+                .sum();
+
+        log.debug("전체 파일 크기: {}MB", totalSize / (1024 * 1024));
+
+        if (totalSize > MAX_TOTAL_FILE_SIZE) {
+            log.warn("파일 크기 초과: totalSize={}MB, maxSize={}MB",
+                    totalSize / (1024 * 1024), MAX_TOTAL_FILE_SIZE / (1024 * 1024));
+            throw new BusinessException(ErrorCode.PLANNER_APPLICATION_FILE_SIZE_EXCEEDED);
+        }
+    }
+
+    /**
+     * 첨부파일 저장
+     */
+    private void saveAttachments(PlannerApplication application, List<Long> fileIds) {
+        if (fileIds == null || fileIds.isEmpty()) {
+            return;
+        }
+
+        int order = 0;
+        for (Long fileId : fileIds) {
+            PlannerApplicationAttachment attachment = PlannerApplicationAttachment.builder()
+                    .plannerApplication(application)
+                    .fileId(fileId)
+                    .displayOrder(order++)
+                    .build();
+            attachmentRepository.save(attachment);
+        }
+    }
+
+    /**
+     * 첨부파일 수정 (비교 로직: 기존 유지/soft delete/신규 추가)
+     */
+    private void updateAttachments(PlannerApplication application, List<Long> newFileIds) {
+        // 기존 첨부파일 조회
+        List<PlannerApplicationAttachment> existingAttachments =
+                attachmentRepository.findByPlannerApplicationAndIsDeletedFalseOrderByDisplayOrderAsc(application);
+
+        Set<Long> existingFileIds = existingAttachments.stream()
+                .map(PlannerApplicationAttachment::getFileId)
+                .collect(Collectors.toSet());
+
+        Set<Long> newFileIdSet = new HashSet<>(newFileIds != null ? newFileIds : List.of());
+
+        // 1. 기존에 있었지만 새 목록에 없는 파일 -> soft delete
+        for (PlannerApplicationAttachment existing : existingAttachments) {
+            if (!newFileIdSet.contains(existing.getFileId())) {
+                existing.softDelete();
+                attachmentRepository.save(existing);
+            }
+        }
+
+        // 2. 새 목록에만 있는 파일 -> 신규 추가
+        int maxOrder = existingAttachments.stream()
+                .mapToInt(PlannerApplicationAttachment::getDisplayOrder)
+                .max()
+                .orElse(-1);
+
+        for (Long fileId : newFileIdSet) {
+            if (!existingFileIds.contains(fileId)) {
+                PlannerApplicationAttachment attachment = PlannerApplicationAttachment.builder()
+                        .plannerApplication(application)
+                        .fileId(fileId)
+                        .displayOrder(++maxOrder)
+                        .build();
+                attachmentRepository.save(attachment);
+            }
+        }
+    }
+
+    /**
+     * 첨부파일을 DTO로 변환
+     */
+    private List<AttachmentDto> convertAttachmentsToDto(PlannerApplication application) {
+        List<PlannerApplicationAttachment> attachments =
+                attachmentRepository.findByPlannerApplicationAndIsDeletedFalseOrderByDisplayOrderAsc(application);
+
+        if (attachments.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> fileIds = attachments.stream()
+                .map(PlannerApplicationAttachment::getFileId)
+                .collect(Collectors.toList());
+
+        List<File> files = fileRepository.findAllById(fileIds);
+        Map<Long, File> fileMap = files.stream()
+                .collect(Collectors.toMap(File::getId, f -> f));
+
+        return attachments.stream()
+                .map(att -> {
+                    File file = fileMap.get(att.getFileId());
+                    if (file == null) return null;
+                    return AttachmentDto.of(
+                            file.getId(),
+                            file.getUuid(),
+                            file.getFileUrl(),
+                            file.getOriginalFilename()
+                    );
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 }
