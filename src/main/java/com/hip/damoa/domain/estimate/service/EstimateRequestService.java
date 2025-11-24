@@ -364,6 +364,10 @@ public class EstimateRequestService {
             throw new BusinessException(ErrorCode.ESTIMATE_REQUEST_HAS_PROPOSALS);
         }
 
+        // 첨부파일 Soft Delete
+        attachmentRepository.softDeleteByEstimateRequestId(estimateRequest.getId(), java.time.LocalDateTime.now());
+        log.info("견적 요청 첨부파일 soft delete 완료: requestId={}", estimateRequest.getId());
+
         // Soft Delete
         estimateRequest.softDelete();
         estimateRequestRepository.save(estimateRequest);

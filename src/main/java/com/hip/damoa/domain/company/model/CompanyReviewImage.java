@@ -39,15 +39,49 @@ public class CompanyReviewImage {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Builder
     public CompanyReviewImage(CompanyReview review, Long fileId, Integer displayOrder) {
         this.review = review;
         this.fileId = fileId;
         this.displayOrder = displayOrder != null ? displayOrder : 0;
+        this.isDeleted = false;
     }
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // ===== Business Methods =====
+
+    /**
+     * Soft Delete 처리
+     */
+    public void softDelete() {
+        this.isDeleted = true;
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 삭제 복구
+     */
+    public void restore() {
+        this.isDeleted = false;
+        this.deletedAt = null;
     }
 }

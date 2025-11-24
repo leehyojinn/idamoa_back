@@ -48,6 +48,13 @@ public class EstimateRequestAttachment {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private Boolean isDeleted = false;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     // ===== Lifecycle Callbacks =====
 
     @PrePersist
@@ -82,5 +89,21 @@ public class EstimateRequestAttachment {
      */
     public void updateFileType(String fileType) {
         this.fileType = fileType;
+    }
+
+    /**
+     * Soft Delete 처리
+     */
+    public void softDelete() {
+        this.isDeleted = true;
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 삭제 복구
+     */
+    public void restore() {
+        this.isDeleted = false;
+        this.deletedAt = null;
     }
 }
