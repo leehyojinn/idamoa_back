@@ -57,8 +57,8 @@ public class CompanyImageService {
             unsetPrimaryImages(company, request.getImageType());
         }
 
-        // URL → File ID 변환
-        Long fileId = convertUrlToFileId(request.getImageUrl());
+        // UUID → File ID 변환
+        Long fileId = convertUuidToFileId(request.getFileUuid());
 
         // 이미지 생성
         CompanyImage image = CompanyImage.builder()
@@ -210,14 +210,15 @@ public class CompanyImageService {
     }
 
     /**
-     * URL을 File ID로 변환
+     * UUID를 File ID로 변환
      */
-    private Long convertUrlToFileId(String url) {
-        if (url == null || url.isBlank()) {
+    private Long convertUuidToFileId(String uuidString) {
+        if (uuidString == null || uuidString.isBlank()) {
             return null;
         }
 
-        return fileRepository.findByFileUrl(url)
+        UUID uuid = UUID.fromString(uuidString);
+        return fileRepository.findByUuidAndIsDeletedFalse(uuid)
                 .map(File::getId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
     }

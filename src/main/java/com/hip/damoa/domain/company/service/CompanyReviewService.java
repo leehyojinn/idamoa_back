@@ -73,8 +73,8 @@ public class CompanyReviewService {
         //     throw new BusinessException(ErrorCode.REVIEW_ALREADY_EXISTS);
         // }
 
-        // URL 배열을 File ID 배열로 변환
-        Long[] imageFileIds = convertUrlsToFileIds(request.getImages());
+        // UUID 배열을 File ID 배열로 변환
+        Long[] imageFileIds = convertUuidsToFileIds(request.getImageUuids());
 
         CompanyReview review = CompanyReview.builder()
                 .company(company)
@@ -89,7 +89,7 @@ public class CompanyReviewService {
         review = reviewRepository.save(review);
 
         // ✅ OneToMany 기반 이미지 처리 추가
-        processReviewImages(review, request.getImages());
+        processReviewImages(review, request.getImageUuids());
 
         // 업체 평균 평점 업데이트
         updateCompanyRating(company);
@@ -136,17 +136,17 @@ public class CompanyReviewService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        // URL 배열을 File ID 배열로 변환
-        Long[] imageFileIds = convertUrlsToFileIds(request.getImages());
+        // UUID 배열을 File ID 배열로 변환
+        Long[] imageFileIds = convertUuidsToFileIds(request.getImageUuids());
 
         review.updateReview(request.getRating(), request.getTitle(), request.getContent(), imageFileIds);
         review = reviewRepository.save(review);
 
         // ✅ OneToMany 기반 이미지 업데이트 (기존 이미지 먼저 삭제)
-        if (request.getImages() != null) {
+        if (request.getImageUuids() != null) {
             // 즉시 삭제 (@Modifying with flushAutomatically)
             reviewImageRepository.deleteByReviewId(review.getId());
-            processReviewImages(review, request.getImages());
+            processReviewImages(review, request.getImageUuids());
         }
 
         // 업체 평균 평점 업데이트
@@ -295,21 +295,22 @@ public class CompanyReviewService {
 
     /**
      * 리뷰 이미지 처리 (Company 패턴 동일)
-     * URL 배열 → File ID로 변환 → company_review_images 테이블에 저장
+     * UUID 배열 → File ID로 변환 → company_review_images 테이블에 저장
      */
-    private void processReviewImages(CompanyReview review, String[] imageUrls) {
-        if (imageUrls == null || imageUrls.length == 0) {
+    private void processReviewImages(CompanyReview review, String[] imageUuids) {
+        if (imageUuids == null || imageUuids.length == 0) {
             log.info("리뷰 이미지 없음: reviewId={}", review.getId());
             return;
         }
 
-        log.info("리뷰 이미지 처리 시작: reviewId={}, imageCount={}", review.getId(), imageUrls.length);
+        log.info("리뷰 이미지 처리 시작: reviewId={}, imageCount={}", review.getId(), imageUuids.length);
 
         int displayOrder = 0;
-        for (String imageUrl : imageUrls) {
-            if (imageUrl != null && !imageUrl.isEmpty()) {
-                // 1. files 테이블에서 URL로 파일 조회
-                File file = fileRepository.findByFileUrl(imageUrl)
+        for (String imageUuid : imageUuids) {
+            if (imageUuid != null && !imageUuid.isEmpty()) {
+                // 1. files 테이블에서 UUID로 파일 조회
+                UUID uuid = UUID.fromString(imageUuid);
+                File file = fileRepository.findByUuidAndIsDeletedFalse(uuid)
                         .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
 
                 // 2. files 테이블의 entity 정보 업데이트
@@ -369,18 +370,21 @@ public class CompanyReviewService {
     }
 
     /**
-     * URL 배열을 File ID 배열로 변환
+     * UUID 배열을 File ID 배열로 변환
      */
-    private Long[] convertUrlsToFileIds(String[] urls) {
-        if (urls == null || urls.length == 0) {
+    private Long[] convertUuidsToFileIds(String[] uuidStrings) {
+        if (uuidStrings == null || uuidStrings.length == 0) {
             return null;
         }
 
-        return Arrays.stream(urls)
-                .map(url -> fileRepository.findByFileUrl(url)
-                        .map(File::getId)
-                        .orElse(null))
-                .filter(Objects::nonNull)
+        return Arrays.stream(uuidStrings)
+                .filter(uuidStr -> uuidStr != null && !uuidStr.isEmpty())
+                .map(uuidStr -> {
+                    UUID uuid = UUID.fromString(uuidStr);
+                    return fileRepository.findByUuidAndIsDeletedFalse(uuid)
+                            .map(File::getId)
+                            .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+                })
                 .toArray(Long[]::new);
     }
 

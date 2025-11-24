@@ -142,7 +142,6 @@ public class DocumentBoardController {
                     "**정렬 옵션:**\n" +
                     "- publishedAt,DESC: 최신순 (기본값)\n" +
                     "- viewCount,DESC: 조회수 높은 순\n" +
-                    "- downloadCount,DESC: 다운로드 많은 순\n" +
                     "- createdAt,DESC: 생성일 최신순\n\n" +
                     "**활용:**\n" +
                     "- 자료실 메인 페이지\n" +
