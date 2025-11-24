@@ -187,6 +187,8 @@ public enum ErrorCode {
     PLANNER_APPLICATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "PA002", "플래너 신청서에 접근할 수 없습니다"),
     PLANNER_APPLICATION_INVALID_STATUS(HttpStatus.BAD_REQUEST, "PA003", "유효하지 않은 플래너 신청서 상태입니다"),
     PLANNER_APPLICATION_FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "PA004", "첨부파일 전체 크기가 100MB를 초과했습니다"),
+    PLANNER_APPLICATION_CANNOT_MODIFY(HttpStatus.BAD_REQUEST, "PA005", "대기중 상태에서만 수정할 수 있습니다"),
+    PLANNER_APPLICATION_CANNOT_DELETE(HttpStatus.BAD_REQUEST, "PA006", "대기중 상태에서만 삭제할 수 있습니다"),
 
     // Popup
     POPUP_NOT_FOUND(HttpStatus.NOT_FOUND, "POP001", "팝업을 찾을 수 없습니다"),

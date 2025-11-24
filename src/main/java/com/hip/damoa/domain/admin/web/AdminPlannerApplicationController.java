@@ -158,4 +158,24 @@ public class AdminPlannerApplicationController {
 
         return ApiResponse.success(response);
     }
+
+    /**
+     * 플래너 신청서 삭제 (관리자)
+     */
+    @Operation(summary = "[관리자] 플래너 신청서 삭제",
+            description = "플래너 신청서를 삭제합니다.\\n\\n" +
+                    "- 모든 상태에서 삭제 가능\\n" +
+                    "- Soft Delete 처리됨")
+    @DeleteMapping("/{applicationUuid}")
+    public ApiResponse<Void> deleteApplication(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable UUID applicationUuid) {
+
+        log.info("[관리자] 플래너 신청서 삭제: adminEmail={}, uuid={}",
+                userDetails.getUsername(), applicationUuid);
+
+        plannerApplicationService.deleteApplicationAdmin(userDetails.getUsername(), applicationUuid);
+
+        return ApiResponse.success();
+    }
 }

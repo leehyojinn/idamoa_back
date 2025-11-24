@@ -78,9 +78,9 @@ public class PlannerApplicationCreateRequest {
     @Size(max = 100, message = "업종은 100자 이내여야 합니다")
     private String businessType;
 
-    // 첨부파일 (files 테이블 ID 배열)
-    @Schema(description = "첨부파일 ID 목록 (전체 100MB 이하)", example = "[1, 2, 3]")
-    private List<Long> attachmentFileIds;
+    // 첨부파일 (files 테이블 UUID 배열)
+    @Schema(description = "첨부파일 UUID 목록 (전체 100MB 이하)", example = "[\"550e8400-e29b-41d4-a716-446655440000\"]")
+    private List<String> attachmentFileUuids;
 
     // 희망 일정 (1~3개)
     @Schema(description = "희망 상담 일정 (1~3개, 우선순위별)", example = "[{\"priority\": 1, \"preferredDate\": \"2025-11-20\", \"preferredTime\": \"오전 10시\"}, {\"priority\": 2, \"preferredDate\": \"2025-11-21\", \"preferredTime\": \"오후 2시\"}]")

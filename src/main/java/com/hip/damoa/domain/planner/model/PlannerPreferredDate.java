@@ -44,8 +44,8 @@ public class PlannerPreferredDate {
         this.createdAt = LocalDateTime.now();
     }
 
-    // 양방향 관계 설정을 위한 setter (package-private)
-    void setPlannerApplication(PlannerApplication plannerApplication) {
+    // 양방향 관계 설정을 위한 setter
+    public void setPlannerApplication(PlannerApplication plannerApplication) {
         this.plannerApplication = plannerApplication;
     }
 }

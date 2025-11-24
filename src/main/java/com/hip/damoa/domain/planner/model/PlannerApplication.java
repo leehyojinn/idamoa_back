@@ -2,13 +2,11 @@ package com.hip.damoa.domain.planner.model;
 
 import com.hip.damoa.domain.common.BaseEntity;
 import com.hip.damoa.domain.user.model.User;
-import io.hypersistence.utils.hibernate.type.array.LongArrayType;
 import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Type;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,7 +14,7 @@ import java.util.List;
  * 플래너 신청서 엔티티
  *
  * USER가 플래너 상담을 신청
- * 수정/취소 불가
+ * PENDING 상태에서만 수정/삭제 가능
  */
 @Entity
 @Getter
@@ -69,10 +67,10 @@ public class PlannerApplication extends BaseEntity {
     @Column(name = "business_type", length = 100)
     private String businessType;
 
-    // 첨부파일 (files 테이블 참조)
-    @Type(LongArrayType.class)
-    @Column(name = "attachment_file_ids", columnDefinition = "bigint[]")
-    private Long[] attachmentFileIds;
+    // 첨부파일 (OneToMany)
+    @OneToMany(mappedBy = "plannerApplication", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<PlannerApplicationAttachment> attachments = new ArrayList<>();
 
     // 희망 일정 (OneToMany)
     @OneToMany(mappedBy = "plannerApplication", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -150,5 +148,47 @@ public class PlannerApplication extends BaseEntity {
     public void softDelete(User deletedBy) {
         super.softDelete();
         this.deletedBy = deletedBy;
+    }
+
+    /**
+     * 첨부파일 추가
+     */
+    public void addAttachment(PlannerApplicationAttachment attachment) {
+        this.attachments.add(attachment);
+        attachment.setPlannerApplication(this);
+    }
+
+    /**
+     * 희망 일정 초기화 (수정 시 사용)
+     */
+    public void clearPreferredDates() {
+        this.preferredDates.clear();
+    }
+
+    /**
+     * 수정 가능 여부 확인
+     */
+    public boolean canModify() {
+        return this.status == PlannerApplicationStatus.PENDING;
+    }
+
+    /**
+     * 신청서 정보 수정 (PENDING 상태에서만)
+     */
+    public void update(String title, String content, ConsultationMethod consultationMethod,
+                       String[] requestTypes, String applicantName, String applicantPhone,
+                       String applicantEmail, String businessName, String businessAddress,
+                       String businessAreaSize, String businessType) {
+        this.title = title;
+        this.content = content;
+        this.consultationMethod = consultationMethod;
+        this.requestTypes = requestTypes;
+        this.applicantName = applicantName;
+        this.applicantPhone = applicantPhone;
+        this.applicantEmail = applicantEmail;
+        this.businessName = businessName;
+        this.businessAddress = businessAddress;
+        this.businessAreaSize = businessAreaSize;
+        this.businessType = businessType;
     }
 }

@@ -100,6 +100,8 @@ public class SecurityConfig {
                                 "/api/popups/*/click",  // Increment click count (public)
                                 "/api/filters",  // Get all filter categories (public)
                                 "/api/filters/**",  // Get specific filter category/options (public)
+                                "/api/planner-applications/list",  // 플래너 신청 목록 (public)
+                                "/api/planner-applications/detail/*",  // 플래너 신청 상세 (public)
                                 "/*.html",  // HTML pages (public)
                                 "/js/**",  // JavaScript files
                                 "/css/**",  // CSS files
