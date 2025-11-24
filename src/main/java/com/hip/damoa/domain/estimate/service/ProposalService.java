@@ -435,7 +435,13 @@ public class ProposalService {
             throw new BusinessException(ErrorCode.PROPOSAL_CANNOT_BE_DELETED);
         }
 
-        proposalRepository.delete(proposal);
+        // 첨부파일 Soft Delete
+        attachmentRepository.softDeleteByEstimateProposalId(proposal.getId(), java.time.LocalDateTime.now());
+        log.info("제안 첨부파일 soft delete 완료: proposalId={}", proposalId);
+
+        // 제안 Soft Delete
+        proposal.softDelete();
+        proposalRepository.save(proposal);
 
         // 견적 요청의 제안 수 감소
         EstimateRequest estimateRequest = proposal.getRequest();
