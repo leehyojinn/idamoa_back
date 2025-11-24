@@ -4,6 +4,7 @@ import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.user.service.OAuthService;
 import com.hip.damoa.domain.user.web.dto.OAuthCallbackResponse;
 import com.hip.damoa.domain.user.web.dto.OAuthLoginResponse;
+import com.hip.damoa.domain.user.web.dto.OAuthTokenRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
@@ -81,13 +82,12 @@ public class OAuthController {
     @Operation(summary = "카카오 로그인 Callback",
             description = "카카오 OAuth Callback을 처리하고 프론트엔드로 리다이렉트합니다.\n\n" +
                     "**보안 플로우:**\n" +
-                    "1. Refresh Token은 HttpOnly 쿠키에 저장 (XSS 방지)\n" +
-                    "2. 프론트엔드 페이지로 리다이렉트 (Access Token은 URL에 포함하지 않음)\n" +
-                    "3. 프론트엔드에서 `/api/auth/refresh`를 호출하여 새 Access Token 발급\n\n" +
+                    "1. OAuth 로그인 완료 후 임시 코드 생성 (30초 TTL)\n" +
+                    "2. 프론트엔드로 임시 코드와 함께 리다이렉트\n" +
+                    "3. 프론트엔드에서 `/api/oauth/token`을 호출하여 토큰 발급\n\n" +
                     "**리다이렉트 URL 파라미터:**\n" +
-                    "- http://localhost:3000/auth/callback?success=true&requiresProfileSetup=true\n" +
-                    "- success: 로그인 성공 여부 (true/false)\n" +
-                    "- requiresProfileSetup: 프로필 완성 필요 여부 (true/false)")
+                    "- http://localhost:3000/auth/callback?code=xxx\n" +
+                    "- code: 임시 인증 코드 (30초 내에 토큰으로 교환 필요)")
     @GetMapping("/kakao/callback")
     public void handleKakaoCallback(
             @RequestParam String code,
@@ -95,13 +95,11 @@ public class OAuthController {
             HttpServletResponse httpResponse) throws IOException {
         OAuthCallbackResponse response = oauthService.handleCallback("kakao", code, state);
 
-        // Refresh Token을 HttpOnly 쿠키에 설정
-        setRefreshTokenCookie(httpResponse, response.getTokenInfo().getRefreshToken());
+        // 임시 코드 생성 및 Redis에 토큰 정보 저장
+        String oauthCode = oauthService.generateOAuthCode(response);
 
-        // 프론트엔드로 리다이렉트 (Access Token은 URL에 포함하지 않음)
-        String redirectUrl = frontendRedirectUrl +
-                "?success=true" +
-                "&requiresProfileSetup=" + !response.getTokenInfo().isProfileCompleted();
+        // 프론트엔드로 임시 코드와 함께 리다이렉트
+        String redirectUrl = frontendRedirectUrl + "?code=" + oauthCode;
 
         log.info("OAuth 카카오 로그인 성공 - 리다이렉트: {}", redirectUrl);
         httpResponse.sendRedirect(redirectUrl);
@@ -123,13 +121,12 @@ public class OAuthController {
     @Operation(summary = "네이버 로그인 Callback",
             description = "네이버 OAuth Callback을 처리하고 프론트엔드로 리다이렉트합니다.\n\n" +
                     "**보안 플로우:**\n" +
-                    "1. Refresh Token은 HttpOnly 쿠키에 저장 (XSS 방지)\n" +
-                    "2. 프론트엔드 페이지로 리다이렉트 (Access Token은 URL에 포함하지 않음)\n" +
-                    "3. 프론트엔드에서 `/api/auth/refresh`를 호출하여 새 Access Token 발급\n\n" +
+                    "1. OAuth 로그인 완료 후 임시 코드 생성 (30초 TTL)\n" +
+                    "2. 프론트엔드로 임시 코드와 함께 리다이렉트\n" +
+                    "3. 프론트엔드에서 `/api/oauth/token`을 호출하여 토큰 발급\n\n" +
                     "**리다이렉트 URL 파라미터:**\n" +
-                    "- http://localhost:3000/auth/callback?success=true&requiresProfileSetup=true\n" +
-                    "- success: 로그인 성공 여부 (true/false)\n" +
-                    "- requiresProfileSetup: 프로필 완성 필요 여부 (true/false)")
+                    "- http://localhost:3000/auth/callback?code=xxx\n" +
+                    "- code: 임시 인증 코드 (30초 내에 토큰으로 교환 필요)")
     @GetMapping("/naver/callback")
     public void handleNaverCallback(
             @RequestParam String code,
@@ -137,13 +134,11 @@ public class OAuthController {
             HttpServletResponse httpResponse) throws IOException {
         OAuthCallbackResponse response = oauthService.handleCallback("naver", code, state);
 
-        // Refresh Token을 HttpOnly 쿠키에 설정
-        setRefreshTokenCookie(httpResponse, response.getTokenInfo().getRefreshToken());
+        // 임시 코드 생성 및 Redis에 토큰 정보 저장
+        String oauthCode = oauthService.generateOAuthCode(response);
 
-        // 프론트엔드로 리다이렉트 (Access Token은 URL에 포함하지 않음)
-        String redirectUrl = frontendRedirectUrl +
-                "?success=true" +
-                "&requiresProfileSetup=" + !response.getTokenInfo().isProfileCompleted();
+        // 프론트엔드로 임시 코드와 함께 리다이렉트
+        String redirectUrl = frontendRedirectUrl + "?code=" + oauthCode;
 
         log.info("OAuth 네이버 로그인 성공 - 리다이렉트: {}", redirectUrl);
         httpResponse.sendRedirect(redirectUrl);
@@ -165,13 +160,12 @@ public class OAuthController {
     @Operation(summary = "구글 로그인 Callback",
             description = "구글 OAuth Callback을 처리하고 프론트엔드로 리다이렉트합니다.\n\n" +
                     "**보안 플로우:**\n" +
-                    "1. Refresh Token은 HttpOnly 쿠키에 저장 (XSS 방지)\n" +
-                    "2. 프론트엔드 페이지로 리다이렉트 (Access Token은 URL에 포함하지 않음)\n" +
-                    "3. 프론트엔드에서 `/api/auth/refresh`를 호출하여 새 Access Token 발급\n\n" +
+                    "1. OAuth 로그인 완료 후 임시 코드 생성 (30초 TTL)\n" +
+                    "2. 프론트엔드로 임시 코드와 함께 리다이렉트\n" +
+                    "3. 프론트엔드에서 `/api/oauth/token`을 호출하여 토큰 발급\n\n" +
                     "**리다이렉트 URL 파라미터:**\n" +
-                    "- http://localhost:3000/auth/callback?success=true&requiresProfileSetup=true\n" +
-                    "- success: 로그인 성공 여부 (true/false)\n" +
-                    "- requiresProfileSetup: 프로필 완성 필요 여부 (true/false)")
+                    "- http://localhost:3000/auth/callback?code=xxx\n" +
+                    "- code: 임시 인증 코드 (30초 내에 토큰으로 교환 필요)")
     @GetMapping("/google/callback")
     public void handleGoogleCallback(
             @RequestParam String code,
@@ -179,15 +173,42 @@ public class OAuthController {
             HttpServletResponse httpResponse) throws IOException {
         OAuthCallbackResponse response = oauthService.handleCallback("google", code, state);
 
-        // Refresh Token을 HttpOnly 쿠키에 설정
-        setRefreshTokenCookie(httpResponse, response.getTokenInfo().getRefreshToken());
+        // 임시 코드 생성 및 Redis에 토큰 정보 저장
+        String oauthCode = oauthService.generateOAuthCode(response);
 
-        // 프론트엔드로 리다이렉트 (Access Token은 URL에 포함하지 않음)
-        String redirectUrl = frontendRedirectUrl +
-                "?success=true" +
-                "&requiresProfileSetup=" + !response.getTokenInfo().isProfileCompleted();
+        // 프론트엔드로 임시 코드와 함께 리다이렉트
+        String redirectUrl = frontendRedirectUrl + "?code=" + oauthCode;
 
         log.info("OAuth 구글 로그인 성공 - 리다이렉트: {}", redirectUrl);
         httpResponse.sendRedirect(redirectUrl);
+    }
+
+    /**
+     * OAuth 임시 코드를 토큰으로 교환
+     */
+    @Operation(summary = "OAuth 코드를 토큰으로 교환",
+            description = "OAuth 콜백에서 받은 임시 코드를 Access Token과 Refresh Token으로 교환합니다.\n\n" +
+                    "**사용법:**\n" +
+                    "1. OAuth 콜백 후 URL에서 code 파라미터를 추출\n" +
+                    "2. 30초 내에 이 API를 호출하여 토큰 교환\n" +
+                    "3. 응답으로 받은 accessToken을 저장하고 API 호출에 사용\n\n" +
+                    "**주의사항:**\n" +
+                    "- 코드는 1회용이며, 30초 후 만료됩니다\n" +
+                    "- Refresh Token은 HttpOnly 쿠키로 자동 설정됩니다")
+    @PostMapping("/token")
+    public ApiResponse<OAuthCallbackResponse> exchangeCodeForToken(
+            @RequestBody OAuthTokenRequest request,
+            HttpServletResponse httpResponse) {
+
+        log.info("OAuth 코드 교환 요청: code={}", request.getCode());
+
+        OAuthCallbackResponse response = oauthService.exchangeCodeForToken(request.getCode());
+
+        // Refresh Token을 HttpOnly 쿠키에 설정
+        setRefreshTokenCookie(httpResponse, response.getTokenInfo().getRefreshToken());
+
+        log.info("OAuth 코드 교환 완료: provider={}", response.getProvider());
+
+        return ApiResponse.success(response);
     }
 }

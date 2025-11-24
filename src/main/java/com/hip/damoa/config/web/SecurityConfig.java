@@ -75,6 +75,7 @@ public class SecurityConfig {
                                 "/api/auth/refresh",
                                 "/api/oauth/*/authorize",
                                 "/api/oauth/*/callback",
+                                "/api/oauth/token",
                                 "/api/estimates/requests/public",  // Public estimate requests
                                 "/api/estimates/requests/{requestId}",  // View estimate request
                                 "/api/contests/public",  // Public contests
