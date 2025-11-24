@@ -27,8 +27,8 @@ public class CompanyReviewCreateRequest {
     private String content;
 
     /**
-     * 리뷰 이미지 URL 배열 (S3 presigned URL로 업로드 후 받은 URL)
-     * Service 레이어에서 URL → File ID로 변환 후 company_review_images 테이블에 저장
+     * 리뷰 이미지 UUID 배열 (파일 업로드 후 받은 UUID)
+     * Service 레이어에서 UUID → File ID로 변환 후 company_review_images 테이블에 저장
      */
-    private String[] images;
+    private String[] imageUuids;
 }

@@ -36,8 +36,7 @@ public class UserProfileUpdateRequest {
     @Size(max = 20, message = "우편번호는 20자 이내로 입력해주세요")
     private String postalCode;
 
-    @Size(max = 500, message = "아바타 URL은 500자 이내로 입력해주세요")
-    private String avatarUrl;
+    private String avatarUuid;  // 아바타 파일 UUID (파일 업로드 API로 받은 UUID)
 
     private String profileVisibility; // PUBLIC, PRIVATE, FRIENDS_ONLY
 }

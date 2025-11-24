@@ -35,22 +35,45 @@ public class ProfileService {
     private final FileRepository fileRepository;
 
     /**
-     * Avatar 파일 정보 추출 헬퍼 메서드
+     * Avatar 파일 정보 추출 헬퍼 메서드 (프로필 조회용)
+     * avatarUrl이 있으면 해당 URL로 File 조회하여 UUID 포함 반환
      * @param avatarUrl 프로필 avatar URL
-     * @return [fileId, fileUuid, avatarUrl] 배열 (avatarUrl이 없으면 [null, null, null])
+     * @return [fileId, fileUuid, avatarUrl] 배열
      */
     private Object[] getAvatarFileInfo(String avatarUrl) {
         if (avatarUrl == null || avatarUrl.isEmpty()) {
             return new Object[]{null, null, null};
         }
 
+        // URL로 File 조회
         File file = fileRepository.findByFileUrl(avatarUrl).orElse(null);
         if (file == null) {
-            // File이 없으면 URL만 반환
+            // File이 없으면 URL만 반환 (레거시 호환)
             return new Object[]{null, null, avatarUrl};
         }
 
         return new Object[]{file.getId(), file.getUuid(), avatarUrl};
+    }
+
+    /**
+     * UUID로 File 조회하여 URL 반환
+     * @param uuidString 파일 UUID 문자열
+     * @return 파일 URL (없으면 null)
+     */
+    private String getFileUrlByUuid(String uuidString) {
+        if (uuidString == null || uuidString.isEmpty()) {
+            return null;
+        }
+
+        UUID uuid = UUID.fromString(uuidString);
+        File file = fileRepository.findByUuidAndIsDeletedFalse(uuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+
+        // entity 정보 업데이트
+        file.updateEntityInfo("USER_PROFILE_AVATAR", null);
+        fileRepository.save(file);
+
+        return file.getFileUrl();
     }
 
     /**
@@ -304,9 +327,12 @@ public class ProfileService {
             );
         }
 
-        // 아바타 업데이트
-        if (request.getAvatarUrl() != null) {
-            userProfile.updateAvatar(request.getAvatarUrl());
+        // 아바타 업데이트 (UUID → URL 변환)
+        if (request.getAvatarUuid() != null) {
+            String avatarUrl = getFileUrlByUuid(request.getAvatarUuid());
+            if (avatarUrl != null) {
+                userProfile.updateAvatar(avatarUrl);
+            }
         }
 
         // 공개 여부 업데이트
