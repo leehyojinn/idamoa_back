@@ -69,13 +69,13 @@ public class CompanyReviewController {
 
         log.info("리뷰 작성 API 호출: companyUuid={}, userEmail={}", companyUuid, userDetails.getUsername());
 
-        CompanyReview review = reviewService.createReview(
+        CompanyReviewResponse response = reviewService.createReview(
                 companyUuid,
                 userDetails.getUsername(),
                 request
         );
 
-        return ApiResponse.success(reviewService.toResponse(review));
+        return ApiResponse.success(response);
     }
 
     /**
@@ -105,8 +105,7 @@ public class CompanyReviewController {
         log.info("업체 리뷰 목록 조회 API 호출: companyUuid={}, page={}, size={}",
                 companyUuid, pageable.getPageNumber(), pageable.getPageSize());
 
-        Page<CompanyReview> reviews = reviewService.getCompanyReviews(companyUuid, pageable);
-        Page<CompanyReviewResponse> response = reviews.map(reviewService::toResponse);
+        Page<CompanyReviewResponse> response = reviewService.getCompanyReviews(companyUuid, pageable);
 
         return ApiResponse.success(response);
     }
@@ -120,9 +119,9 @@ public class CompanyReviewController {
 
         log.info("리뷰 상세 조회 API 호출: reviewUuid={}", reviewUuid);
 
-        CompanyReview review = reviewService.getReview(reviewUuid);
+        CompanyReviewResponse response = reviewService.getReview(reviewUuid);
 
-        return ApiResponse.success(reviewService.toResponse(review));
+        return ApiResponse.success(response);
     }
 
     /**
@@ -142,13 +141,13 @@ public class CompanyReviewController {
 
         log.info("리뷰 수정 API 호출: reviewUuid={}, userEmail={}", reviewUuid, userDetails.getUsername());
 
-        CompanyReview review = reviewService.updateReview(
+        CompanyReviewResponse response = reviewService.updateReview(
                 reviewUuid,
                 userDetails.getUsername(),
                 request
         );
 
-        return ApiResponse.success(reviewService.toResponse(review));
+        return ApiResponse.success(response);
     }
 
     /**

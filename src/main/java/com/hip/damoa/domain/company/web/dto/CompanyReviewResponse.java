@@ -49,15 +49,24 @@ public class CompanyReviewResponse {
     private LocalDateTime updatedAt;
 
     public static CompanyReviewResponse from(CompanyReview review) {
-        return from(review, null, review.getUser() != null ? review.getUser().getEmail() : null);
+        return from(review, null, review.getUser() != null ? review.getUser().getEmail() : null,
+                review.getCompany().getId(), review.getCompany().getName());
     }
 
     public static CompanyReviewResponse from(CompanyReview review, List<ReviewImageDto> images, String userName) {
+        return from(review, images, userName, review.getCompany().getId(), review.getCompany().getName());
+    }
+
+    /**
+     * Lazy Loading 문제 방지를 위해 Company 정보를 파라미터로 받는 메서드
+     */
+    public static CompanyReviewResponse from(CompanyReview review, List<ReviewImageDto> images, String userName,
+                                              Long companyId, String companyName) {
         return CompanyReviewResponse.builder()
                 .id(review.getId())
                 .uuid(review.getUuid())
-                .companyId(review.getCompany().getId())
-                .companyName(review.getCompany().getName())
+                .companyId(companyId)
+                .companyName(companyName)
                 .userId(review.getUser().getId())
                 .userEmail(review.getUser().getEmail())
                 .userName(userName != null ? userName : review.getUser().getEmail())

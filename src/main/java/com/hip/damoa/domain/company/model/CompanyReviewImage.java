@@ -44,6 +44,10 @@ public class CompanyReviewImage {
         this.review = review;
         this.fileId = fileId;
         this.displayOrder = displayOrder != null ? displayOrder : 0;
+    }
+
+    @PrePersist
+    protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
 }

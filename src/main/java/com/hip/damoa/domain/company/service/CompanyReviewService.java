@@ -9,9 +9,13 @@ import com.hip.damoa.domain.company.repository.CompanyRepository;
 import com.hip.damoa.domain.company.repository.CompanyReviewImageRepository;
 import com.hip.damoa.domain.company.repository.CompanyReviewRepository;
 import com.hip.damoa.domain.company.web.dto.CompanyReviewCreateRequest;
+import com.hip.damoa.domain.company.web.dto.CompanyReviewResponse;
+import com.hip.damoa.domain.company.web.dto.ReviewImageDto;
 import com.hip.damoa.domain.file.model.File;
 import com.hip.damoa.domain.file.repository.FileRepository;
 import com.hip.damoa.domain.user.model.User;
+import com.hip.damoa.domain.user.model.UserProfile;
+import com.hip.damoa.domain.user.repository.UserProfileRepository;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +42,7 @@ public class CompanyReviewService {
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
     private final FileRepository fileRepository;
-    private final com.hip.damoa.domain.user.repository.UserProfileRepository userProfileRepository;
+    private final UserProfileRepository userProfileRepository;
 
     /**
      * CompanyReview의 User로부터 userName 조회
@@ -50,7 +54,7 @@ public class CompanyReviewService {
         }
 
         return userProfileRepository.findByUserId(review.getUser().getId())
-                .map(com.hip.damoa.domain.user.model.UserProfile::getName)
+                .map(UserProfile::getName)
                 .orElse(review.getUser().getEmail());
     }
 
@@ -58,7 +62,7 @@ public class CompanyReviewService {
      * 리뷰 작성
      */
     @Transactional
-    public CompanyReview createReview(UUID companyUuid, String userEmail, CompanyReviewCreateRequest request) {
+    public CompanyReviewResponse createReview(UUID companyUuid, String userEmail, CompanyReviewCreateRequest request) {
         log.info("리뷰 작성 시작: companyUuid={}, userEmail={}", companyUuid, userEmail);
 
         User user = userRepository.findByEmail(userEmail)
@@ -92,37 +96,45 @@ public class CompanyReviewService {
         processReviewImages(review, request.getImageUuids());
 
         // 업체 평균 평점 업데이트
-        updateCompanyRating(company);
+        updateCompanyRating(company.getId());
 
         log.info("리뷰 작성 완료: reviewUuid={}", review.getId());
-        return review;
+
+        // 트랜잭션 내에서 Response 생성 (Lazy Loading 문제 방지)
+        return toResponse(review);
     }
 
     /**
      * 업체 리뷰 목록 조회
      */
     @Transactional(readOnly = true)
-    public Page<CompanyReview> getCompanyReviews(UUID companyUuid, Pageable pageable) {
+    public Page<CompanyReviewResponse> getCompanyReviews(UUID companyUuid, Pageable pageable) {
         Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
 
-        return reviewRepository.findByCompanyAndStatusOrderByCreatedAtDesc(company, "PUBLISHED", pageable);
+        Page<CompanyReview> reviews = reviewRepository.findByCompanyAndStatusOrderByCreatedAtDesc(company, "PUBLISHED", pageable);
+
+        // 트랜잭션 내에서 Response 변환 (Lazy Loading 문제 방지)
+        return reviews.map(this::toResponse);
     }
 
     /**
      * 리뷰 상세 조회
      */
     @Transactional(readOnly = true)
-    public CompanyReview getReview(UUID reviewUuid) {
-        return reviewRepository.findByUuidAndIsDeletedFalse(reviewUuid)
+    public CompanyReviewResponse getReview(UUID reviewUuid) {
+        CompanyReview review = reviewRepository.findByUuidAndIsDeletedFalse(reviewUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN)); // REVIEW_NOT_FOUND 에러코드 추가 필요
+
+        // 트랜잭션 내에서 Response 생성 (Lazy Loading 문제 방지)
+        return toResponse(review);
     }
 
     /**
      * 리뷰 수정
      */
     @Transactional
-    public CompanyReview updateReview(UUID reviewUuid, String userEmail, CompanyReviewCreateRequest request) {
+    public CompanyReviewResponse updateReview(UUID reviewUuid, String userEmail, CompanyReviewCreateRequest request) {
         log.info("리뷰 수정 시작: reviewUuid={}, userEmail={}", reviewUuid, userEmail);
 
         User user = userRepository.findByEmail(userEmail)
@@ -150,10 +162,12 @@ public class CompanyReviewService {
         }
 
         // 업체 평균 평점 업데이트
-        updateCompanyRating(review.getCompany());
+        updateCompanyRating(review.getCompany().getId());
 
         log.info("리뷰 수정 완료: reviewUuid={}", reviewUuid);
-        return review;
+
+        // 트랜잭션 내에서 Response 생성 (Lazy Loading 문제 방지)
+        return toResponse(review);
     }
 
     /**
@@ -174,12 +188,12 @@ public class CompanyReviewService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        Company company = review.getCompany();
+        Long companyId = review.getCompany().getId();
         review.softDelete();
         reviewRepository.save(review);
 
         // 업체 평균 평점 업데이트
-        updateCompanyRating(company);
+        updateCompanyRating(companyId);
 
         log.info("리뷰 삭제 완료: reviewUuid={}", reviewUuid);
     }
@@ -261,7 +275,11 @@ public class CompanyReviewService {
     /**
      * 업체 평균 평점 업데이트
      */
-    private void updateCompanyRating(Company company) {
+    private void updateCompanyRating(Long companyId) {
+        // Company를 새로 조회하여 Lazy Loading 문제 방지
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
+
         List<CompanyReview> reviews = reviewRepository.findByCompanyAndStatus(company, "PUBLISHED");
 
         if (reviews.isEmpty()) {
@@ -286,11 +304,17 @@ public class CompanyReviewService {
     /**
      * CompanyReview 엔티티를 Response DTO로 변환 (File ID → URL, UUID 변환 포함)
      */
-    public com.hip.damoa.domain.company.web.dto.CompanyReviewResponse toResponse(CompanyReview review) {
+    public CompanyReviewResponse toResponse(CompanyReview review) {
         // ✅ OneToMany 기반 이미지 조회 사용 (UUID 포함)
-        List<com.hip.damoa.domain.company.web.dto.ReviewImageDto> imageDtos = getReviewImageDtos(review);
+        List<ReviewImageDto> imageDtos = getReviewImageDtos(review);
         String userName = getUserName(review);
-        return com.hip.damoa.domain.company.web.dto.CompanyReviewResponse.from(review, imageDtos, userName);
+
+        // Company를 새로 조회하여 Lazy Loading 문제 방지
+        Long companyId = review.getCompany().getId();
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
+
+        return CompanyReviewResponse.from(review, imageDtos, userName, company.getId(), company.getName());
     }
 
     /**
@@ -349,7 +373,7 @@ public class CompanyReviewService {
     /**
      * 리뷰 이미지 조회 (File ID → DTO 변환, UUID 포함)
      */
-    public List<com.hip.damoa.domain.company.web.dto.ReviewImageDto> getReviewImageDtos(CompanyReview review) {
+    public List<ReviewImageDto> getReviewImageDtos(CompanyReview review) {
         List<CompanyReviewImage> images = reviewImageRepository
                 .findByReviewOrderByDisplayOrder(review);
 
@@ -359,7 +383,7 @@ public class CompanyReviewService {
                     if (file == null) {
                         return null;
                     }
-                    return com.hip.damoa.domain.company.web.dto.ReviewImageDto.from(
+                    return ReviewImageDto.from(
                             image,
                             file.getFileUrl(),
                             file.getUuid()
