@@ -57,14 +57,12 @@ public class CompanyCreateRequest {
     @Schema(description = "영업 시간 비고 (선택)", example = "주말 및 공휴일 휴무")
     private String businessHoursNote;
 
-    @Schema(description = "서비스 지역 배열 (선택)", example = "[\"강남구\", \"서초구\", \"송파구\"]")
-    private String[] serviceAreas;
+    // serviceAreas 제거 - 필터로 관리
 
     @Schema(description = "태그 배열 (선택)", example = "[\"인테리어\", \"리모델링\", \"상업공간\"]")
     private String[] tags;
 
-    @Schema(description = "검색 키워드 배열 (선택)", example = "[\"강남\", \"인테리어\", \"고급\"]")
-    private String[] keywords;
+    // keywords 필드 제거 - 통합 검색으로 대체
 
     @Schema(description = "필터 옵션 ID 목록 (업체 분류, 전문영역 등 - 선택)",
             example = "[1, 2, 5]")

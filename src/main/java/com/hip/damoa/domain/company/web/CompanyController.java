@@ -8,7 +8,11 @@ import com.hip.damoa.domain.company.model.CompanyImage;
 import com.hip.damoa.domain.company.service.CompanyImageService;
 import com.hip.damoa.domain.company.service.CompanyService;
 import com.hip.damoa.domain.company.web.dto.*;
+import com.hip.damoa.domain.company.web.dto.CompanyFilterGroupDto;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -84,7 +88,19 @@ public class CompanyController {
         }
 
         Company company = companyService.createCompany(userDetails.getUsername(), request);
-        return ApiResponse.success(CompanyResponse.from(company));
+
+        CompanyResponse response = CompanyResponse.from(company);
+
+        // filterOptions 제거 - filterGroups만 사용
+
+        // 카테고리별로 그룹화된 필터 추가
+        List<CompanyFilterGroupDto> filterGroups = companyService.getCompanyFilterGroups(company);
+        response.setFilterGroups(filterGroups);
+
+        // 새로 생성된 업체이므로 좋아요는 항상 false
+        response.setIsLiked(false);
+
+        return ApiResponse.success(response);
     }
 
     /**
@@ -124,9 +140,11 @@ public class CompanyController {
                 .map(companyImageService::toDto)
                 .collect(Collectors.toList()));
 
-        // 필터 옵션 추가 (전문영역, 진료과, 작업평수 등)
-        List<FilterOptionDto> filterOptions = companyService.getCompanyFilterOptions(company);
-        response.setFilterOptions(filterOptions);
+        // filterOptions 제거 - filterGroups만 사용
+
+        // 카테고리별로 그룹화된 필터 추가
+        List<CompanyFilterGroupDto> filterGroups = companyService.getCompanyFilterGroups(company);
+        response.setFilterGroups(filterGroups);
 
         // 본인 업체이므로 좋아요는 항상 false
         response.setIsLiked(false);
@@ -168,9 +186,11 @@ public class CompanyController {
                 .map(companyImageService::toDto)
                 .collect(Collectors.toList()));
 
-        // 필터 옵션 추가 (전문영역, 진료과, 작업평수 등)
-        List<FilterOptionDto> filterOptions = companyService.getCompanyFilterOptions(company);
-        response.setFilterOptions(filterOptions);
+        // filterOptions 제거 - filterGroups만 사용
+
+        // 카테고리별로 그룹화된 필터 추가
+        List<CompanyFilterGroupDto> filterGroups = companyService.getCompanyFilterGroups(company);
+        response.setFilterGroups(filterGroups);
 
         // 로그인한 사용자의 좋아요 여부 설정
         if (userDetails != null) {
@@ -220,9 +240,11 @@ public class CompanyController {
                 .map(companyImageService::toDto)
                 .collect(Collectors.toList()));
 
-        // 필터 옵션 추가 (전문영역, 진료과, 작업평수 등)
-        List<FilterOptionDto> filterOptions = companyService.getCompanyFilterOptions(company);
-        response.setFilterOptions(filterOptions);
+        // filterOptions 제거 - filterGroups만 사용
+
+        // 카테고리별로 그룹화된 필터 추가
+        List<CompanyFilterGroupDto> filterGroups = companyService.getCompanyFilterGroups(company);
+        response.setFilterGroups(filterGroups);
 
         // 로그인한 사용자의 좋아요 여부 설정
         if (userDetails != null) {
@@ -271,6 +293,10 @@ public class CompanyController {
             List<CompanyImageDto> images = companyService.getCompanyImages(company);
             CompanyListResponse listResponse = CompanyListResponse.from(company, images);
 
+            // 카테고리별로 그룹화된 필터 추가
+            List<CompanyFilterGroupDto> filterGroups = companyService.getCompanyFilterGroups(company);
+            listResponse.setFilterGroups(filterGroups);
+
             // 로그인한 사용자의 좋아요 여부 설정
             if (userDetails != null) {
                 boolean isLiked = companyService.isLiked(userDetails.getUsername(), company.getUuid());
@@ -287,51 +313,75 @@ public class CompanyController {
     /**
      * 업체 검색 (필터링 + 정렬)
      */
-    @Operation(summary = "업체 검색",
-            description = "다양한 조건으로 업체를 검색하고 정렬할 수 있습니다.\n\n" +
-                    "**검색 조건 (모두 선택):**\n" +
-                    "- keyword: 업체명, 설명, 태그에서 검색\n" +
-                    "- serviceAreas: 서비스 지역 필터 (배열, 예: `강남구,서초구`)\n" +
-                    "- tags: 태그 필터 (배열, 예: `인테리어,리모델링`)\n" +
-                    "- minRating: 최소 평점 (예: `4.0` - 4점 이상)\n" +
-                    "- filterOptionIds: 필터 옵션 ID 배열 (업종, 전문영역 등)\n\n" +
+    @Operation(summary = "업체 검색 (통합 키워드 + 카테고리별 필터)",
+            description = "통합 키워드 검색과 카테고리별 필터링으로 업체를 검색합니다.\n\n" +
+                    "**통합 키워드 검색 (keyword):**\n" +
+                    "- 업체명, 설명, 상세내용\n" +
+                    "- 주소, 웹사이트URL, 이메일, 전화번호\n" +
+                    "- 태그 배열 내부의 텍스트도 검색됨\n" +
+                    "- 예: keyword=상업공간 검색 시 태그에 '상업공간' 포함된 업체도 검색\n\n" +
+                    "**카테고리별 필터 (filters):**\n" +
+                    "- 형식: 카테고리ID:옵션ID1,옵션ID2\n" +
+                    "- 예: 1:1,2,3 (카테고리1의 옵션 1,2,3)\n" +
+                    "- 같은 카테고리 내: OR 조건\n" +
+                    "- 다른 카테고리 간: AND 조건\n" +
+                    "- 여러 카테고리는 & 구분: 1:1,2&2:10,11\n\n" +
                     "**정렬 기준 (sortBy):**\n" +
-                    "- `LATEST`: 최신순 (기본값)\n" +
-                    "- `RATING`: 평점 높은 순\n" +
-                    "- `REVIEW_COUNT`: 리뷰 많은 순\n" +
-                    "- `POPULAR`: 인기순 (조회수 + 좋아요)\n\n" +
-                    "**페이지네이션:**\n" +
-                    "- size: 페이지당 항목 수 (기본 20)\n" +
-                    "- page: 페이지 번호 (0부터 시작)\n\n" +
-                    "**응답:**\n" +
-                    "- 업체 목록 (이미지 포함)\n" +
-                    "- 각 업체의 평점, 리뷰 수, 좋아요 여부\n" +
-                    "- 페이지 정보 (totalElements, totalPages 등)\n\n" +
-                    "**예시 호출:**\n" +
+                    "- LATEST: 최신순 (기본값)\n" +
+                    "- RATING: 평점순\n" +
+                    "- REVIEW_COUNT: 리뷰순\n" +
+                    "- POPULAR: 인기순\n" +
+                    "- PREMIUM_TIER: 프리미엄순\n\n" +
+                    "**예시:**\n" +
                     "```\n" +
-                    "GET /api/companies/search?keyword=인테리어&serviceAreas=강남구&minRating=4.0&sortBy=RATING&size=10&page=0\n" +
-                    "```\n\n" +
-                    "**활용:**\n" +
-                    "- 메인 페이지 업체 검색\n" +
-                    "- 필터링된 업체 목록\n" +
-                    "- 지역별 업체 찾기")
+                    "GET /api/companies/search?keyword=병원&filters=1:1,2&filters=2:10,11\n" +
+                    "// '병원' 키워드로 검색하며 (서울 OR 경기) AND (인테리어 OR 마케팅) 필터 적용\n" +
+                    "```")
     @GetMapping("/search")
     public ApiResponse<Page<CompanyListResponse>> searchCompanies(
+            @Parameter(description = "통합 키워드 검색", example = "인테리어")
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String[] serviceAreas,
-            @RequestParam(required = false) String[] tags,
+
+            @Parameter(description = "최소 평점 (0.0~5.0)", example = "4.0")
             @RequestParam(required = false) java.math.BigDecimal minRating,
-            @RequestParam(required = false) java.util.List<Long> filterOptionIds,
+
+            @Parameter(description = "필터 옵션 (카테고리ID:옵션ID1,옵션ID2 형식)", examples = {
+                @ExampleObject(name = "지역필터", value = "1:1,2,3"),
+                @ExampleObject(name = "업종필터", value = "2:10,11"),
+                @ExampleObject(name = "복합필터", value = "1:1,2&2:10,11")
+            })
+            @RequestParam(required = false) String filters,
+
+            @Parameter(description = "정렬 기준", schema = @Schema(allowableValues = {"LATEST", "POPULAR", "RATING", "REVIEW_COUNT", "PREMIUM_TIER"}))
             @RequestParam(required = false, defaultValue = "LATEST") String sortBy,
+
             @PageableDefault(size = 20) Pageable pageable,
             @AuthenticationPrincipal UserDetails userDetails) {
 
+        // 동적 필터 파싱 (예: "1:1,2,3&2:10,11" -> {1: [1,2,3], 2: [10,11]})
+        java.util.Map<Long, java.util.List<Long>> filtersByCategory = new java.util.HashMap<>();
+        if (filters != null && !filters.isEmpty()) {
+            String[] categoryFilters = filters.split("&");
+            for (String categoryFilter : categoryFilters) {
+                String[] parts = categoryFilter.split(":");
+                if (parts.length == 2) {
+                    try {
+                        Long categoryId = Long.parseLong(parts[0]);
+                        java.util.List<Long> optionIds = java.util.Arrays.stream(parts[1].split(","))
+                            .map(Long::parseLong)
+                            .collect(java.util.stream.Collectors.toList());
+                        filtersByCategory.put(categoryId, optionIds);
+                    } catch (NumberFormatException e) {
+                        // 잘못된 형식은 무시
+                    }
+                }
+            }
+        }
+
         CompanySearchRequest searchRequest = CompanySearchRequest.builder()
                 .keyword(keyword)
-                .serviceAreas(serviceAreas)
-                .tags(tags)
                 .minRating(minRating)
-                .filterOptionIds(filterOptionIds)
+                .filtersByCategory(filtersByCategory)
                 .sortBy(sortBy)
                 .build();
 
@@ -339,6 +389,10 @@ public class CompanyController {
         Page<CompanyListResponse> response = companies.map(company -> {
             List<CompanyImageDto> images = companyService.getCompanyImages(company);
             CompanyListResponse listResponse = CompanyListResponse.from(company, images);
+
+            // 카테고리별로 그룹화된 필터 추가
+            List<CompanyFilterGroupDto> filterGroups = companyService.getCompanyFilterGroups(company);
+            listResponse.setFilterGroups(filterGroups);
 
             // 로그인한 사용자의 좋아요 여부 설정
             if (userDetails != null) {
@@ -390,7 +444,19 @@ public class CompanyController {
 
         Company company = companyService.updateCompany(
                 userDetails.getUsername(), companyUuid, request);
-        return ApiResponse.success(CompanyResponse.from(company));
+
+        CompanyResponse response = CompanyResponse.from(company);
+
+        // filterOptions 제거 - filterGroups만 사용
+
+        // 카테고리별로 그룹화된 필터 추가
+        List<CompanyFilterGroupDto> filterGroups = companyService.getCompanyFilterGroups(company);
+        response.setFilterGroups(filterGroups);
+
+        // 본인 업체이므로 좋아요는 항상 false
+        response.setIsLiked(false);
+
+        return ApiResponse.success(response);
     }
 
     /**

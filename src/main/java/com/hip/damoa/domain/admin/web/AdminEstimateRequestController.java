@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.*;
  * 견적 요청 관리 REST API (관리자용)
  */
 @Slf4j
-@Tag(name = "1902. Admin - EstimateRequest", description = "견적 요청 관리 API (관리자)")
+@Tag(name = "1903. Admin - EstimateRequest", description = "견적 요청 관리 API (관리자)")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

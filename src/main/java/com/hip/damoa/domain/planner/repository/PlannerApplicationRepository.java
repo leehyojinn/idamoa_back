@@ -6,8 +6,11 @@ import com.hip.damoa.domain.user.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,4 +39,10 @@ public interface PlannerApplicationRepository extends JpaRepository<PlannerAppli
     long countByStatusAndIsDeletedFalse(PlannerApplicationStatus status);
 
     long countByUserAndIsDeletedFalse(User user);
+
+    // Admin Dashboard Statistics
+    Long countByCreatedAtAfterAndIsDeletedFalse(LocalDateTime dateTime);
+
+    @Query("SELECT COUNT(p) FROM PlannerApplication p WHERE CAST(p.status AS string) = :status AND p.isDeleted = false")
+    Long countByStatusAndIsDeletedFalse(@Param("status") String status);
 }

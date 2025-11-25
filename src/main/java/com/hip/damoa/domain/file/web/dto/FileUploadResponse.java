@@ -51,7 +51,7 @@ public class FileUploadResponse {
     @Schema(description = "연결된 엔티티 ID", example = "123")
     private Long entityId;
 
-    @Schema(description = "파일 업로드 일시", example = "2024-01-15T10:30:00")
+    @Schema(description = "파일 업로드 일시", example = "2025-01-15T10:30:00")
     private LocalDateTime createdAt;
 
     public static FileUploadResponse from(File file) {

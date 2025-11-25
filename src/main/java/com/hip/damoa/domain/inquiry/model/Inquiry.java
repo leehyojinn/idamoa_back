@@ -63,4 +63,11 @@ public class Inquiry extends BaseEntity {
     public void cancel() {
         this.status = InquiryStatus.CANCELLED;
     }
+
+    /**
+     * 상태 업데이트 (관리자용)
+     */
+    public void updateStatus(String status) {
+        this.status = InquiryStatus.valueOf(status);
+    }
 }

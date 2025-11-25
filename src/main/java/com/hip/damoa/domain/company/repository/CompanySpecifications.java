@@ -34,7 +34,9 @@ public class CompanySpecifications {
     }
 
     /**
-     * 키워드 검색 (업체명 또는 설명)
+     * 통합 키워드 검색
+     * 검색 대상: 업체명, 설명, 상세내용, 주소, 웹사이트URL, 이메일
+     * tags는 별도 hasTags 메서드 사용, serviceAreas는 필터로 검색, keywords는 제거됨
      */
     public static Specification<Company> hasKeyword(String keyword) {
         return (root, query, cb) -> {
@@ -42,9 +44,17 @@ public class CompanySpecifications {
                 return cb.conjunction();
             }
             String pattern = "%" + keyword.toLowerCase() + "%";
+
+            // 일반 텍스트 필드 검색만 수행
+            // tags 배열은 PostgreSQL 호환성 문제로 별도 검색
             return cb.or(
                 cb.like(cb.lower(root.get("name")), pattern),
-                cb.like(cb.lower(root.get("description")), pattern)
+                cb.like(cb.lower(root.get("description")), pattern),
+                cb.like(cb.lower(root.get("detailContent")), pattern),
+                cb.like(cb.lower(root.get("address")), pattern),
+                cb.like(cb.lower(root.get("websiteUrl")), pattern),
+                cb.like(cb.lower(root.get("email")), pattern),
+                cb.like(cb.lower(root.get("primaryPhone")), pattern)
             );
         };
     }
@@ -102,38 +112,78 @@ public class CompanySpecifications {
     }
 
     /**
-     * 서비스 지역 필터 (PostgreSQL 배열 연산)
+     * 서비스 지역 필터 - 필터 옵션을 통한 검색
+     * REGION 카테고리의 필터 옵션 ID들로 검색
      */
+    public static Specification<Company> hasRegionFilters(List<Long> regionFilterIds) {
+        return (root, query, cb) -> {
+            if (regionFilterIds == null || regionFilterIds.isEmpty()) {
+                return cb.conjunction();
+            }
+
+            // EXISTS 서브쿼리로 필터 옵션 확인
+            Subquery<Long> subquery = query.subquery(Long.class);
+            Root<CompanyFilterOption> cfoRoot = subquery.from(CompanyFilterOption.class);
+
+            subquery.select(cfoRoot.get("company").get("id"))
+                .where(
+                    cb.equal(cfoRoot.get("company").get("id"), root.get("id")),
+                    cfoRoot.get("filterOption").get("id").in(regionFilterIds)
+                );
+
+            return cb.exists(subquery);
+        };
+    }
+
+    /**
+     * @deprecated 서비스 지역은 이제 필터 옵션으로 관리됨. hasRegionFilters 사용 권장
+     * 임시로 마이그레이션 기간 동안 유지
+     */
+    @Deprecated
     public static Specification<Company> hasServiceAreas(String[] serviceAreas) {
         return (root, query, cb) -> {
             if (serviceAreas == null || serviceAreas.length == 0) {
                 return cb.conjunction();
             }
-            // PostgreSQL 배열 && 연산자 사용 (겹치는 요소가 있는지 확인)
-            return cb.isTrue(
-                cb.function("array_overlap", Boolean.class,
-                    root.get("serviceAreas"),
-                    cb.literal(serviceAreas)
-                )
-            );
+
+            // PostgreSQL array_position 함수를 사용하여 배열 멤버십 체크
+            // array_position(service_areas, 'value') IS NOT NULL
+            Predicate[] predicates = new Predicate[serviceAreas.length];
+            for (int i = 0; i < serviceAreas.length; i++) {
+                predicates[i] = cb.isNotNull(
+                    cb.function("array_position", Integer.class,
+                        root.get("serviceAreas"),
+                        cb.literal(serviceAreas[i])
+                    )
+                );
+            }
+            return cb.or(predicates);
         };
     }
 
     /**
      * 태그 필터 (PostgreSQL 배열 연산)
+     * 각 tag 값이 배열에 포함되어 있는지 확인 (OR 조건)
+     * tags는 text[] 배열로 유지됨 (사용자 자유 입력용)
      */
     public static Specification<Company> hasTags(String[] tags) {
         return (root, query, cb) -> {
             if (tags == null || tags.length == 0) {
                 return cb.conjunction();
             }
-            // PostgreSQL 배열 && 연산자 사용
-            return cb.isTrue(
-                cb.function("array_overlap", Boolean.class,
-                    root.get("tags"),
-                    cb.literal(tags)
-                )
-            );
+
+            // PostgreSQL array_position 함수를 사용하여 배열 멤버십 체크
+            // array_position(tags, 'value') IS NOT NULL
+            Predicate[] predicates = new Predicate[tags.length];
+            for (int i = 0; i < tags.length; i++) {
+                predicates[i] = cb.isNotNull(
+                    cb.function("array_position", Integer.class,
+                        root.get("tags"),
+                        cb.literal(tags[i])
+                    )
+                );
+            }
+            return cb.or(predicates);
         };
     }
 }

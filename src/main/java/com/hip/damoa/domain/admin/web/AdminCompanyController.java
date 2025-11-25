@@ -28,7 +28,7 @@ import java.util.UUID;
  * 업체 관리 REST API (관리자용)
  */
 @Slf4j
-@Tag(name = "1901. Admin - Company", description = "업체 관리 API (관리자용)")
+@Tag(name = "1902. Admin - Company", description = "업체 관리 API (관리자용)")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor
@@ -40,12 +40,16 @@ public class AdminCompanyController {
     /**
      * 업체 등록 (관리자용)
      */
-    @Operation(summary = "업체 등록 (관리자)", description = "관리자가 특정 사용자를 위한 업체를 등록합니다")
+    @Operation(
+            summary = "업체 등록 (관리자)",
+            description = "관리자가 업체를 등록합니다.\n" +
+                    "ownerId를 지정하지 않으면 소유자 없는 관리자 생성 업체로 등록됩니다."
+    )
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<CompanyResponse> createCompany(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam Long ownerId,
+            @RequestParam(required = false) Long ownerId,
             @Valid @RequestBody CompanyCreateRequest request) {
 
         Company company = companyService.createCompanyByAdmin(

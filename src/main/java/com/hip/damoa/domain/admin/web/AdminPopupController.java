@@ -1,4 +1,4 @@
-package com.hip.damoa.domain.popup.web;
+package com.hip.damoa.domain.admin.web;
 
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.popup.service.PopupService;
@@ -27,7 +27,7 @@ import java.util.UUID;
  *
  * 홈페이지 팝업 등록/수정/삭제 API (ADMIN 전용)
  */
-@Tag(name = "1900. Admin - Popup", description = "팝업 관리 API (관리자 전용)")
+@Tag(name = "1910. Admin - Popup", description = "팝업 관리 API (관리자 전용)")
 @SecurityRequirement(name = "bearerAuth")
 @Slf4j
 @RestController

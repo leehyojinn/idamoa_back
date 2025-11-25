@@ -31,9 +31,9 @@ public class CompanyResponse {
     private Map<String, Object> businessInfo;
     private Map<String, Object> businessHours;
     private String businessHoursNote;
-    private String[] serviceAreas;
+    // serviceAreas 제거 - 필터로 관리
     private String[] tags;
-    private String[] keywords;
+    // keywords 필드 제거 - 통합 검색으로 대체
     private String primaryPhone;
     private String secondaryPhone;
     private String emergencyContact;
@@ -61,7 +61,8 @@ public class CompanyResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<CompanyImageDto> images;
-    private List<FilterOptionDto> filterOptions; // 업체 분류/전문 영역/작업 평수 등
+    // filterOptions 제거 - filterGroups만 사용
+    private List<CompanyFilterGroupDto> filterGroups; // 카테고리별로 그룹화된 필터
 
     /**
      * Entity → DTO 변환
@@ -70,8 +71,8 @@ public class CompanyResponse {
         return CompanyResponse.builder()
                 .id(company.getId())
                 .uuid(company.getUuid())
-                .ownerId(company.getOwner().getId())
-                .ownerEmail(company.getOwner().getEmail())
+                .ownerId(company.getOwner() != null ? company.getOwner().getId() : null)
+                .ownerEmail(company.getOwner() != null ? company.getOwner().getEmail() : null)
                 .name(company.getName())
                 .slug(company.getSlug())
                 .description(company.getDescription())
@@ -80,9 +81,9 @@ public class CompanyResponse {
                 .businessInfo(company.getBusinessInfo())
                 .businessHours(company.getBusinessHours())
                 .businessHoursNote(company.getBusinessHoursNote())
-                .serviceAreas(company.getServiceAreas())
+                // serviceAreas 제거 - 필터로 관리
                 .tags(company.getTags())
-                .keywords(company.getKeywords())
+                // keywords 제거됨
                 .primaryPhone(company.getPrimaryPhone())
                 .secondaryPhone(company.getSecondaryPhone())
                 .emergencyContact(company.getEmergencyContact())
