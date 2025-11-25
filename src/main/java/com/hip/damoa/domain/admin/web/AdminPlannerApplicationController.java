@@ -23,7 +23,7 @@ import java.util.UUID;
 /**
  * 플래너 신청서 관리자 API
  */
-@Tag(name = "1912. Admin - Planner Application", description = "플래너 신청서 관리자 API")
+@Tag(name = "1904. Admin - Planner Application", description = "플래너 신청서 관리자 API")
 @SecurityRequirement(name = "bearerAuth")
 @Slf4j
 @RestController
@@ -37,8 +37,8 @@ public class AdminPlannerApplicationController {
      * 전체 플래너 신청서 목록 조회 (관리자 전용)
      */
     @Operation(summary = "[관리자] 전체 플래너 신청서 목록 조회",
-            description = "모든 플래너 신청서를 조회합니다.\\n\\n" +
-                    "- 상태별 필터링 가능\\n" +
+            description = "모든 플래너 신청서를 조회합니다.\n\n" +
+                    "- 상태별 필터링 가능\n" +
                     "- 최신순 정렬")
     @GetMapping
     public ApiResponse<Page<PlannerApplicationListResponse>> getAllApplications(
@@ -79,10 +79,10 @@ public class AdminPlannerApplicationController {
      * 플래너 신청서 상태 변경
      */
     @Operation(summary = "[관리자] 플래너 신청서 상태 변경",
-            description = "플래너 신청서의 상태를 변경합니다.\\n\\n" +
-                    "- PENDING: 대기중\\n" +
-                    "- IN_PROGRESS: 진행중\\n" +
-                    "- COMPLETED: 완료\\n" +
+            description = "플래너 신청서의 상태를 변경합니다.\n\n" +
+                    "- PENDING: 대기중\n" +
+                    "- IN_PROGRESS: 진행중\n" +
+                    "- COMPLETED: 완료\n" +
                     "- REJECTED: 거절")
     @PatchMapping("/{applicationUuid}/status")
     public ApiResponse<PlannerApplicationResponse> updateStatus(
@@ -163,8 +163,8 @@ public class AdminPlannerApplicationController {
      * 플래너 신청서 삭제 (관리자)
      */
     @Operation(summary = "[관리자] 플래너 신청서 삭제",
-            description = "플래너 신청서를 삭제합니다.\\n\\n" +
-                    "- 모든 상태에서 삭제 가능\\n" +
+            description = "플래너 신청서를 삭제합니다.\n\n" +
+                    "- 모든 상태에서 삭제 가능\n" +
                     "- Soft Delete 처리됨")
     @DeleteMapping("/{applicationUuid}")
     public ApiResponse<Void> deleteApplication(

@@ -103,6 +103,17 @@ payment:
     return-url: ${PAYMENT_APPROVAL_URL:http://localhost:8080/api/payments/inicis/return}
     close-url: ${PAYMENT_CANCEL_URL:http://localhost:8080/api/payments/inicis/close}
 
+# Google Analytics Configuration
+# 실제 사용 시 환경변수로 설정하세요:
+# - GOOGLE_ANALYTICS_ENABLED: true/false (기본값: false)
+# - GOOGLE_ANALYTICS_CREDENTIALS_PATH: Service Account JSON 파일 경로
+# - GOOGLE_ANALYTICS_PROPERTY_ID: GA4 Property ID (예: 123456789)
+google:
+  analytics:
+    enabled: ${GOOGLE_ANALYTICS_ENABLED:true}
+    credentials-path: ${GOOGLE_ANALYTICS_CREDENTIALS_PATH:./secrets/ga-service-account.json}
+    property-id: ${GOOGLE_ANALYTICS_PROPERTY_ID:your-property-id}
+
 # Notification Configuration
 # 실제 사용 시 환경변수로 설정하세요
 notification:

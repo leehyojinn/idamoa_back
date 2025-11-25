@@ -1,4 +1,4 @@
-package com.hip.damoa.domain.inquiry.web;
+package com.hip.damoa.domain.admin.web;
 
 import com.hip.damoa.core.exception.BusinessException;
 import com.hip.damoa.core.exception.ErrorCode;
@@ -30,7 +30,7 @@ import java.util.UUID;
  * 제휴/광고 문의 관리 API (관리자용)
  */
 @Slf4j
-@Tag(name = "1990. Admin - Inquiry", description = "제휴/광고 문의 관리 API (관리자)")
+@Tag(name = "1908. Admin - Inquiry", description = "제휴/광고 문의 관리 API (관리자)")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor
@@ -99,11 +99,11 @@ public class AdminInquiryController {
      * 문의 상태 변경
      */
     @Operation(summary = "문의 상태 변경 (관리자)",
-               description = "문의 처리 상태를 변경합니다\\n\\n" +
-                       "가능한 상태값:\\n" +
-                       "- PENDING: 접수 대기\\n" +
-                       "- IN_PROGRESS: 처리 중\\n" +
-                       "- COMPLETED: 처리 완료\\n" +
+               description = "문의 처리 상태를 변경합니다\n\n" +
+                       "가능한 상태값:\n" +
+                       "- PENDING: 접수 대기\n" +
+                       "- IN_PROGRESS: 처리 중\n" +
+                       "- COMPLETED: 처리 완료\n" +
                        "- CANCELLED: 취소됨")
     @PatchMapping("/{inquiryUuid}/status")
     @Transactional

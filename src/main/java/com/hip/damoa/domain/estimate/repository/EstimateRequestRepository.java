@@ -64,4 +64,21 @@ public interface EstimateRequestRepository extends JpaRepository<EstimateRequest
 
     // Find by status (for admin)
     Page<EstimateRequest> findByStatus(EstimateStatus status, Pageable pageable);
+
+    // Admin Dashboard Statistics
+    Long countByIsDeletedFalse();
+
+    Long countByCreatedAtAfterAndIsDeletedFalse(LocalDateTime dateTime);
+
+    Long countByIsPublicTrueAndIsDeletedFalse();
+
+    @Query("SELECT AVG(e.proposalCount) FROM EstimateRequest e WHERE e.isDeleted = false")
+    Double getAverageProposalCount();
+
+    @Query("SELECT SUM(e.viewCount) FROM EstimateRequest e WHERE e.isDeleted = false")
+    Long getTotalViewCount();
+
+    // Overload for String status (for admin dashboard)
+    @Query("SELECT COUNT(e) FROM EstimateRequest e WHERE CAST(e.status AS string) = :status AND e.isDeleted = false")
+    long countByStatusAndIsDeletedFalse(@Param("status") String status);
 }

@@ -18,19 +18,11 @@ import java.util.List;
 public class CompanySearchRequest {
 
     /**
-     * 키워드 검색 (업체명, 설명)
+     * 통합 키워드 검색
+     * 검색 대상: 업체명, 설명, 상세내용, 태그, 키워드, URL, 주소, 서비스지역 등
+     * 모든 텍스트 필드에서 통합 검색
      */
     private String keyword;
-
-    /**
-     * 서비스 지역 필터 (배열)
-     */
-    private String[] serviceAreas;
-
-    /**
-     * 태그 필터 (배열)
-     */
-    private String[] tags;
 
     /**
      * 최소 평점 필터
@@ -38,13 +30,26 @@ public class CompanySearchRequest {
     private BigDecimal minRating;
 
     /**
-     * 필터 옵션 ID 목록 (카테고리별로 OR, 카테고리 간에는 AND)
-     * 예: 피부과(1) + 마케팅(5) + 서울(10) 검색 시 [1, 5, 10]
+     * 카테고리별 필터 옵션 ID 목록
+     * Map<CategoryId, List<OptionIds>>
      *
-     * 카테고리 내 OR: [내과(1), 외과(2)] → 내과 OR 외과
-     * 카테고리 간 AND: 진료과[1,2] + 지역[10,11] → (내과 OR 외과) AND (서울 OR 경기)
+     * 예시:
+     * - categoryId 1 (지역): [서울(1), 경기(2)]
+     * - categoryId 2 (업종): [인테리어(10), 마케팅(11)]
+     * - categoryId 3 (진료과): [피부과(20), 산부인과(21)]
+     *
+     * 로직:
+     * - 같은 카테고리 내: OR 조건 (서울 OR 경기)
+     * - 다른 카테고리 간: AND 조건 ((서울 OR 경기) AND (인테리어 OR 마케팅))
+     *
+     * 클라이언트에서 보내는 형식:
+     * filtersByCategory: {
+     *   "1": [1, 2],      // 지역 카테고리
+     *   "2": [10, 11],    // 업종 카테고리
+     *   "3": [20, 21]     // 진료과 카테고리
+     * }
      */
-    private List<Long> filterOptionIds;
+    private java.util.Map<Long, List<Long>> filtersByCategory;
 
     /**
      * 정렬 기준

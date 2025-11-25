@@ -92,4 +92,16 @@ public interface EstimateProposalRepository extends JpaRepository<EstimatePropos
            "AND p.isDeleted = false AND p.status != 'WITHDRAWN' " +
            "ORDER BY p.createdAt DESC")
     List<EstimateProposal> findByRequestAndStatusNotWithdrawn(@Param("request") EstimateRequest request);
+
+    // Admin Dashboard Statistics
+    Long countByIsDeletedFalse();
+
+    Long countByCreatedAtAfterAndIsDeletedFalse(java.time.LocalDateTime dateTime);
+
+    Long countByStatusAndIsDeletedFalse(String status);
+
+    Long countByIsSelectedTrueAndIsDeletedFalse();
+
+    @Query("SELECT AVG(p.price) FROM EstimateProposal p WHERE p.isDeleted = false")
+    java.math.BigDecimal getAveragePrice();
 }

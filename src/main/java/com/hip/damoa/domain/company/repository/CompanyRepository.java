@@ -83,6 +83,71 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         Pageable pageable
     );
 
+    /**
+     * 통합 키워드 검색 (태그 포함)
+     * Native Query로 태그 배열 내부의 텍스트까지 검색
+     */
+    @Query(value = """
+        SELECT DISTINCT c.* FROM companies c
+        WHERE c.is_deleted = false
+        AND c.status = 'ACTIVE'
+        AND (
+            LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.detail_content) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.address) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.website_url) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.primary_phone) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR EXISTS (
+                SELECT 1 FROM unnest(c.tags) AS tag
+                WHERE LOWER(tag) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            )
+        )
+        """,
+        countQuery = """
+        SELECT COUNT(DISTINCT c.id) FROM companies c
+        WHERE c.is_deleted = false
+        AND c.status = 'ACTIVE'
+        AND (
+            LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.detail_content) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.address) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.website_url) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.primary_phone) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR EXISTS (
+                SELECT 1 FROM unnest(c.tags) AS tag
+                WHERE LOWER(tag) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            )
+        )
+        """,
+        nativeQuery = true)
+    Page<Company> searchByKeywordIncludingTags(
+        @Param("keyword") String keyword,
+        Pageable pageable
+    );
+
     // Check if user already has a company
     boolean existsByOwnerEmailAndIsDeletedFalse(String ownerEmail);
+
+    // Admin Dashboard Statistics
+    Long countByIsDeletedFalse();
+
+    Long countByStatusAndIsDeletedFalse(String status);
+
+    Long countByCreatedAtAfterAndIsDeletedFalse(java.time.LocalDateTime dateTime);
+
+    Long countByVerifiedTrueAndIsDeletedFalse();
+
+    Long countByPremiumUntilAfterAndIsDeletedFalse(java.time.LocalDateTime dateTime);
+
+    Long countByPremiumTierAndIsDeletedFalse(String premiumTier);
+
+    @Query("SELECT AVG(c.avgRating) FROM Company c WHERE c.isDeleted = false")
+    BigDecimal getAverageRating();
+
+    @Query("SELECT SUM(c.reviewCount) FROM Company c WHERE c.isDeleted = false")
+    Long getTotalReviewCount();
 }

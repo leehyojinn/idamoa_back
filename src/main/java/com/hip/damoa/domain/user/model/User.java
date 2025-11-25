@@ -321,4 +321,18 @@ User extends BaseEntity implements UserDetails {
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
+
+    /**
+     * 상태 업데이트 (관리자용)
+     */
+    public void updateStatus(String status) {
+        this.status = UserStatus.valueOf(status);
+    }
+
+    /**
+     * 역할 업데이트 (관리자용)
+     */
+    public void updateRoles(String[] roles) {
+        this.roles = roles;
+    }
 }

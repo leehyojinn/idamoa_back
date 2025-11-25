@@ -31,7 +31,7 @@ import java.util.Map;
 public class Company extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false)
+    @JoinColumn(name = "owner_id", nullable = true)
     private User owner;
 
     @Column(name = "name", nullable = false, length = 200)
@@ -69,9 +69,7 @@ public class Company extends BaseEntity {
     @Column(name = "tags", columnDefinition = "text[]")
     private String[] tags;
 
-    @Type(StringArrayType.class)
-    @Column(name = "keywords", columnDefinition = "text[]")
-    private String[] keywords;
+    // keywords 필드 제거 - 통합 검색 기능으로 대체
 
     @Column(name = "primary_phone", length = 20)
     private String primaryPhone;
@@ -307,7 +305,7 @@ public class Company extends BaseEntity {
     public void updateAllFields(
             String name, String slug, String description, String detailContent, String detailContentFormat,
             Map<String, Object> businessInfo, Map<String, Object> businessHours, String businessHoursNote,
-            String[] serviceAreas, String[] tags, String[] keywords,
+            String[] serviceAreas, String[] tags,
             String primaryPhone, String secondaryPhone, String emergencyContact,
             String email, String websiteUrl, String kakaoChatUrl, Map<String, Object> socialLinks,
             String address, String postalCode, BigDecimal latitude, BigDecimal longitude,
@@ -323,7 +321,7 @@ public class Company extends BaseEntity {
         if (businessHoursNote != null) this.businessHoursNote = businessHoursNote;
         if (serviceAreas != null) this.serviceAreas = serviceAreas;
         if (tags != null) this.tags = tags;
-        if (keywords != null) this.keywords = keywords;
+        // keywords 제거 - 통합 검색으로 대체
         if (primaryPhone != null) this.primaryPhone = primaryPhone;
         if (secondaryPhone != null) this.secondaryPhone = secondaryPhone;
         if (emergencyContact != null) this.emergencyContact = emergencyContact;
@@ -337,5 +335,38 @@ public class Company extends BaseEntity {
         if (longitude != null) this.longitude = longitude;
         if (status != null) this.status = status;
         if (featured != null) this.featured = featured;
+    }
+
+    /**
+     * 필터 옵션에서 서비스 지역 가져오기
+     * (REGION 카테고리 필터에서 추출)
+     */
+    public List<String> getServiceAreasFromFilters() {
+        if (filterOptions == null || filterOptions.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return filterOptions.stream()
+            .filter(cfo -> cfo.getFilterOption() != null
+                && cfo.getFilterOption().getCategory() != null
+                && "REGION".equals(cfo.getFilterOption().getCategory().getCode()))
+            .map(cfo -> cfo.getFilterOption().getName())
+            .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * 특정 카테고리의 필터 옵션 가져오기
+     */
+    public List<String> getFiltersByCategory(String categoryCode) {
+        if (filterOptions == null || filterOptions.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return filterOptions.stream()
+            .filter(cfo -> cfo.getFilterOption() != null
+                && cfo.getFilterOption().getCategory() != null
+                && categoryCode.equals(cfo.getFilterOption().getCategory().getCode()))
+            .map(cfo -> cfo.getFilterOption().getName())
+            .collect(java.util.stream.Collectors.toList());
     }
 }

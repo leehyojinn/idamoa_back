@@ -89,7 +89,7 @@ public class CompanyService {
                 .businessHoursNote(request.getBusinessHoursNote())
                 .serviceAreas(request.getServiceAreas())
                 .tags(request.getTags())
-                .keywords(request.getKeywords())
+                // keywords 제거됨
                 .primaryPhone(request.getPrimaryPhone())
                 .secondaryPhone(request.getSecondaryPhone())
                 .emergencyContact(request.getEmergencyContact())
@@ -138,9 +138,12 @@ public class CompanyService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
-        // 소유자 조회
-        User owner = userRepository.findById(ownerId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        // 소유자 조회 (ownerId가 있는 경우만)
+        User owner = null;
+        if (ownerId != null) {
+            owner = userRepository.findById(ownerId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        }
 
         // Slug 중복 확인
         if (request.getSlug() != null && companyRepository.existsBySlug(request.getSlug())) {
@@ -160,7 +163,7 @@ public class CompanyService {
                 .businessHoursNote(request.getBusinessHoursNote())
                 .serviceAreas(request.getServiceAreas())
                 .tags(request.getTags())
-                .keywords(request.getKeywords())
+                // keywords 제거됨
                 .primaryPhone(request.getPrimaryPhone())
                 .secondaryPhone(request.getSecondaryPhone())
                 .emergencyContact(request.getEmergencyContact())
@@ -469,31 +472,27 @@ public class CompanyService {
      */
     @Transactional(readOnly = true)
     public Page<Company> searchCompanies(CompanySearchRequest searchRequest, Pageable pageable) {
-        log.info("업체 검색: keyword={}, filterOptions={}, sortBy={}",
+        log.info("업체 검색: keyword={}, filtersByCategory={}, sortBy={}",
             searchRequest.getKeyword(),
-            searchRequest.getFilterOptionIds(),
+            searchRequest.getFiltersByCategory(),
             searchRequest.getSortBy());
 
         // 정렬 기준 결정
         Pageable sortedPageable = createSortedPageable(pageable, searchRequest.getSortBy());
 
-        // 필터 옵션을 카테고리별로 그룹화
-        java.util.Map<Long, List<Long>> filterOptionsByCategory = new java.util.HashMap<>();
-        if (searchRequest.getFilterOptionIds() != null && !searchRequest.getFilterOptionIds().isEmpty()) {
-            // 필터 옵션 조회
-            List<FilterOption> filterOptions = filterOptionRepository.findByIdIn(searchRequest.getFilterOptionIds());
+        // 카테고리별 필터 옵션 가져오기
+        java.util.Map<Long, List<Long>> filterOptionsByCategory = searchRequest.getFiltersByCategory();
 
-            // 카테고리별로 그룹화 (카테고리 ID -> 옵션 ID 목록)
-            filterOptionsByCategory = filterOptions.stream()
-                .collect(java.util.stream.Collectors.groupingBy(
-                    option -> option.getCategory().getId(),
-                    java.util.stream.Collectors.mapping(
-                        FilterOption::getId,
-                        java.util.stream.Collectors.toList()
-                    )
-                ));
+        // null 체크 및 빈 Map으로 초기화
+        if (filterOptionsByCategory == null) {
+            filterOptionsByCategory = new java.util.HashMap<>();
+        }
 
-            log.info("카테고리별 필터 옵션 그룹화: {}", filterOptionsByCategory);
+        // 각 카테고리별 필터 옵션 로그
+        if (!filterOptionsByCategory.isEmpty()) {
+            filterOptionsByCategory.forEach((categoryId, optionIds) -> {
+                log.info("카테고리 {}: 필터 옵션 {}", categoryId, optionIds);
+            });
         }
 
         // Specification 조합
@@ -502,9 +501,7 @@ public class CompanyService {
                 .and(com.hip.damoa.domain.company.repository.CompanySpecifications.isActive())
                 .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasKeyword(searchRequest.getKeyword()))
                 .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasMinRating(searchRequest.getMinRating()))
-                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasFilterOptions(filterOptionsByCategory))
-                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasServiceAreas(searchRequest.getServiceAreas()))
-                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasTags(searchRequest.getTags()));
+                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasFilterOptions(filterOptionsByCategory));
 
         // 검색 실행
         return companyRepository.findAll(spec, sortedPageable);
@@ -541,7 +538,7 @@ public class CompanyService {
                 request.getBusinessHoursNote(),
                 request.getServiceAreas(),
                 request.getTags(),
-                request.getKeywords(),
+                // keywords 제거됨
                 request.getPrimaryPhone(),
                 request.getSecondaryPhone(),
                 request.getEmergencyContact(),

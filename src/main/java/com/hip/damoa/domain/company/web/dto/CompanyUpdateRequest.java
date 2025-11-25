@@ -45,7 +45,7 @@ public class CompanyUpdateRequest {
 
     private String[] tags;
 
-    private String[] keywords;
+    // keywords 필드 제거 - 통합 검색으로 대체
 
     // 필터 옵션 ID 목록 (업체 분류, 전문 영역, 작업 평수 등)
     private List<Long> filterOptionIds;

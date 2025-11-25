@@ -9,6 +9,8 @@ import com.hip.damoa.domain.company.service.CompanyImageService;
 import com.hip.damoa.domain.company.service.CompanyService;
 import com.hip.damoa.domain.company.web.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -287,51 +289,80 @@ public class CompanyController {
     /**
      * 업체 검색 (필터링 + 정렬)
      */
-    @Operation(summary = "업체 검색",
-            description = "다양한 조건으로 업체를 검색하고 정렬할 수 있습니다.\n\n" +
-                    "**검색 조건 (모두 선택):**\n" +
-                    "- keyword: 업체명, 설명, 태그에서 검색\n" +
-                    "- serviceAreas: 서비스 지역 필터 (배열, 예: `강남구,서초구`)\n" +
-                    "- tags: 태그 필터 (배열, 예: `인테리어,리모델링`)\n" +
-                    "- minRating: 최소 평점 (예: `4.0` - 4점 이상)\n" +
-                    "- filterOptionIds: 필터 옵션 ID 배열 (업종, 전문영역 등)\n\n" +
+    @Operation(summary = "업체 검색 (통합 키워드 + 카테고리별 필터)",
+            description = "통합 키워드 검색과 카테고리별 필터링으로 업체를 검색합니다.\n\n" +
+                    "**통합 키워드 검색 (keyword):**\n" +
+                    "- 업체명, 설명, 상세내용\n" +
+                    "- 주소, 웹사이트URL, 이메일, 전화번호\n" +
+                    "- 태그, 키워드, 서비스지역 배열\n\n" +
+                    "**카테고리별 필터 (filterCategory1~5):**\n" +
+                    "- filterCategory1: 지역 필터 (예: 서울=1, 경기=2)\n" +
+                    "- filterCategory2: 업종 필터 (예: 인테리어=10, 마케팅=11)\n" +
+                    "- filterCategory3: 진료과 필터 (예: 피부과=20, 산부인과=21)\n" +
+                    "- 같은 카테고리 내: OR 조건\n" +
+                    "- 다른 카테고리 간: AND 조건\n\n" +
                     "**정렬 기준 (sortBy):**\n" +
-                    "- `LATEST`: 최신순 (기본값)\n" +
-                    "- `RATING`: 평점 높은 순\n" +
-                    "- `REVIEW_COUNT`: 리뷰 많은 순\n" +
-                    "- `POPULAR`: 인기순 (조회수 + 좋아요)\n\n" +
-                    "**페이지네이션:**\n" +
-                    "- size: 페이지당 항목 수 (기본 20)\n" +
-                    "- page: 페이지 번호 (0부터 시작)\n\n" +
-                    "**응답:**\n" +
-                    "- 업체 목록 (이미지 포함)\n" +
-                    "- 각 업체의 평점, 리뷰 수, 좋아요 여부\n" +
-                    "- 페이지 정보 (totalElements, totalPages 등)\n\n" +
-                    "**예시 호출:**\n" +
+                    "- LATEST: 최신순 (기본값)\n" +
+                    "- RATING: 평점순\n" +
+                    "- REVIEW_COUNT: 리뷰순\n" +
+                    "- POPULAR: 인기순\n" +
+                    "- PREMIUM_TIER: 프리미엄순\n\n" +
+                    "**예시:**\n" +
                     "```\n" +
-                    "GET /api/companies/search?keyword=인테리어&serviceAreas=강남구&minRating=4.0&sortBy=RATING&size=10&page=0\n" +
-                    "```\n\n" +
-                    "**활용:**\n" +
-                    "- 메인 페이지 업체 검색\n" +
-                    "- 필터링된 업체 목록\n" +
-                    "- 지역별 업체 찾기")
+                    "GET /api/companies/search?keyword=병원&filterCategory1=1,2&filterCategory2=10,11\n" +
+                    "// '병원' 키워드로 검색하며 (서울 OR 경기) AND (인테리어 OR 마케팅) 필터 적용\n" +
+                    "```")
     @GetMapping("/search")
     public ApiResponse<Page<CompanyListResponse>> searchCompanies(
+            @Parameter(description = "통합 키워드 검색", example = "인테리어")
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String[] serviceAreas,
-            @RequestParam(required = false) String[] tags,
+
+            @Parameter(description = "최소 평점 (0.0~5.0)", example = "4.0")
             @RequestParam(required = false) java.math.BigDecimal minRating,
-            @RequestParam(required = false) java.util.List<Long> filterOptionIds,
+
+            @Parameter(description = "카테고리1 필터 (지역 등)", example = "1,2,3")
+            @RequestParam(required = false) java.util.List<Long> filterCategory1,
+
+            @Parameter(description = "카테고리2 필터 (업종 등)", example = "10,11")
+            @RequestParam(required = false) java.util.List<Long> filterCategory2,
+
+            @Parameter(description = "카테고리3 필터 (진료과 등)", example = "20,21")
+            @RequestParam(required = false) java.util.List<Long> filterCategory3,
+
+            @Parameter(description = "카테고리4 필터", example = "30")
+            @RequestParam(required = false) java.util.List<Long> filterCategory4,
+
+            @Parameter(description = "카테고리5 필터", example = "40")
+            @RequestParam(required = false) java.util.List<Long> filterCategory5,
+
+            @Parameter(description = "정렬 기준", schema = @Schema(allowableValues = {"LATEST", "POPULAR", "RATING", "REVIEW_COUNT", "PREMIUM_TIER"}))
             @RequestParam(required = false, defaultValue = "LATEST") String sortBy,
+
             @PageableDefault(size = 20) Pageable pageable,
             @AuthenticationPrincipal UserDetails userDetails) {
 
+        // 카테고리별 필터를 Map으로 조합
+        java.util.Map<Long, java.util.List<Long>> filtersByCategory = new java.util.HashMap<>();
+        if (filterCategory1 != null && !filterCategory1.isEmpty()) {
+            filtersByCategory.put(1L, filterCategory1);
+        }
+        if (filterCategory2 != null && !filterCategory2.isEmpty()) {
+            filtersByCategory.put(2L, filterCategory2);
+        }
+        if (filterCategory3 != null && !filterCategory3.isEmpty()) {
+            filtersByCategory.put(3L, filterCategory3);
+        }
+        if (filterCategory4 != null && !filterCategory4.isEmpty()) {
+            filtersByCategory.put(4L, filterCategory4);
+        }
+        if (filterCategory5 != null && !filterCategory5.isEmpty()) {
+            filtersByCategory.put(5L, filterCategory5);
+        }
+
         CompanySearchRequest searchRequest = CompanySearchRequest.builder()
                 .keyword(keyword)
-                .serviceAreas(serviceAreas)
-                .tags(tags)
                 .minRating(minRating)
-                .filterOptionIds(filterOptionIds)
+                .filtersByCategory(filtersByCategory)
                 .sortBy(sortBy)
                 .build();
 

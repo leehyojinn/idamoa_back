@@ -76,6 +76,11 @@ services:
       ALIGO_API_KEY: ${ALIGO_API_KEY:-}
       ALIGO_USER_ID: ${ALIGO_USER_ID:-}
 
+      # Google Analytics
+      GOOGLE_ANALYTICS_ENABLED: ${GOOGLE_ANALYTICS_ENABLED:-false}
+      GOOGLE_ANALYTICS_PROPERTY_ID: ${GOOGLE_ANALYTICS_PROPERTY_ID:-}
+      GOOGLE_ANALYTICS_CREDENTIALS_PATH: ${GOOGLE_ANALYTICS_CREDENTIALS_PATH:-/app/secrets/ga-service-account.json}
+
       # JVM Options
       JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC"
 

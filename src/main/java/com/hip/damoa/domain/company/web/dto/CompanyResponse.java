@@ -33,7 +33,7 @@ public class CompanyResponse {
     private String businessHoursNote;
     private String[] serviceAreas;
     private String[] tags;
-    private String[] keywords;
+    // keywords 필드 제거 - 통합 검색으로 대체
     private String primaryPhone;
     private String secondaryPhone;
     private String emergencyContact;
@@ -70,8 +70,8 @@ public class CompanyResponse {
         return CompanyResponse.builder()
                 .id(company.getId())
                 .uuid(company.getUuid())
-                .ownerId(company.getOwner().getId())
-                .ownerEmail(company.getOwner().getEmail())
+                .ownerId(company.getOwner() != null ? company.getOwner().getId() : null)
+                .ownerEmail(company.getOwner() != null ? company.getOwner().getEmail() : null)
                 .name(company.getName())
                 .slug(company.getSlug())
                 .description(company.getDescription())
@@ -82,7 +82,7 @@ public class CompanyResponse {
                 .businessHoursNote(company.getBusinessHoursNote())
                 .serviceAreas(company.getServiceAreas())
                 .tags(company.getTags())
-                .keywords(company.getKeywords())
+                // keywords 제거됨
                 .primaryPhone(company.getPrimaryPhone())
                 .secondaryPhone(company.getSecondaryPhone())
                 .emergencyContact(company.getEmergencyContact())
