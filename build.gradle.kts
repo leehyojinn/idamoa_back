@@ -59,9 +59,12 @@ dependencies {
     implementation("com.google.analytics:google-analytics-data:0.56.0")
 
     // gRPC - 버전은 BOM이 관리
-    implementation("io.grpc:grpc-netty-shaded")
+    implementation("io.grpc:grpc-netty") // shaded 대신 일반 버전 사용
     implementation("io.grpc:grpc-stub")
     implementation("io.grpc:grpc-protobuf")
+
+    // Netty TCNative - Docker/Linux 호환성
+    implementation("io.netty:netty-tcnative-boringssl-static:2.0.65.Final")
     implementation("javax.annotation:javax.annotation-api:1.3.2") // JDK 11+ 필요
     // Hypersistence Utils for JSONB and Array types
     implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.7.3")
