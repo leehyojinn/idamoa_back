@@ -16,6 +16,8 @@ repositories {
 }
 
 dependencies {
+    // gRPC 버전 통일 (google-analytics-data가 사용하는 버전으로 맞춤)
+    implementation(platform("io.grpc:grpc-bom:1.70.0"))
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
@@ -55,11 +57,21 @@ dependencies {
 
     // Google Analytics Data API
     implementation("com.google.analytics:google-analytics-data:0.56.0")
-    implementation("io.grpc:grpc-netty-shaded:1.62.2")
+
+    // gRPC - 버전은 BOM이 관리
+    implementation("io.grpc:grpc-netty-shaded")
+    implementation("io.grpc:grpc-stub")
+    implementation("io.grpc:grpc-protobuf")
+    implementation("javax.annotation:javax.annotation-api:1.3.2") // JDK 11+ 필요
     // Hypersistence Utils for JSONB and Array types
     implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.7.3")
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+// Spring Boot JAR 빌드 시 gRPC 관련 설정
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
