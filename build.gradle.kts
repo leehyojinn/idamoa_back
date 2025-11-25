@@ -55,7 +55,7 @@ dependencies {
 
     // Google Analytics Data API
     implementation("com.google.analytics:google-analytics-data:0.56.0")
-    implementation("io.grpc:grpc-netty-shaded:1.57.0") // gRPC for Google Analytics
+    implementation("io.grpc:grpc-netty-shaded:1.62.2")
     // Hypersistence Utils for JSONB and Array types
     implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.7.3")
 }
