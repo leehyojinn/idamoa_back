@@ -32,15 +32,19 @@ public class GoogleAnalyticsConfig {
     public BetaAnalyticsDataClient analyticsDataClient() throws IOException {
         log.info("Google Analytics Data API 초기화 시작: credentialsPath={}", credentialsPath);
 
+        // file: 프리픽스 제거 (Gmail과 동일한 방식)
+        String actualPath = credentialsPath.replace("file:", "");
+        log.debug("Service Account 키 파일 실제 경로: {}", actualPath);
+
         // 파일 존재 확인
-        File credentialsFile = new File(credentialsPath);
+        File credentialsFile = new File(actualPath);
         if (!credentialsFile.exists()) {
             throw new IllegalStateException(
-                    "Google Analytics Service Account 파일을 찾을 수 없습니다: " + credentialsPath);
+                    "Google Analytics Service Account 파일을 찾을 수 없습니다: " + actualPath);
         }
 
         GoogleCredentials credentials = GoogleCredentials
-                .fromStream(new FileInputStream(credentialsPath))
+                .fromStream(new FileInputStream(actualPath))
                 .createScoped("https://www.googleapis.com/auth/analytics.readonly");
 
         BetaAnalyticsDataSettings settings = BetaAnalyticsDataSettings.newBuilder()
