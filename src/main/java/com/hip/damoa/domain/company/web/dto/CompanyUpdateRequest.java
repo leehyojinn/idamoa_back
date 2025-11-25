@@ -41,7 +41,7 @@ public class CompanyUpdateRequest {
 
     private String businessHoursNote;
 
-    private String[] serviceAreas;
+    // serviceAreas 제거 - 필터로 관리
 
     private String[] tags;
 

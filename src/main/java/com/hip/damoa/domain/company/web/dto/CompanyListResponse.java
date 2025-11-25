@@ -40,6 +40,7 @@ public class CompanyListResponse {
     private Boolean isPremium;
     private String premiumTier;
     private List<CompanyImageDto> images;
+    private List<CompanyFilterGroupDto> filterGroups; // 카테고리별로 그룹화된 필터
     private Boolean isLiked; // 현재 사용자의 좋아요 여부
     private LocalDateTime createdAt;
 

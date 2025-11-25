@@ -11,9 +11,11 @@ import com.hip.damoa.domain.company.repository.CompanyImageRepository;
 import com.hip.damoa.domain.company.repository.CompanyLikeRepository;
 import com.hip.damoa.domain.company.repository.CompanyRepository;
 import com.hip.damoa.domain.company.web.dto.CompanyCreateRequest;
+import com.hip.damoa.domain.company.web.dto.CompanyFilterGroupDto;
 import com.hip.damoa.domain.company.web.dto.CompanyImageDto;
 import com.hip.damoa.domain.company.web.dto.CompanySearchRequest;
 import com.hip.damoa.domain.company.web.dto.CompanyUpdateRequest;
+import com.hip.damoa.domain.company.web.dto.FilterOptionDto;
 import com.hip.damoa.domain.file.model.File;
 import com.hip.damoa.domain.file.repository.FileRepository;
 import com.hip.damoa.domain.filter.model.FilterOption;
@@ -30,6 +32,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -87,7 +91,7 @@ public class CompanyService {
                 .businessInfo(request.getBusinessInfo())
                 .businessHours(request.getBusinessHours())
                 .businessHoursNote(request.getBusinessHoursNote())
-                .serviceAreas(request.getServiceAreas())
+                // serviceAreas 제거 - 필터로 관리
                 .tags(request.getTags())
                 // keywords 제거됨
                 .primaryPhone(request.getPrimaryPhone())
@@ -161,7 +165,7 @@ public class CompanyService {
                 .businessInfo(request.getBusinessInfo())
                 .businessHours(request.getBusinessHours())
                 .businessHoursNote(request.getBusinessHoursNote())
-                .serviceAreas(request.getServiceAreas())
+                // serviceAreas 제거 - 필터로 관리
                 .tags(request.getTags())
                 // keywords 제거됨
                 .primaryPhone(request.getPrimaryPhone())
@@ -298,9 +302,9 @@ public class CompanyService {
         company = updateCompanyFields(company, request);
         company = companyRepository.save(company);
 
-        // 필터 옵션 업데이트 (filterOptionIds가 제공된 경우에만)
+        // 필터 옵션 스마트 업데이트 (filterOptionIds가 제공된 경우에만)
         if (request.getFilterOptionIds() != null) {
-            updateFilterOptions(company, request.getFilterOptionIds());
+            updateFilterOptionsSmart(company, request.getFilterOptionIds());
         }
 
         // 이미지 업데이트 (새로운 이미지가 있는 경우에만 처리)
@@ -348,9 +352,9 @@ public class CompanyService {
         company = updateCompanyFields(company, request);
         company = companyRepository.save(company);
 
-        // 필터 옵션 업데이트 (filterOptionIds가 제공된 경우에만)
+        // 필터 옵션 스마트 업데이트 (filterOptionIds가 제공된 경우에만)
         if (request.getFilterOptionIds() != null) {
-            updateFilterOptions(company, request.getFilterOptionIds());
+            updateFilterOptionsSmart(company, request.getFilterOptionIds());
         }
 
         // 이미지 업데이트 (새로운 이미지가 있는 경우에만 처리)
@@ -469,6 +473,7 @@ public class CompanyService {
 
     /**
      * 업체 검색 (공개용, 필터링 + 정렬)
+     * 필터가 1순위로 적용되고, 키워드는 필터링된 결과 내에서 검색
      */
     @Transactional(readOnly = true)
     public Page<Company> searchCompanies(CompanySearchRequest searchRequest, Pageable pageable) {
@@ -476,9 +481,6 @@ public class CompanyService {
             searchRequest.getKeyword(),
             searchRequest.getFiltersByCategory(),
             searchRequest.getSortBy());
-
-        // 정렬 기준 결정
-        Pageable sortedPageable = createSortedPageable(pageable, searchRequest.getSortBy());
 
         // 카테고리별 필터 옵션 가져오기
         java.util.Map<Long, List<Long>> filterOptionsByCategory = searchRequest.getFiltersByCategory();
@@ -495,16 +497,50 @@ public class CompanyService {
             });
         }
 
-        // Specification 조합
-        org.springframework.data.jpa.domain.Specification<Company> spec =
-            com.hip.damoa.domain.company.repository.CompanySpecifications.isNotDeleted()
-                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.isActive())
-                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasKeyword(searchRequest.getKeyword()))
-                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasMinRating(searchRequest.getMinRating()))
-                .and(com.hip.damoa.domain.company.repository.CompanySpecifications.hasFilterOptions(filterOptionsByCategory));
+        // Native Query용 정렬 생성 (DB 컬럼명 사용)
+        Pageable nativeQueryPageable = createNativeQuerySortedPageable(pageable, searchRequest.getSortBy());
 
-        // 검색 실행
-        return companyRepository.findAll(spec, sortedPageable);
+        Page<Company> results;
+
+        // 필터가 없으면 전체 조회 (키워드 검색만 적용)
+        if (filterOptionsByCategory.isEmpty()) {
+            log.info("필터가 없어 전체 업체를 조회합니다. 키워드: {}", searchRequest.getKeyword());
+
+            // 필터 없이 키워드와 최소 평점만으로 검색
+            results = companyRepository.searchWithFiltersAndKeyword(
+                searchRequest.getKeyword(),
+                searchRequest.getMinRating(),
+                false, // hasFilters = false (필터 없음)
+                new Long[0], // 빈 배열
+                0, // categoryCount = 0
+                nativeQueryPageable
+            );
+        } else {
+            // 필터가 있으면 필터 적용
+            log.info("필터를 적용하여 업체를 조회합니다.");
+
+            // 모든 필터 옵션 ID를 하나의 배열로 변환
+            List<Long> allFilterOptionIds = new java.util.ArrayList<>();
+            filterOptionsByCategory.values().forEach(allFilterOptionIds::addAll);
+            Long[] filterOptionIdArray = allFilterOptionIds.toArray(new Long[0]);
+
+            // 카테고리 개수 (AND 조건 확인용)
+            Integer categoryCount = filterOptionsByCategory.size();
+
+            // 통합 검색 실행 (필터 + 키워드)
+            results = companyRepository.searchWithFiltersAndKeyword(
+                searchRequest.getKeyword(),
+                searchRequest.getMinRating(),
+                true, // hasFilters = true (필터 있음)
+                filterOptionIdArray,
+                categoryCount,
+                nativeQueryPageable
+            );
+        }
+
+        log.info("검색 결과: {} 건", results.getTotalElements());
+
+        return results;
     }
 
     /**
@@ -536,7 +572,7 @@ public class CompanyService {
                 request.getBusinessInfo(),
                 request.getBusinessHours(),
                 request.getBusinessHoursNote(),
-                request.getServiceAreas(),
+                // serviceAreas 제거 - 필터로 관리
                 request.getTags(),
                 // keywords 제거됨
                 request.getPrimaryPhone(),
@@ -589,6 +625,43 @@ public class CompanyService {
                 break;
             default:
                 sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+    }
+
+    /**
+     * 정렬 기준에 따른 Pageable 생성 (Native Query용 - DB 컬럼명 사용)
+     */
+    private Pageable createNativeQuerySortedPageable(Pageable pageable, String sortBy) {
+        if (sortBy == null || sortBy.isEmpty()) {
+            sortBy = "LATEST";
+        }
+
+        Sort sort;
+        switch (sortBy.toUpperCase()) {
+            case "LATEST":
+                sort = Sort.by(Sort.Direction.DESC, "created_at");
+                break;
+            case "POPULAR":
+                // 인기순: 좋아요 + 조회수 복합 (좋아요 우선)
+                sort = Sort.by(Sort.Direction.DESC, "like_count")
+                        .and(Sort.by(Sort.Direction.DESC, "view_count"));
+                break;
+            case "RATING":
+                sort = Sort.by(Sort.Direction.DESC, "avg_rating")
+                        .and(Sort.by(Sort.Direction.DESC, "review_count"));
+                break;
+            case "REVIEW_COUNT":
+                sort = Sort.by(Sort.Direction.DESC, "review_count");
+                break;
+            case "PREMIUM_TIER":
+                // 프리미엄 등급순 (월정액 내림차순 → 프리미엄 등급 내림차순)
+                sort = Sort.by(Sort.Direction.DESC, "premium_monthly_amount")
+                        .and(Sort.by(Sort.Direction.DESC, "premium_tier"));
+                break;
+            default:
+                sort = Sort.by(Sort.Direction.DESC, "created_at");
         }
 
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
@@ -830,5 +903,95 @@ public class CompanyService {
 
         // 새 필터 옵션 저장
         processFilterOptions(company, filterOptionIds);
+    }
+
+    /**
+     * 업체 필터를 카테고리별로 그룹화
+     */
+    public List<CompanyFilterGroupDto> getCompanyFilterGroups(Company company) {
+        List<CompanyFilterOption> filterOptions = companyFilterOptionRepository.findByCompany(company);
+
+        // 카테고리별로 그룹화
+        java.util.Map<com.hip.damoa.domain.filter.model.FilterCategory, List<CompanyFilterOption>> groupedByCategory =
+            filterOptions.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                    cfo -> cfo.getFilterOption().getCategory()
+                ));
+
+        // DTO로 변환
+        return groupedByCategory.entrySet().stream()
+            .map(entry -> {
+                com.hip.damoa.domain.filter.model.FilterCategory category = entry.getKey();
+                List<FilterOptionDto> options = entry.getValue().stream()
+                    .map(cfo -> FilterOptionDto.from(cfo.getFilterOption()))
+                    .collect(java.util.stream.Collectors.toList());
+
+                return CompanyFilterGroupDto.builder()
+                    .categoryId(category.getId())
+                    .categoryCode(category.getCode())
+                    .categoryName(category.getName())
+                    .categoryDescription(category.getDescription())
+                    .options(options)
+                    .build();
+            })
+            .sorted((g1, g2) -> {
+                // 카테고리 코드로 정렬 (REGION -> SPECIALTY -> DEPARTMENT 등)
+                return g1.getCategoryCode().compareTo(g2.getCategoryCode());
+            })
+            .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * 업체 수정 시 필터 옵션 스마트 업데이트
+     * - 동일한 것은 유지
+     * - 삭제된 것은 제거
+     * - 새로 추가된 것은 추가
+     */
+    private void updateFilterOptionsSmart(Company company, List<Long> newFilterOptionIds) {
+        if (newFilterOptionIds == null) {
+            return; // null이면 변경하지 않음
+        }
+
+        // 현재 필터 옵션 ID들
+        List<CompanyFilterOption> currentOptions = companyFilterOptionRepository.findByCompany(company);
+        Set<Long> currentOptionIds = currentOptions.stream()
+            .map(cfo -> cfo.getFilterOption().getId())
+            .collect(java.util.stream.Collectors.toSet());
+
+        Set<Long> newOptionIdSet = new HashSet<>(newFilterOptionIds);
+
+        // 삭제할 항목 (현재는 있지만 새 목록에는 없음)
+        List<CompanyFilterOption> toDelete = currentOptions.stream()
+            .filter(cfo -> !newOptionIdSet.contains(cfo.getFilterOption().getId()))
+            .collect(java.util.stream.Collectors.toList());
+
+        // 추가할 항목 (새 목록에는 있지만 현재는 없음)
+        List<Long> toAdd = newFilterOptionIds.stream()
+            .filter(id -> !currentOptionIds.contains(id))
+            .collect(java.util.stream.Collectors.toList());
+
+        // 삭제 처리
+        if (!toDelete.isEmpty()) {
+            companyFilterOptionRepository.deleteAll(toDelete);
+            log.info("필터 옵션 삭제: companyId={}, 삭제 개수={}", company.getId(), toDelete.size());
+        }
+
+        // 추가 처리
+        if (!toAdd.isEmpty()) {
+            List<FilterOption> filterOptionsToAdd = filterOptionRepository.findAllById(toAdd);
+            List<CompanyFilterOption> newCompanyFilterOptions = filterOptionsToAdd.stream()
+                .map(filterOption -> CompanyFilterOption.builder()
+                    .company(company)
+                    .filterOption(filterOption)
+                    .build())
+                .collect(java.util.stream.Collectors.toList());
+
+            companyFilterOptionRepository.saveAll(newCompanyFilterOptions);
+            log.info("필터 옵션 추가: companyId={}, 추가 개수={}", company.getId(), newCompanyFilterOptions.size());
+        }
+
+        if (toDelete.isEmpty() && toAdd.isEmpty()) {
+            log.info("필터 옵션 변경 없음: companyId={}", company.getId());
+        }
     }
 }

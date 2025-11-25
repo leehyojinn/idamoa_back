@@ -150,4 +150,70 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
 
     @Query("SELECT SUM(c.reviewCount) FROM Company c WHERE c.isDeleted = false")
     Long getTotalReviewCount();
+
+    /**
+     * 필터와 키워드를 모두 적용한 통합 검색
+     * 필터가 1순위로 적용되고, 키워드는 필터링된 결과 내에서 검색
+     */
+    @Query(value = """
+        SELECT DISTINCT c.* FROM companies c
+        WHERE c.is_deleted = false
+        AND c.status = 'ACTIVE'
+        AND (:minRating IS NULL OR c.avg_rating >= :minRating)
+        AND (:hasFilters = false OR (
+            SELECT COUNT(DISTINCT fo.category_id)
+            FROM company_filter_options cfo
+            JOIN filter_options fo ON cfo.filter_option_id = fo.id
+            WHERE cfo.company_id = c.id
+            AND cfo.filter_option_id IN (:filterOptionIds)
+        ) = :categoryCount)
+        AND (:keyword IS NULL OR :keyword = '' OR (
+            LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.detail_content) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.address) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.website_url) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.primary_phone) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR EXISTS (
+                SELECT 1 FROM unnest(c.tags) AS tag
+                WHERE LOWER(tag) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            )
+        ))
+        """,
+        countQuery = """
+        SELECT COUNT(DISTINCT c.id) FROM companies c
+        WHERE c.is_deleted = false
+        AND c.status = 'ACTIVE'
+        AND (:minRating IS NULL OR c.avg_rating >= :minRating)
+        AND (:hasFilters = false OR (
+            SELECT COUNT(DISTINCT fo.category_id)
+            FROM company_filter_options cfo
+            JOIN filter_options fo ON cfo.filter_option_id = fo.id
+            WHERE cfo.company_id = c.id
+            AND cfo.filter_option_id IN (:filterOptionIds)
+        ) = :categoryCount)
+        AND (:keyword IS NULL OR :keyword = '' OR (
+            LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.detail_content) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.address) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.website_url) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.primary_phone) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR EXISTS (
+                SELECT 1 FROM unnest(c.tags) AS tag
+                WHERE LOWER(tag) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            )
+        ))
+        """,
+        nativeQuery = true)
+    Page<Company> searchWithFiltersAndKeyword(
+        @Param("keyword") String keyword,
+        @Param("minRating") BigDecimal minRating,
+        @Param("hasFilters") boolean hasFilters,
+        @Param("filterOptionIds") Long[] filterOptionIds,
+        @Param("categoryCount") Integer categoryCount,
+        Pageable pageable
+    );
 }

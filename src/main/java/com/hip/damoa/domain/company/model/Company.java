@@ -61,9 +61,7 @@ public class Company extends BaseEntity {
     @Column(name = "business_hours_note", columnDefinition = "TEXT")
     private String businessHoursNote;
 
-    @Type(StringArrayType.class)
-    @Column(name = "service_areas", columnDefinition = "text[]")
-    private String[] serviceAreas;
+    // serviceAreas 필드 제거 - 필터로 관리
 
     @Type(StringArrayType.class)
     @Column(name = "tags", columnDefinition = "text[]")
@@ -305,7 +303,7 @@ public class Company extends BaseEntity {
     public void updateAllFields(
             String name, String slug, String description, String detailContent, String detailContentFormat,
             Map<String, Object> businessInfo, Map<String, Object> businessHours, String businessHoursNote,
-            String[] serviceAreas, String[] tags,
+            String[] tags,
             String primaryPhone, String secondaryPhone, String emergencyContact,
             String email, String websiteUrl, String kakaoChatUrl, Map<String, Object> socialLinks,
             String address, String postalCode, BigDecimal latitude, BigDecimal longitude,
@@ -319,7 +317,7 @@ public class Company extends BaseEntity {
         if (businessInfo != null) this.businessInfo = businessInfo;
         if (businessHours != null) this.businessHours = businessHours;
         if (businessHoursNote != null) this.businessHoursNote = businessHoursNote;
-        if (serviceAreas != null) this.serviceAreas = serviceAreas;
+        // serviceAreas 제거 - 필터로 관리
         if (tags != null) this.tags = tags;
         // keywords 제거 - 통합 검색으로 대체
         if (primaryPhone != null) this.primaryPhone = primaryPhone;

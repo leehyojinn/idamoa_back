@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Bash",
       "Bash(docker-compose:*)",
       "WebSearch",
       "Bash(netstat:*)",
