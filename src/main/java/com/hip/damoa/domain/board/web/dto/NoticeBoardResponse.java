@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -29,9 +30,13 @@ public class NoticeBoardResponse {
     // 썸네일 이미지
     private FileInfo thumbnail;
 
+    // 첨부파일 목록
+    private List<FileInfo> attachments;
+
     // 이벤트 날짜 (EVENT 타입일 경우)
     private LocalDateTime eventStartDate;
     private LocalDateTime eventEndDate;
+    private String eventStatus;  // 이벤트 상태 (ACTIVE, ENDED)
     private Boolean isEventEnded;  // 이벤트 종료 여부
 
     // 통계
@@ -58,16 +63,23 @@ public class NoticeBoardResponse {
     private LocalDateTime updatedAt;
 
     /**
-     * Entity to DTO (기본 - 썸네일 없음)
+     * Entity to DTO (기본 - 썸네일, 첨부파일 없음)
      */
     public static NoticeBoardResponse from(Board board) {
-        return from(board, null, board.getUser() != null ? board.getUser().getEmail() : null);
+        return from(board, null, null, board.getUser() != null ? board.getUser().getEmail() : null);
     }
 
     /**
-     * Entity to DTO (썸네일 포함)
+     * Entity to DTO (썸네일 포함, 첨부파일 없음)
      */
     public static NoticeBoardResponse from(Board board, FileInfo thumbnail, String userName) {
+        return from(board, thumbnail, null, userName);
+    }
+
+    /**
+     * Entity to DTO (썸네일, 첨부파일 포함)
+     */
+    public static NoticeBoardResponse from(Board board, FileInfo thumbnail, List<FileInfo> attachments, String userName) {
         // typeData에서 이벤트 날짜 추출
         Map<String, Object> typeData = board.getTypeData();
         LocalDateTime eventStartDate = null;
@@ -93,8 +105,10 @@ public class NoticeBoardResponse {
                 .categoryId(board.getCategory() != null ? board.getCategory().getId() : null)
                 .categoryName(board.getCategory() != null ? board.getCategory().getName() : null)
                 .thumbnail(thumbnail)
+                .attachments(attachments)
                 .eventStartDate(eventStartDate)
                 .eventEndDate(eventEndDate)
+                .eventStatus(board.getEventStatus())
                 .isEventEnded(isEventEnded)
                 .viewCount(board.getViewCount())
                 .likeCount(board.getLikeCount())

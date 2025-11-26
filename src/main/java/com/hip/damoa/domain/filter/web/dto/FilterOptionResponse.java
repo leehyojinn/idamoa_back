@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 /**
  * 필터 옵션 응답 DTO
  */
@@ -16,6 +18,7 @@ import lombok.NoArgsConstructor;
 public class FilterOptionResponse {
 
     private Long id;
+    private UUID uuid;
     private String code;
     private String name;
     private String description;
@@ -26,6 +29,7 @@ public class FilterOptionResponse {
     public static FilterOptionResponse from(FilterOption option) {
         return FilterOptionResponse.builder()
                 .id(option.getId())
+                .uuid(option.getUuid())
                 .code(option.getCode())
                 .name(option.getName())
                 .description(option.getDescription())

@@ -6,6 +6,7 @@ import com.hip.damoa.domain.filter.model.FilterCategory;
 import com.hip.damoa.domain.filter.model.FilterOption;
 import com.hip.damoa.domain.filter.repository.FilterCategoryRepository;
 import com.hip.damoa.domain.filter.repository.FilterOptionRepository;
+import com.hip.damoa.domain.filter.web.dto.BoardFilterResponse;
 import com.hip.damoa.domain.filter.web.dto.FilterCategoryResponse;
 import com.hip.damoa.domain.filter.web.dto.FilterOptionResponse;
 import lombok.RequiredArgsConstructor;
@@ -160,6 +161,76 @@ public class FilterService {
                 .collect(Collectors.toList());
 
         log.info("필터 타입별 카테고리 조회 완료: filterType={}, 카테고리 개수={}", filterType, response.size());
+        return response;
+    }
+
+    /**
+     * 갤러리 게시판용 필터 목록 조회
+     * entityType이 'BOARD'이고 metadata의 board_types 배열에 'gallery'가 포함된 필터들을 조회
+     */
+    @Transactional(readOnly = true)
+    public List<BoardFilterResponse> getGalleryFilters() {
+        log.info("갤러리 필터 목록 조회 시작 (metadata 기반)");
+
+        // entityType이 BOARD이고 metadata의 board_types 배열에 'gallery'가 포함된 카테고리 조회
+        List<FilterCategory> categories = filterCategoryRepository.findBoardFiltersByType("[\"GALLERY\"]");
+
+        List<BoardFilterResponse> response = categories.stream()
+                .map(category -> {
+                    try {
+                        List<FilterOption> options = filterOptionRepository
+                                .findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(category);
+
+                        List<FilterOptionResponse> optionResponses = options.stream()
+                                .map(FilterOptionResponse::from)
+                                .collect(Collectors.toList());
+
+                        FilterCategoryResponse categoryResponse = FilterCategoryResponse.from(category, optionResponses);
+                        return BoardFilterResponse.from(categoryResponse);
+                    } catch (Exception e) {
+                        log.error("갤러리 필터 조회 중 오류 발생: categoryCode={}", category.getCode(), e);
+                        return null;
+                    }
+                })
+                .filter(filter -> filter != null)
+                .collect(Collectors.toList());
+
+        log.info("갤러리 필터 목록 조회 완료: {}개 카테고리", response.size());
+        return response;
+    }
+
+    /**
+     * 자료실 게시판용 필터 목록 조회
+     * entityType이 'BOARD'이고 metadata의 board_types 배열에 'document'가 포함된 필터들을 조회
+     */
+    @Transactional(readOnly = true)
+    public List<BoardFilterResponse> getDocumentFilters() {
+        log.info("자료실 필터 목록 조회 시작 (metadata 기반)");
+
+        // entityType이 BOARD이고 metadata의 board_types 배열에 'document'가 포함된 카테고리 조회
+        List<FilterCategory> categories = filterCategoryRepository.findBoardFiltersByType("[\"DOCUMENT\"]");
+
+        List<BoardFilterResponse> response = categories.stream()
+                .map(category -> {
+                    try {
+                        List<FilterOption> options = filterOptionRepository
+                                .findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(category);
+
+                        List<FilterOptionResponse> optionResponses = options.stream()
+                                .map(FilterOptionResponse::from)
+                                .collect(Collectors.toList());
+
+                        FilterCategoryResponse categoryResponse = FilterCategoryResponse.from(category, optionResponses);
+                        return BoardFilterResponse.from(categoryResponse);
+                    } catch (Exception e) {
+                        log.error("자료실 필터 조회 중 오류 발생: categoryCode={}", category.getCode(), e);
+                        return null;
+                    }
+                })
+                .filter(filter -> filter != null)
+                .collect(Collectors.toList());
+
+        log.info("자료실 필터 목록 조회 완료: {}개 카테고리", response.size());
         return response;
     }
 }
