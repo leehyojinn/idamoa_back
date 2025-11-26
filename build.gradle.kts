@@ -16,8 +16,6 @@ repositories {
 }
 
 dependencies {
-    // gRPC 버전 통일 (google-analytics-data가 사용하는 버전으로 맞춤)
-    implementation(platform("io.grpc:grpc-bom:1.70.0"))
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
@@ -55,17 +53,12 @@ dependencies {
     implementation("com.google.apis:google-api-services-gmail:v1-rev20250630-2.0.0")
     implementation("com.google.auth:google-auth-library-oauth2-http:1.40.0")
 
-    // Google Analytics Data API
+    // Google Analytics Data API - REST/HTTP만 사용 (gRPC 제외)
     implementation("com.google.analytics:google-analytics-data:0.56.0")
 
-    // gRPC - 버전은 BOM이 관리
-    implementation("io.grpc:grpc-netty") // shaded 대신 일반 버전 사용
-    implementation("io.grpc:grpc-stub")
-    implementation("io.grpc:grpc-protobuf")
+    // Java annotation API (일부 Google 라이브러리에서 필요)
+    implementation("javax.annotation:javax.annotation-api:1.3.2")
 
-    // Netty TCNative - Docker/Linux 호환성
-    implementation("io.netty:netty-tcnative-boringssl-static:2.0.65.Final")
-    implementation("javax.annotation:javax.annotation-api:1.3.2") // JDK 11+ 필요
     // Hypersistence Utils for JSONB and Array types
     implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.7.3")
 }

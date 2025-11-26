@@ -2,6 +2,7 @@ package com.hip.damoa.config.analytics;
 
 import com.google.analytics.data.v1beta.BetaAnalyticsDataClient;
 import com.google.analytics.data.v1beta.BetaAnalyticsDataSettings;
+import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,6 +16,7 @@ import java.io.IOException;
 
 /**
  * Google Analytics Data API 설정
+ * HTTP/JSON REST API를 사용하여 gRPC native 라이브러리 의존성을 제거합니다.
  * google.analytics.enabled=true로 설정해야 활성화됩니다.
  */
 @Slf4j
@@ -30,7 +32,7 @@ public class GoogleAnalyticsConfig {
 
     @Bean
     public BetaAnalyticsDataClient analyticsDataClient() throws IOException {
-        log.info("Google Analytics Data API 초기화 시작: credentialsPath={}", credentialsPath);
+        log.info("Google Analytics Data API 초기화 시작 (HTTP/JSON 모드): credentialsPath={}", credentialsPath);
 
         // file: 프리픽스 제거 (Gmail과 동일한 방식)
         String actualPath = credentialsPath.replace("file:", "");
@@ -47,13 +49,15 @@ public class GoogleAnalyticsConfig {
                 .fromStream(new FileInputStream(actualPath))
                 .createScoped("https://www.googleapis.com/auth/analytics.readonly");
 
-        BetaAnalyticsDataSettings settings = BetaAnalyticsDataSettings.newBuilder()
-                .setCredentialsProvider(() -> credentials)
+        // ✅ 핵심: newHttpJsonBuilder()를 사용하여 REST API로 전환 (gRPC 비활성화)
+        BetaAnalyticsDataSettings settings = BetaAnalyticsDataSettings
+                .newHttpJsonBuilder()  // gRPC 대신 HTTP/JSON 사용
+                .setCredentialsProvider(FixedCredentialsProvider.create(credentials))
                 .build();
 
         BetaAnalyticsDataClient client = BetaAnalyticsDataClient.create(settings);
 
-        log.info("Google Analytics Data API 초기화 완료: propertyId={}", propertyId);
+        log.info("Google Analytics Data API 초기화 완료 (HTTP/JSON 모드): propertyId={}", propertyId);
 
         return client;
     }
