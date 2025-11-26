@@ -26,13 +26,41 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: 빠른상담 CRUD 기능 구현 완료
-**마지막 업데이트**: 2025-11-13
-**다음 우선순위**: 빠른상담 기능 테스트 및 프론트엔드 연동
+**프로젝트 단계**: 필터 관리자 기능 리팩토링 완료
+**마지막 업데이트**: 2025-11-26
+**다음 우선순위**: 필터 기능 프론트엔드 연동 및 테스트
 
 ---
 
 ## 📝 작업 로그
+
+### 2025-11-26
+
+#### ✅ 완료 (Completed)
+
+**[FILTER-ADMIN-001] 필터 관리자 기능 리팩토링** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-11-26
+- **작업 내용**:
+  - 불필요한 API 엔드포인트 제거
+    - 필터 사용 통계 조회 API 제거 (`/api/admin/filters/statistics`)
+    - 미사용 필터 옵션 조회 API 제거 (`/api/admin/filters/options/unused`)
+    - 필터 옵션 일괄 생성 API 제거 (`/api/admin/filters/options/bulk`)
+  - Swagger 문서화 상세 개선
+    - 모든 API 엔드포인트에 상세한 설명 추가 (Java text blocks 사용)
+    - 파라미터 설명 및 사용 예시 추가
+    - 응답 형식 및 에러 케이스 문서화
+  - 코드 정리
+    - AdminFilterService에서 미사용 메서드 제거 (getFilterStatistics, getUnusedFilterOptions, createFilterOptionsBulk)
+    - FilterStatisticsResponse DTO 파일 삭제
+    - 미사용 Specification 메서드 제거 (optionUsageCountEquals)
+
+**생성/수정된 파일**:
+- `domain/admin/web/AdminFilterController.java` - 엔드포인트 제거 및 Swagger 문서 개선
+- `domain/admin/service/AdminFilterService.java` - 미사용 메서드 제거
+- `domain/admin/web/dto/FilterStatisticsResponse.java` - 파일 삭제
+
+**빌드 테스트**: 성공 ✅
 
 ### 2025-11-13
 

@@ -81,4 +81,11 @@ public abstract class BaseEntity extends BaseTimeEntity {
         }
         return this.metadata.get(key);
     }
+
+    /**
+     * 메타데이터 전체 설정
+     */
+    public void setMetadata(Map<String, Object> metadata) {
+        this.metadata = metadata != null ? metadata : new HashMap<>();
+    }
 }

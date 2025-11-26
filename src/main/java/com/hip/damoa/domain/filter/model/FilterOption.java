@@ -150,4 +150,33 @@ public class FilterOption extends BaseEntity {
     public void unsetDefault() {
         this.isDefault = false;
     }
+
+    // Setter methods for admin operations
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setShortName(String shortName) {
+        this.shortName = shortName;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
+    }
+
+    public void setDisplayOrder(Integer displayOrder) {
+        this.displayOrder = displayOrder;
+    }
+
+    public void setIcon(String icon) {
+        this.icon = icon;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
 }
