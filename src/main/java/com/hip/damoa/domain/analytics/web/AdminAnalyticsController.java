@@ -1,12 +1,8 @@
 package com.hip.damoa.domain.analytics.web;
 
-import com.hip.damoa.core.exception.BusinessException;
-import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.analytics.service.GoogleAnalyticsService;
 import com.hip.damoa.domain.analytics.web.dto.*;
-import com.hip.damoa.domain.user.model.User;
-import com.hip.damoa.domain.user.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -35,22 +32,10 @@ import java.util.List;
         havingValue = "true",
         matchIfMissing = false
 )
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminAnalyticsController {
 
     private final GoogleAnalyticsService analyticsService;
-    private final UserRepository userRepository;
-
-    /**
-     * ADMIN 권한 검증
-     */
-    private void validateAdmin(UserDetails userDetails) {
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-    }
 
     /**
      * 일별 트래픽 데이터 조회
@@ -60,8 +45,6 @@ public class AdminAnalyticsController {
     public ApiResponse<List<DailyTrafficData>> getDailyTraffic(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @ModelAttribute AnalyticsDateRequest request) {
-
-        validateAdmin(userDetails);
 
         List<DailyTrafficData> result = analyticsService.getDailyTraffic(
                 request.getStartDate(), request.getEndDate());
@@ -78,8 +61,6 @@ public class AdminAnalyticsController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @ModelAttribute AnalyticsPageRequest request) {
 
-        validateAdmin(userDetails);
-
         List<PageViewData> result = analyticsService.getPageViews(
                 request.getStartDate(), request.getEndDate(), request.getLimit());
 
@@ -95,8 +76,6 @@ public class AdminAnalyticsController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @ModelAttribute PagePathRequest request) {
 
-        validateAdmin(userDetails);
-
         PageViewData result = analyticsService.getPageStatsByPath(
                 request.getPagePath(), request.getStartDate(), request.getEndDate());
 
@@ -111,8 +90,6 @@ public class AdminAnalyticsController {
     public ApiResponse<RealtimeUsersResponse> getRealtimeUsers(
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        validateAdmin(userDetails);
-
         RealtimeUsersResponse result = analyticsService.getRealtimeUsers();
 
         return ApiResponse.success(result);
@@ -126,8 +103,6 @@ public class AdminAnalyticsController {
     public ApiResponse<SummaryStatsResponse> getSummaryStats(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @ModelAttribute AnalyticsDateRequest request) {
-
-        validateAdmin(userDetails);
 
         SummaryStatsResponse result = analyticsService.getSummaryStats(
                 request.getStartDate(), request.getEndDate());
@@ -148,8 +123,6 @@ public class AdminAnalyticsController {
     public ApiResponse<List<EventCountData>> getEventCounts(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @ModelAttribute AnalyticsPageRequest request) {
-
-        validateAdmin(userDetails);
 
         List<EventCountData> result = analyticsService.getEventCounts(
                 request.getStartDate(), request.getEndDate(), request.getLimit());
@@ -172,8 +145,6 @@ public class AdminAnalyticsController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @ModelAttribute AnalyticsPageRequest request) {
 
-        validateAdmin(userDetails);
-
         List<AcquisitionChannelData> result = analyticsService.getAcquisitionChannels(
                 request.getStartDate(), request.getEndDate(), request.getLimit());
 
@@ -193,8 +164,6 @@ public class AdminAnalyticsController {
     public ApiResponse<List<DeviceStatsData>> getDeviceStats(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @ModelAttribute AnalyticsDateRequest request) {
-
-        validateAdmin(userDetails);
 
         List<DeviceStatsData> result = analyticsService.getDeviceStats(
                 request.getStartDate(), request.getEndDate());
@@ -216,8 +185,6 @@ public class AdminAnalyticsController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @ModelAttribute AnalyticsPageRequest request) {
 
-        validateAdmin(userDetails);
-
         List<LocationStatsData> result = analyticsService.getLocationStats(
                 request.getStartDate(), request.getEndDate(), request.getLimit());
 
@@ -237,8 +204,6 @@ public class AdminAnalyticsController {
     public ApiResponse<List<BrowserStatsData>> getBrowserStats(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @ModelAttribute AnalyticsPageRequest request) {
-
-        validateAdmin(userDetails);
 
         List<BrowserStatsData> result = analyticsService.getBrowserStats(
                 request.getStartDate(), request.getEndDate(), request.getLimit());
@@ -263,8 +228,6 @@ public class AdminAnalyticsController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @ModelAttribute AnalyticsDateRequest request) {
 
-        validateAdmin(userDetails);
-
         EngagementMetricsResponse result = analyticsService.getEngagementMetrics(
                 request.getStartDate(), request.getEndDate());
 
@@ -286,8 +249,6 @@ public class AdminAnalyticsController {
     public ApiResponse<ComparisonStatsResponse> getComparisonStats(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @ModelAttribute ComparisonStatsRequest request) {
-
-        validateAdmin(userDetails);
 
         ComparisonStatsResponse result = analyticsService.getComparisonStats(
                 request.getCurrentStart(), request.getCurrentEnd(),
