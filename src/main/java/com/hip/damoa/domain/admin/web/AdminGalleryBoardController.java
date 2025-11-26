@@ -4,6 +4,7 @@ import com.hip.damoa.core.exception.BusinessException;
 import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.board.model.Board;
+import com.hip.damoa.domain.board.repository.BoardRepository;
 import com.hip.damoa.domain.board.service.BoardService;
 import com.hip.damoa.domain.board.service.GalleryBoardService;
 import com.hip.damoa.domain.board.web.dto.GalleryCreateRequest;
@@ -43,6 +44,7 @@ public class AdminGalleryBoardController {
 
     private final GalleryBoardService galleryBoardService;
     private final BoardService boardService;
+    private final BoardRepository boardRepository;
     private final UserRepository userRepository;
 
     /**
@@ -217,6 +219,7 @@ public class AdminGalleryBoardController {
         } else {
             board.publish();
         }
+        boardRepository.save(board);
 
         return ApiResponse.success();
     }
@@ -248,6 +251,7 @@ public class AdminGalleryBoardController {
         } else {
             board.pin();
         }
+        boardRepository.save(board);
 
         return ApiResponse.success();
     }
@@ -279,6 +283,7 @@ public class AdminGalleryBoardController {
         } else {
             board.feature();
         }
+        boardRepository.save(board);
 
         return ApiResponse.success();
     }
