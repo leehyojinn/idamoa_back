@@ -83,6 +83,9 @@ public class Board extends BaseEntity {
     @Column(name = "password", length = 255)
     private String password;
 
+    @Column(name = "event_status", length = 20)
+    private String eventStatus; // ACTIVE, ENDED (EVENT 타입일 경우만)
+
     @Column(name = "created_by")
     private Long createdBy;
 
@@ -177,6 +180,24 @@ public class Board extends BaseEntity {
 
     public void unfeature() {
         this.isFeatured = false;
+    }
+
+    public void activateEvent() {
+        if ("EVENT".equals(this.boardType)) {
+            this.eventStatus = "ACTIVE";
+        }
+    }
+
+    public void endEvent() {
+        if ("EVENT".equals(this.boardType)) {
+            this.eventStatus = "ENDED";
+        }
+    }
+
+    public void updateEventStatus(String status) {
+        if ("EVENT".equals(this.boardType)) {
+            this.eventStatus = status;
+        }
     }
 
     public void publish() {

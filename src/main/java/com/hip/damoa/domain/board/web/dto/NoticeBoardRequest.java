@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -27,6 +28,8 @@ public class NoticeBoardRequest {
     @Size(max = 10000, message = "내용은 10000자 이내여야 합니다")
     private String content;
 
+    // NOTICE/EVENT는 카테고리를 사용하지 않음 (무시됨)
+    @Deprecated
     private Long categoryId;
 
     private String[] tags;
@@ -37,6 +40,9 @@ public class NoticeBoardRequest {
 
     // 썸네일 이미지
     private UUID thumbnailUuid;
+
+    // 첨부파일 목록 (여러 파일 첨부 가능)
+    private List<UUID> attachmentUuids;
 
     // 이벤트 날짜 (EVENT 타입일 경우)
     private LocalDateTime eventStartDate;

@@ -13,6 +13,8 @@ import com.hip.damoa.domain.board.web.dto.NoticeBoardRequest;
 import com.hip.damoa.domain.board.web.dto.NoticeBoardResponse;
 import com.hip.damoa.domain.file.model.File;
 import com.hip.damoa.domain.file.repository.FileRepository;
+import com.hip.damoa.domain.user.model.User;
+import com.hip.damoa.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -21,10 +23,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -42,6 +46,7 @@ public class NoticeBoardService {
     private final BoardRepository boardRepository;
     private final BoardAttachmentRepository boardAttachmentRepository;
     private final FileRepository fileRepository;
+    private final UserRepository userRepository;
     private final com.hip.damoa.domain.user.repository.UserProfileRepository userProfileRepository;
 
     // 공지사항 관련 타입 (NOTICE, EVENT, FAQ)
@@ -69,11 +74,11 @@ public class NoticeBoardService {
             typeData.put("eventEndDate", request.getEventEndDate().toString());
         }
 
-        // Board 생성
+        // Board 생성 (NOTICE/EVENT는 categoryId 무시)
         Board board = boardService.createBoard(
                 userEmail,
                 boardType,
-                request.getCategoryId(),
+                null,  // NOTICE/EVENT는 카테고리를 사용하지 않음
                 request.getTitle(),
                 request.getContent(),
                 typeData,
@@ -88,10 +93,24 @@ public class NoticeBoardService {
             board.pin();
         }
 
+        // 이벤트인 경우 초기 상태 설정
+        if (BoardType.EVENT.name().equals(boardType)) {
+            // 이벤트 종료일 확인하여 상태 설정
+            if (request.getEventEndDate() != null && request.getEventEndDate().isBefore(LocalDateTime.now())) {
+                board.endEvent();
+            } else {
+                board.activateEvent();
+            }
+        }
+
         // 썸네일 저장
         if (request.getThumbnailUuid() != null) {
             File thumbnailFile = fileRepository.findByUuidAndIsDeletedFalse(request.getThumbnailUuid())
                     .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+
+            // Files 테이블의 entity 정보 업데이트 (스케줄러 삭제 방지)
+            thumbnailFile.updateEntityInfo("BOARD_THUMBNAIL", board.getId());
+            fileRepository.save(thumbnailFile);
 
             BoardAttachment attachment = BoardAttachment.builder()
                     .board(board)
@@ -105,12 +124,38 @@ public class NoticeBoardService {
             log.info("썸네일 첨부파일 저장 완료: fileId={}", thumbnailFile.getId());
         }
 
+        // 일반 첨부파일들 저장
+        if (request.getAttachmentUuids() != null && !request.getAttachmentUuids().isEmpty()) {
+            int orderIndex = 1;
+            for (UUID fileUuid : request.getAttachmentUuids()) {
+                File attachmentFile = fileRepository.findByUuidAndIsDeletedFalse(fileUuid)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+
+                // Files 테이블의 entity 정보 업데이트 (스케줄러 삭제 방지)
+                attachmentFile.updateEntityInfo("BOARD_ATTACHMENT", board.getId());
+                fileRepository.save(attachmentFile);
+
+                BoardAttachment attachment = BoardAttachment.builder()
+                        .board(board)
+                        .fileId(attachmentFile.getId())
+                        .attachmentType(BoardAttachment.AttachmentType.OTHER)
+                        .displayOrder(orderIndex++)
+                        .description("첨부파일")
+                        .build();
+
+                boardAttachmentRepository.save(attachment);
+                log.info("첨부파일 저장 완료: fileId={}, order={}", attachmentFile.getId(), attachment.getDisplayOrder());
+            }
+            log.info("총 {}개의 첨부파일 저장 완료", request.getAttachmentUuids().size());
+        }
+
         log.info("{} 게시글 생성 완료: uuid={}", boardType, board.getUuid());
 
-        // 썸네일과 함께 응답 생성
+        // 썸네일과 첨부파일과 함께 응답 생성
         FileInfo thumbnail = loadThumbnail(board);
+        List<FileInfo> attachments = loadAttachments(board);
         String userName = getUserName(board);
-        return NoticeBoardResponse.from(board, thumbnail, userName);
+        return NoticeBoardResponse.from(board, thumbnail, attachments, userName);
     }
 
     /**
@@ -130,10 +175,11 @@ public class NoticeBoardService {
         // 조회수 증가
         boardService.incrementViewCount(uuid);
 
-        // 썸네일과 함께 응답
+        // 썸네일과 첨부파일과 함께 응답
         FileInfo thumbnail = loadThumbnail(board);
+        List<FileInfo> attachments = loadAttachments(board);
         String userName = getUserName(board);
-        return NoticeBoardResponse.from(board, thumbnail, userName);
+        return NoticeBoardResponse.from(board, thumbnail, attachments, userName);
     }
 
     /**
@@ -232,6 +278,21 @@ public class NoticeBoardService {
     }
 
     /**
+     * 게시글의 첨부파일 목록 조회
+     */
+    private List<FileInfo> loadAttachments(Board board) {
+        return boardAttachmentRepository.findByBoardAndTypeOrderByDisplayOrder(
+                        board, BoardAttachment.AttachmentType.OTHER)
+                .stream()
+                .map(attachment -> fileRepository.findById(attachment.getFileId()))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .filter(file -> !file.getIsDeleted())
+                .map(FileInfo::from)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 공지사항/이벤트 게시글 수정
      */
     @Transactional
@@ -279,6 +340,10 @@ public class NoticeBoardService {
             File thumbnailFile = fileRepository.findByUuidAndIsDeletedFalse(request.getThumbnailUuid())
                     .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
 
+            // Files 테이블의 entity 정보 업데이트 (스케줄러 삭제 방지)
+            thumbnailFile.updateEntityInfo("BOARD_THUMBNAIL", board.getId());
+            fileRepository.save(thumbnailFile);
+
             BoardAttachment newAttachment = BoardAttachment.builder()
                     .board(board)
                     .fileId(thumbnailFile.getId())
@@ -291,12 +356,49 @@ public class NoticeBoardService {
             log.info("새 썸네일 저장 완료: fileId={}", thumbnailFile.getId());
         }
 
+        // 첨부파일 업데이트
+        if (request.getAttachmentUuids() != null) {
+            // 기존 첨부파일 삭제 (썸네일 제외)
+            List<BoardAttachment> existingAttachments = boardAttachmentRepository.findByBoardAndTypeOrderByDisplayOrder(
+                    board, BoardAttachment.AttachmentType.OTHER);
+            existingAttachments.forEach(attachment -> {
+                attachment.softDelete();
+                log.info("기존 첨부파일 삭제: attachmentId={}", attachment.getId());
+            });
+
+            // 새 첨부파일들 추가
+            if (!request.getAttachmentUuids().isEmpty()) {
+                int orderIndex = 1;
+                for (UUID fileUuid : request.getAttachmentUuids()) {
+                    File attachmentFile = fileRepository.findByUuidAndIsDeletedFalse(fileUuid)
+                            .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+
+                    // Files 테이블의 entity 정보 업데이트 (스케줄러 삭제 방지)
+                    attachmentFile.updateEntityInfo("BOARD_ATTACHMENT", board.getId());
+                    fileRepository.save(attachmentFile);
+
+                    BoardAttachment newAttachment = BoardAttachment.builder()
+                            .board(board)
+                            .fileId(attachmentFile.getId())
+                            .attachmentType(BoardAttachment.AttachmentType.OTHER)
+                            .displayOrder(orderIndex++)
+                            .description("첨부파일")
+                            .build();
+
+                    boardAttachmentRepository.save(newAttachment);
+                    log.info("새 첨부파일 저장 완료: fileId={}, order={}", attachmentFile.getId(), newAttachment.getDisplayOrder());
+                }
+                log.info("총 {}개의 첨부파일 저장 완료", request.getAttachmentUuids().size());
+            }
+        }
+
         log.info("게시글 수정 완료: uuid={}", uuid);
 
-        // 썸네일과 함께 응답
+        // 썸네일과 첨부파일과 함께 응답
         FileInfo thumbnail = loadThumbnail(board);
+        List<FileInfo> attachments = loadAttachments(board);
         String userName = getUserName(board);
-        return NoticeBoardResponse.from(board, thumbnail, userName);
+        return NoticeBoardResponse.from(board, thumbnail, attachments, userName);
     }
 
     /**
@@ -306,6 +408,56 @@ public class NoticeBoardService {
     public void deleteNotice(UUID uuid, String userEmail) {
         log.info("게시글 삭제: uuid={}, userEmail={}", uuid, userEmail);
         boardService.deleteBoard(uuid, userEmail);
+    }
+
+    /**
+     * 이벤트 상태 업데이트 (관리자 수동 종료/활성화)
+     *
+     * @param uuid 이벤트 UUID
+     * @param userEmail 관리자 이메일
+     * @param status 변경할 상태 (ACTIVE, ENDED)
+     * @return 업데이트된 이벤트 정보
+     */
+    @Transactional
+    public NoticeBoardResponse updateEventStatus(UUID uuid, String userEmail, String status) {
+        log.info("이벤트 상태 업데이트 시작: uuid={}, userEmail={}, status={}", uuid, userEmail, status);
+
+        // 사용자 확인
+        User user = userRepository.findByEmailAndIsDeletedFalse(userEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 게시글 조회
+        Board board = boardRepository.findByUuidAndIsDeletedFalse(uuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.BOARD_NOT_FOUND));
+
+        // EVENT 타입인지 확인
+        if (!BoardType.EVENT.name().equals(board.getBoardType())) {
+            throw new BusinessException(ErrorCode.EVENT_NOT_EDITABLE);
+        }
+
+        // 상태 업데이트
+        if ("ENDED".equals(status)) {
+            board.endEvent();
+            log.info("이벤트 종료 처리: uuid={}, title={}", uuid, board.getTitle());
+        } else if ("ACTIVE".equals(status)) {
+            board.activateEvent();
+            log.info("이벤트 활성화 처리: uuid={}, title={}", uuid, board.getTitle());
+        } else {
+            log.error("유효하지 않은 이벤트 상태값: {}", status);
+            throw new BusinessException(ErrorCode.INVALID_EVENT_STATUS);
+        }
+
+        // 수정자 정보 업데이트
+        board.setUpdatedBy(user.getId());
+        boardRepository.save(board);
+
+        // 응답 생성
+        FileInfo thumbnail = loadThumbnail(board);
+        List<FileInfo> attachments = loadAttachments(board);
+        String userName = getUserName(board);
+
+        log.info("이벤트 상태 업데이트 완료: uuid={}, newStatus={}", uuid, board.getEventStatus());
+        return NoticeBoardResponse.from(board, thumbnail, attachments, userName);
     }
 
     /**

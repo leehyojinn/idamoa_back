@@ -15,7 +15,7 @@ import java.util.List;
  * 게시판 필터 조회 Controller
  * 갤러리/자료실 게시판용 필터 목록을 제공합니다.
  */
-@Tag(name = "12-1. Board Filter", description = "게시판 필터 조회 API")
+@Tag(name = "10-1. Board Filter", description = "게시판 필터 조회 API")
 @Slf4j
 @RestController
 @RequiredArgsConstructor

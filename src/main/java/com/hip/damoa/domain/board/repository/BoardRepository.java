@@ -97,5 +97,16 @@ public interface BoardRepository extends JpaRepository<Board, Long>, JpaSpecific
 
     // 존재 여부
     boolean existsByUuidAndIsDeletedFalse(UUID uuid);
+
+    // 종료되어야 할 이벤트 조회 (이벤트 종료일이 지났지만 아직 ACTIVE 상태인 이벤트)
+    @Query(value = """
+        SELECT b.* FROM boards b
+        WHERE b.board_type = 'EVENT'
+        AND b.is_deleted = false
+        AND (b.event_status = 'ACTIVE' OR b.event_status IS NULL)
+        AND b.type_data->>'eventEndDate' IS NOT NULL
+        AND CAST(b.type_data->>'eventEndDate' AS timestamp) < CURRENT_TIMESTAMP
+        """, nativeQuery = true)
+    List<Board> findExpiredActiveEvents();
 }
 

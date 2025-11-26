@@ -167,6 +167,8 @@ public enum ErrorCode {
     BOARD_TYPE_NOT_SUPPORT_FILTER(HttpStatus.BAD_REQUEST, "BD006", "이 게시판 타입은 필터를 지원하지 않습니다"),
     BOARD_TYPE_NOT_SUPPORT_BOOKMARK(HttpStatus.BAD_REQUEST, "BD007", "이 게시판 타입은 북마크를 지원하지 않습니다"),
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "BD008", "카테고리를 찾을 수 없습니다"),
+    EVENT_NOT_EDITABLE(HttpStatus.BAD_REQUEST, "BD009", "이벤트 게시글이 아니므로 이벤트 상태를 변경할 수 없습니다"),
+    INVALID_EVENT_STATUS(HttpStatus.BAD_REQUEST, "BD010", "유효하지 않은 이벤트 상태값입니다. ACTIVE 또는 ENDED만 가능합니다"),
 
     // Filter
     FILTER_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "FC001", "필터 카테고리를 찾을 수 없습니다"),
