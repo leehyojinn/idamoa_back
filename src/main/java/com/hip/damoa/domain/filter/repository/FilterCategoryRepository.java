@@ -4,6 +4,7 @@ import com.hip.damoa.domain.filter.model.FilterCategory;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,5 +22,20 @@ public interface FilterCategoryRepository extends JpaRepository<FilterCategory, 
     List<FilterCategory> findRequiredCategories();
 
     @Query("SELECT fc FROM FilterCategory fc WHERE fc.filterType = :filterType AND fc.isActive = true AND fc.isDeleted = false ORDER BY fc.displayOrder")
-    List<FilterCategory> findActiveByFilterType(String filterType);
+    List<FilterCategory> findActiveByFilterType(@Param("filterType") String filterType);
+
+    // BOARD 타입이면서 metadata의 board_types 배열에 특정 타입이 포함된 필터 조회
+    @Query(value = """
+        SELECT fc.* FROM filter_categories fc
+        WHERE fc.entity_type = 'BOARD'
+        AND fc.is_active = true
+        AND fc.is_deleted = false
+        AND fc.metadata->'board_types' @> CAST(:boardType AS jsonb)
+        ORDER BY fc.display_order
+        """, nativeQuery = true)
+    List<FilterCategory> findBoardFiltersByType(@Param("boardType") String boardType);
+
+    // BOARD 타입 전체 필터 조회 (board_type 관계없이)
+    @Query("SELECT fc FROM FilterCategory fc WHERE fc.entityType = 'BOARD' AND fc.isActive = true AND fc.isDeleted = false ORDER BY fc.displayOrder")
+    List<FilterCategory> findAllBoardFilters();
 }
