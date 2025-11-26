@@ -13,6 +13,9 @@ public enum ErrorCode {
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "C002", "허용되지 않은 메서드입니다"),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "C003", "서버 오류가 발생했습니다"),
     INVALID_TYPE_VALUE(HttpStatus.BAD_REQUEST, "C004", "잘못된 타입입니다"),
+    NOT_FOUND(HttpStatus.NOT_FOUND, "C005", "리소스를 찾을 수 없습니다"),
+    DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "C006", "중복된 리소스입니다"),
+    RESOURCE_IN_USE(HttpStatus.CONFLICT, "C007", "사용 중인 리소스는 삭제할 수 없습니다"),
 
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "사용자를 찾을 수 없습니다"),
@@ -168,6 +171,14 @@ public enum ErrorCode {
     // Filter
     FILTER_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "FC001", "필터 카테고리를 찾을 수 없습니다"),
     FILTER_OPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "FC002", "필터 옵션을 찾을 수 없습니다"),
+    FILTER_PARENT_OPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "FC003", "부모 필터 옵션을 찾을 수 없습니다"),
+    FILTER_CATEGORY_CODE_DUPLICATE(HttpStatus.CONFLICT, "FC004", "이미 존재하는 필터 카테고리 코드입니다"),
+    FILTER_OPTION_CODE_DUPLICATE(HttpStatus.CONFLICT, "FC005", "이미 존재하는 필터 옵션 코드입니다"),
+    FILTER_CATEGORY_HAS_OPTIONS(HttpStatus.CONFLICT, "FC006", "필터 옵션이 있는 카테고리는 삭제할 수 없습니다"),
+    FILTER_OPTION_HAS_CHILDREN(HttpStatus.CONFLICT, "FC007", "하위 필터 옵션이 있는 옵션은 삭제할 수 없습니다"),
+    FILTER_INVALID_HIERARCHY(HttpStatus.BAD_REQUEST, "FC008", "유효하지 않은 필터 계층 구조입니다"),
+    FILTER_MAX_DEPTH_EXCEEDED(HttpStatus.BAD_REQUEST, "FC009", "필터 계층의 최대 깊이를 초과했습니다"),
+    FILTER_ENTITY_TYPE_MISMATCH(HttpStatus.BAD_REQUEST, "FC010", "필터 엔티티 타입이 일치하지 않습니다"),
 
     // Notification
     TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "NT001", "알림 템플릿을 찾을 수 없습니다"),

@@ -111,4 +111,37 @@ public class FilterCategory extends BaseEntity {
     public void activate() {
         this.isActive = true;
     }
+
+    // Setter methods for admin operations
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setFilterType(String filterType) {
+        this.filterType = filterType;
+    }
+
+    public void setSupportsHierarchy(Boolean supportsHierarchy) {
+        this.supportsHierarchy = supportsHierarchy;
+    }
+
+    public void setMaxDepth(Integer maxDepth) {
+        this.maxDepth = maxDepth;
+    }
+
+    public void setDisplayOrder(Integer displayOrder) {
+        this.displayOrder = displayOrder;
+    }
+
+    public void setIcon(String icon) {
+        this.icon = icon;
+    }
+
+    public void setIsRequired(Boolean isRequired) {
+        this.isRequired = isRequired;
+    }
 }

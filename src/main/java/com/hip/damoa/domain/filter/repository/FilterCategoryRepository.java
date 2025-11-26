@@ -2,12 +2,13 @@ package com.hip.damoa.domain.filter.repository;
 
 import com.hip.damoa.domain.filter.model.FilterCategory;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface FilterCategoryRepository extends JpaRepository<FilterCategory, Long> {
+public interface FilterCategoryRepository extends JpaRepository<FilterCategory, Long>, JpaSpecificationExecutor<FilterCategory> {
     Optional<FilterCategory> findByCode(String code);
     List<FilterCategory> findByEntityTypeAndIsActiveTrueAndIsDeletedFalse(String entityType);
     List<FilterCategory> findByIsActiveTrueAndIsDeletedFalseOrderByDisplayOrder();
