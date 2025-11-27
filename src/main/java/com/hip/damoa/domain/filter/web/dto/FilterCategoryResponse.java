@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -22,10 +23,14 @@ public class FilterCategoryResponse {
     private UUID uuid;
     private String code;
     private String name;
+    private String entityType;  // COMPANY, BOARD 등 필터 적용 대상
     private String filterType;
     private String description;
     private Integer displayOrder;
     private Boolean isRequired;
+    private String icon;
+    private Boolean isActive;
+    private Map<String, Object> metadata;  // BOARD_TYPE: "GALLERY" 등 확장 데이터
     private List<FilterOptionResponse> options;
 
     public static FilterCategoryResponse from(FilterCategory category, List<FilterOptionResponse> options) {
@@ -34,10 +39,14 @@ public class FilterCategoryResponse {
                 .uuid(category.getUuid())
                 .code(category.getCode())
                 .name(category.getName())
+                .entityType(category.getEntityType())
                 .filterType(category.getFilterType())
                 .description(category.getDescription())
                 .displayOrder(category.getDisplayOrder())
                 .isRequired(category.getIsRequired())
+                .icon(category.getIcon())
+                .isActive(category.getIsActive())
+                .metadata(category.getMetadata())
                 .options(options)
                 .build();
     }

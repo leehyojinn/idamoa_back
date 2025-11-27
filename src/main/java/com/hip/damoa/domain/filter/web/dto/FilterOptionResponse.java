@@ -21,10 +21,18 @@ public class FilterOptionResponse {
     private UUID uuid;
     private String code;
     private String name;
+    private String shortName;
     private String description;
     private Integer displayOrder;
     private String icon;
+    private String color;
     private Integer usageCount;
+    private Boolean isActive;
+
+    // 카테고리 정보
+    private Long categoryId;
+    private String categoryCode;
+    private String categoryName;
 
     public static FilterOptionResponse from(FilterOption option) {
         return FilterOptionResponse.builder()
@@ -32,10 +40,16 @@ public class FilterOptionResponse {
                 .uuid(option.getUuid())
                 .code(option.getCode())
                 .name(option.getName())
+                .shortName(option.getShortName())
                 .description(option.getDescription())
                 .displayOrder(option.getDisplayOrder())
                 .icon(option.getIcon())
+                .color(option.getColor())
                 .usageCount(option.getUsageCount())
+                .isActive(option.getIsActive())
+                .categoryId(option.getCategory() != null ? option.getCategory().getId() : null)
+                .categoryCode(option.getCategory() != null ? option.getCategory().getCode() : null)
+                .categoryName(option.getCategory() != null ? option.getCategory().getName() : null)
                 .build();
     }
 }
