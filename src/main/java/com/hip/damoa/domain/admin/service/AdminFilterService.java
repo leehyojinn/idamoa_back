@@ -104,6 +104,9 @@ public class AdminFilterService {
             throw new BusinessException(ErrorCode.FILTER_CATEGORY_CODE_DUPLICATE);
         }
 
+        // BOARD 타입 메타데이터 검증
+        validateBoardTypeMetadata(request.getEntityType(), request.getMetadata());
+
         FilterCategory category = request.toEntity();
         if (request.getMetadata() != null) {
             category.setMetadata(request.getMetadata());
@@ -391,6 +394,8 @@ public class AdminFilterService {
             category.setIsRequired(request.getIsRequired());
         }
         if (request.getMetadata() != null) {
+            // BOARD 타입일 경우 메타데이터 검증
+            validateBoardTypeMetadata(category.getEntityType(), request.getMetadata());
             category.setMetadata(request.getMetadata());
         }
     }
@@ -456,6 +461,57 @@ public class AdminFilterService {
             log.warn("사용 중인 필터 옵션 삭제 시도: optionId={}, usageCount={}",
                     option.getId(), option.getUsageCount());
         }
+    }
+
+    /**
+     * BOARD 타입 필터 카테고리의 메타데이터 검증
+     * - BOARD 타입인 경우 board_types 필드가 필수
+     * - board_types에는 유효한 값만 허용 (GALLERY, DOCUMENT)
+     */
+    private void validateBoardTypeMetadata(String entityType, Map<String, Object> metadata) {
+        if (!"BOARD".equals(entityType)) {
+            return; // BOARD 타입이 아니면 검증 스킵
+        }
+
+        // BOARD 타입인데 metadata가 없거나 board_types가 없는 경우
+        if (metadata == null || !metadata.containsKey("board_types")) {
+            throw new BusinessException(ErrorCode.FILTER_BOARD_TYPES_REQUIRED);
+        }
+
+        Object boardTypes = metadata.get("board_types");
+
+        // board_types가 List인지 확인
+        if (!(boardTypes instanceof List)) {
+            log.error("board_types가 배열이 아닙니다: {}", boardTypes);
+            throw new BusinessException(ErrorCode.FILTER_INVALID_METADATA);
+        }
+
+        @SuppressWarnings("unchecked")
+        List<String> boardTypeList = (List<String>) boardTypes;
+
+        // 빈 배열 체크
+        if (boardTypeList.isEmpty()) {
+            log.error("board_types가 비어있습니다");
+            throw new BusinessException(ErrorCode.FILTER_BOARD_TYPES_REQUIRED);
+        }
+
+        // 유효한 board_types 값 목록
+        List<String> validBoardTypes = List.of("GALLERY", "DOCUMENT");
+
+        // 각 값이 유효한지 확인
+        for (Object type : boardTypeList) {
+            if (!(type instanceof String)) {
+                log.error("board_types의 값이 문자열이 아닙니다: {}", type);
+                throw new BusinessException(ErrorCode.FILTER_INVALID_METADATA);
+            }
+            String typeStr = ((String) type).toUpperCase();
+            if (!validBoardTypes.contains(typeStr)) {
+                log.error("유효하지 않은 board_type 값입니다: {} (허용: {})", type, validBoardTypes);
+                throw new BusinessException(ErrorCode.FILTER_INVALID_METADATA);
+            }
+        }
+
+        log.debug("BOARD 타입 메타데이터 검증 완료: board_types={}", boardTypeList);
     }
 
     // ==================== JPA Specifications ====================
