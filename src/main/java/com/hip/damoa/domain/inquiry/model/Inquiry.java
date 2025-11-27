@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 /**
- * 제휴/광고 문의 엔티티
+ * 일반 문의 엔티티 (버그, 결제 오류, 계정 문제 등)
  */
 @Entity
 @Getter
@@ -17,21 +17,15 @@ import lombok.*;
 public class Inquiry extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;  // 회원일 경우만 (nullable)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;  // 문의 작성자 (필수)
+
+    @Column(name = "title", nullable = false, length = 200)
+    private String title;  // 문의 제목
 
     @Enumerated(EnumType.STRING)
     @Column(name = "inquiry_type", nullable = false, length = 20)
     private InquiryType inquiryType;
-
-    @Column(name = "name", nullable = false, length = 100)
-    private String name;  // 작성자명
-
-    @Column(name = "email", nullable = false, length = 100)
-    private String email;  // 이메일주소
-
-    @Column(name = "phone", nullable = false, length = 20)
-    private String phone;  // 연락처
 
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;  // 문의내용
@@ -51,17 +45,25 @@ public class Inquiry extends BaseEntity {
     }
 
     /**
-     * 상태 변경: 완료로
+     * 상태 변경: 답변 완료로
      */
-    public void complete() {
-        this.status = InquiryStatus.COMPLETED;
+    public void markAnswered() {
+        this.status = InquiryStatus.ANSWERED;
     }
 
     /**
-     * 상태 변경: 취소로
+     * 상태 변경: 종료로
      */
-    public void cancel() {
-        this.status = InquiryStatus.CANCELLED;
+    public void close() {
+        this.status = InquiryStatus.CLOSED;
+    }
+
+    /**
+     * 문의 내용 수정 (작성자용)
+     */
+    public void updateContent(String title, String content) {
+        this.title = title;
+        this.content = content;
     }
 
     /**

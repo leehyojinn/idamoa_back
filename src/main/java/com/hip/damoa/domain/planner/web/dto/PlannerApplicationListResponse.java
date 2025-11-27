@@ -29,6 +29,7 @@ public class PlannerApplicationListResponse {
     private String applicantName;
     private PlannerApplicationStatus status;
     private LocalDateTime createdAt;
+    private Boolean isDeleted;  // 삭제 여부 (관리자용)
 
     /**
      * Entity → DTO 변환
@@ -46,6 +47,7 @@ public class PlannerApplicationListResponse {
                 .applicantName(entity.getApplicantName())
                 .status(entity.getStatus())
                 .createdAt(entity.getCreatedAt())
+                .isDeleted(entity.getIsDeleted())
                 .build();
     }
 }

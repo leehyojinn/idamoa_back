@@ -63,6 +63,8 @@ public class CompanyResponse {
     private List<CompanyImageDto> images;
     // filterOptions 제거 - filterGroups만 사용
     private List<CompanyFilterGroupDto> filterGroups; // 카테고리별로 그룹화된 필터
+    private Boolean isDeleted;  // 삭제 여부 (관리자용)
+    private LocalDateTime deletedAt;  // 삭제 시간 (관리자용)
 
     /**
      * Entity → DTO 변환
@@ -109,6 +111,8 @@ public class CompanyResponse {
                 .isPremium(company.isPremium())
                 .createdAt(company.getCreatedAt())
                 .updatedAt(company.getUpdatedAt())
+                .isDeleted(company.getIsDeleted())
+                .deletedAt(company.getDeletedAt())
                 .build();
     }
 }

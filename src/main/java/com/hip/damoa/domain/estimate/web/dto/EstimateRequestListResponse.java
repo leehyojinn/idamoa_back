@@ -31,6 +31,7 @@ public class EstimateRequestListResponse {
     private Integer viewCount;
     private LocalDateTime expiresAt;
     private LocalDateTime createdAt;
+    private Boolean isDeleted;  // 삭제 여부 (관리자용)
 
     public static EstimateRequestListResponse from(EstimateRequest request) {
         return EstimateRequestListResponse.builder()
@@ -46,6 +47,7 @@ public class EstimateRequestListResponse {
                 .viewCount(request.getViewCount())
                 .expiresAt(request.getExpiresAt())
                 .createdAt(request.getCreatedAt())
+                .isDeleted(request.getIsDeleted())
                 .build();
     }
 }

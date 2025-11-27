@@ -62,6 +62,9 @@ public class ProposalResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 삭제 여부 (관리자용)
+    private Boolean isDeleted;
+
     public static ProposalResponse from(EstimateProposal proposal) {
         return ProposalResponse.builder()
                 .id(proposal.getId())
@@ -84,6 +87,7 @@ public class ProposalResponse {
                 .requestTitle(proposal.getRequest().getTitle())
                 .createdAt(proposal.getCreatedAt())
                 .updatedAt(proposal.getUpdatedAt())
+                .isDeleted(proposal.getIsDeleted())
                 .build();
     }
 }

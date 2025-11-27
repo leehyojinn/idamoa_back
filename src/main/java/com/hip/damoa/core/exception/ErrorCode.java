@@ -215,7 +215,14 @@ public enum ErrorCode {
     CHAT_MESSAGE_EMPTY(HttpStatus.BAD_REQUEST, "CH004", "메시지 내용이 비어있습니다"),
 
     // Inquiry
-    INQUIRY_NOT_FOUND(HttpStatus.NOT_FOUND, "IQ001", "문의를 찾을 수 없습니다");
+    INQUIRY_NOT_FOUND(HttpStatus.NOT_FOUND, "IQ001", "문의를 찾을 수 없습니다"),
+    ANSWER_NOT_FOUND(HttpStatus.NOT_FOUND, "IQ002", "답변을 찾을 수 없습니다"),
+
+    // Partnership Inquiry
+    INVALID_PARTNERSHIP_TYPE(HttpStatus.BAD_REQUEST, "PI001", "잘못된 문의 유형입니다"),
+    PARTNERSHIP_INQUIRY_NOT_FOUND(HttpStatus.NOT_FOUND, "PI002", "제휴/광고 문의를 찾을 수 없습니다"),
+    PARTNERSHIP_INQUIRY_CANNOT_BE_UPDATED(HttpStatus.BAD_REQUEST, "PI003", "처리 완료된 문의는 수정할 수 없습니다"),
+    INVALID_PARTNERSHIP_STATUS(HttpStatus.BAD_REQUEST, "PI004", "잘못된 문의 상태입니다");
 
     private final HttpStatus status;
     private final String code;

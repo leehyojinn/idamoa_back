@@ -78,16 +78,6 @@ public class SecurityConfig {
                                 "/api/oauth/token",
                                 "/api/estimates/requests/public",  // Public estimate requests
                                 "/api/estimates/requests/{requestId}",  // View estimate request
-                                "/api/contests/public",  // Public contests
-                                "/api/contests/{contestId}",  // View contest
-                                "/api/contests/winners",  // View contests with winners
-                                "/api/contests/upcoming",  // View upcoming contests
-                                "/api/contests/by-prize",  // View contests by prize
-                                "/api/contests/free",  // View free entry contests
-                                "/api/contests/ending-soon",  // View contests ending soon
-                                "/api/contests/{contestId}/entries",  // View contest entries
-                                "/api/contests/{contestId}/winner",  // View contest winner
-                                "/api/contests/entries/{entryId}",  // View entry
                                 "/api/payments/webhook",  // Payment webhook (PG providers)
                                 "/api/payments/plans",  // View subscription plans
                                 "/api/payments/plans/*",  // View specific plan
@@ -98,6 +88,7 @@ public class SecurityConfig {
                                 "/api/popups/active",  // Active popups (public)
                                 "/api/popups/*/view",  // Increment view count (public)
                                 "/api/popups/*/click",  // Increment click count (public)
+                                "/api/partnership-inquiries",  // Partnership inquiry (public)
                                 "/api/filters",  // Get all filter categories (public)
                                 "/api/filters/**",  // Get specific filter category/options (public)
                                 "/api/planner-applications/list",  // 플래너 신청 목록 (public)

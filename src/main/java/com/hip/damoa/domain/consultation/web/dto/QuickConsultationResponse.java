@@ -62,6 +62,10 @@ public class QuickConsultationResponse {
     // 회원 여부
     private Boolean isMember;
 
+    // 삭제 상태 (관리자용)
+    private Boolean isDeleted;
+    private LocalDateTime deletedAt;
+
     public static QuickConsultationResponse from(QuickConsultation consultation) {
         return QuickConsultationResponse.builder()
                 .uuid(consultation.getUuid())
@@ -94,6 +98,8 @@ public class QuickConsultationResponse {
                 .createdAt(consultation.getCreatedAt())
                 .updatedAt(consultation.getUpdatedAt())
                 .isMember(consultation.isMember())
+                .isDeleted(consultation.getIsDeleted())
+                .deletedAt(consultation.getDeletedAt())
                 .build();
     }
 }

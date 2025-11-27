@@ -1,37 +1,32 @@
 package com.hip.damoa.domain.admin.web;
 
-import com.hip.damoa.core.exception.BusinessException;
-import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
-import com.hip.damoa.domain.inquiry.model.InquiryStatus;
 import com.hip.damoa.domain.inquiry.service.InquiryService;
-import com.hip.damoa.domain.inquiry.web.dto.InquiryListResponse;
-import com.hip.damoa.domain.inquiry.web.dto.InquiryResponse;
-import com.hip.damoa.domain.user.model.User;
-import com.hip.damoa.domain.user.repository.UserRepository;
+import com.hip.damoa.domain.inquiry.web.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 /**
- * 제휴/광고 문의 관리 API (관리자용)
+ * 일반 문의 관리 API (관리자용)
  */
 @Slf4j
-@Tag(name = "1908. Admin - Inquiry", description = "제휴/광고 문의 관리 API (관리자)")
+@Tag(name = "1908. Admin - Inquiry", description = "일반 문의 관리 API (관리자)")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor
@@ -40,126 +35,131 @@ import java.util.UUID;
 public class AdminInquiryController {
 
     private final InquiryService inquiryService;
-    private final UserRepository userRepository;
 
     /**
-     * 전체 문의 목록 조회
+     * 문의 목록 조회/검색 (관리자용) - 통합 API
      */
-    @Operation(summary = "전체 문의 목록 조회 (관리자)", description = "모든 문의를 조회합니다")
+    @Operation(summary = "문의 목록 조회/검색 (관리자용)",
+            description = "일반 문의 목록을 조회합니다. 파라미터 없이 호출하면 전체 목록을 조회합니다.\n\n" +
+                    "**검색 조건 (모두 선택사항)**:\n" +
+                    "- `keyword`: 제목/내용 검색어\n" +
+                    "- `inquiryType`: 문의 유형\n" +
+                    "  - `BUG`: 버그 신고\n" +
+                    "  - `PAYMENT_ERROR`: 결제 오류\n" +
+                    "  - `ACCOUNT_ISSUE`: 계정 문제\n" +
+                    "  - `SUGGESTION`: 건의사항\n" +
+                    "  - `OTHER`: 기타\n" +
+                    "- `status`: 문의 상태\n" +
+                    "  - `PENDING`: 대기중\n" +
+                    "  - `IN_PROGRESS`: 처리중\n" +
+                    "  - `ANSWERED`: 답변완료\n" +
+                    "  - `CLOSED`: 종료\n" +
+                    "- `userEmail`: 작성자 이메일\n" +
+                    "- `hasAnswer`: 답변 여부 (true/false)")
     @GetMapping
-    public ApiResponse<Page<InquiryListResponse>> getAllInquiries(
-            @AuthenticationPrincipal UserDetails userDetails,
+    public ApiResponse<Page<InquiryListResponse>> getInquiries(
+            @Parameter(description = "제목/내용 검색어") @RequestParam(required = false) String keyword,
+            @Parameter(description = "문의 유형 (BUG, PAYMENT_ERROR, ACCOUNT_ISSUE, SUGGESTION, OTHER)")
+            @RequestParam(required = false) String inquiryType,
+            @Parameter(description = "문의 상태 (PENDING, IN_PROGRESS, ANSWERED, CLOSED)")
             @RequestParam(required = false) String status,
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable) {
+            @Parameter(description = "작성자 이메일") @RequestParam(required = false) String userEmail,
+            @Parameter(description = "답변 여부") @RequestParam(required = false) Boolean hasAnswer,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        // 권한 확인
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
-        Page<InquiryListResponse> response;
-        if (status != null) {
-            try {
-                InquiryStatus statusEnum = InquiryStatus.valueOf(status);
-                response = inquiryService.getInquiriesByStatus(statusEnum, pageable);
-            } catch (IllegalArgumentException e) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-            }
-        } else {
-            response = inquiryService.getInquiries(pageable);
-        }
-
-        return ApiResponse.success(response);
+        Page<InquiryListResponse> responses = inquiryService.searchInquiries(
+                keyword, inquiryType, status, userEmail, hasAnswer, pageable);
+        return ApiResponse.success(responses);
     }
 
     /**
-     * 문의 상세 조회
+     * 문의 상세 조회 (관리자용)
      */
-    @Operation(summary = "문의 상세 조회 (관리자)", description = "문의 상세 정보를 조회합니다")
+    @Operation(summary = "문의 상세 조회 (관리자용)",
+            description = "특정 문의를 상세 조회합니다.")
     @GetMapping("/{inquiryUuid}")
     public ApiResponse<InquiryResponse> getInquiry(
-            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID inquiryUuid) {
-
-        // 권한 확인
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
 
         InquiryResponse response = inquiryService.getInquiry(inquiryUuid);
         return ApiResponse.success(response);
     }
 
     /**
-     * 문의 상태 변경
+     * 문의 상태 변경 (관리자용)
      */
-    @Operation(summary = "문의 상태 변경 (관리자)",
-               description = "문의 처리 상태를 변경합니다\n\n" +
-                       "가능한 상태값:\n" +
-                       "- PENDING: 접수 대기\n" +
-                       "- IN_PROGRESS: 처리 중\n" +
-                       "- COMPLETED: 처리 완료\n" +
-                       "- CANCELLED: 취소됨")
-    @PatchMapping("/{inquiryUuid}/status")
-    @Transactional
+    @Operation(summary = "문의 상태 변경 (관리자용)",
+            description = "문의 상태를 변경합니다.\n\n" +
+                    "가능한 상태:\n" +
+                    "- IN_PROGRESS: 처리중\n" +
+                    "- ANSWERED: 답변완료\n" +
+                    "- CLOSED: 종료")
+    @PutMapping("/{inquiryUuid}/status")
     public ApiResponse<InquiryResponse> changeStatus(
-            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID inquiryUuid,
-            @Parameter(description = "문의 상태 (PENDING, IN_PROGRESS, COMPLETED, CANCELLED)",
-                      required = true,
-                      example = "IN_PROGRESS")
+            @Parameter(description = "변경할 상태", example = "IN_PROGRESS")
             @RequestParam String status) {
 
-        log.info("관리자 문의 상태 변경: adminEmail={}, inquiryUuid={}, status={}",
-                userDetails.getUsername(), inquiryUuid, status);
-
-        // 권한 확인
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         InquiryResponse response = inquiryService.changeStatus(inquiryUuid, status);
-
-        log.info("관리자 문의 상태 변경 완료: inquiryUuid={}, status={}", inquiryUuid, status);
-
         return ApiResponse.success(response);
     }
 
     /**
-     * 문의 삭제
+     * 문의 답변 작성 (관리자용)
      */
-    @Operation(summary = "문의 삭제 (관리자)", description = "문의를 삭제합니다 (Soft Delete)")
-    @DeleteMapping("/{inquiryUuid}")
-    @Transactional
-    public ApiResponse<Void> deleteInquiry(
+    @Operation(summary = "문의 답변 작성 (관리자용)",
+            description = "문의에 대한 답변을 작성합니다. 한 문의당 하나의 답변만 가능합니다.")
+    @PostMapping("/{inquiryUuid}/answer")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<InquiryAnswerResponse> createAnswer(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable UUID inquiryUuid) {
+            @PathVariable UUID inquiryUuid,
+            @Valid @RequestBody InquiryAnswerCreateRequest request) {
 
-        log.info("관리자 문의 삭제: adminEmail={}, inquiryUuid={}",
-                userDetails.getUsername(), inquiryUuid);
+        InquiryAnswerResponse response = inquiryService.createAnswer(
+                userDetails.getUsername(), inquiryUuid, request);
+        return ApiResponse.success(response);
+    }
 
-        // 권한 확인
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    /**
+     * 문의 답변 수정 (관리자용)
+     */
+    @Operation(summary = "문의 답변 수정 (관리자용)",
+            description = "작성된 답변을 수정합니다.")
+    @PutMapping("/{inquiryUuid}/answer")
+    public ApiResponse<InquiryAnswerResponse> updateAnswer(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable UUID inquiryUuid,
+            @Valid @RequestBody InquiryAnswerCreateRequest request) {
 
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
+        InquiryAnswerResponse response = inquiryService.updateAnswer(
+                userDetails.getUsername(), inquiryUuid, request);
+        return ApiResponse.success(response);
+    }
+
+    /**
+     * 문의 답변 삭제 (관리자용)
+     */
+    @Operation(summary = "문의 답변 삭제 (관리자용)",
+            description = "작성된 답변을 삭제합니다.")
+    @DeleteMapping("/{inquiryUuid}/answer")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public ApiResponse<Void> deleteAnswer(@PathVariable UUID inquiryUuid) {
+
+        inquiryService.deleteAnswer(inquiryUuid);
+        return ApiResponse.success();
+    }
+
+    /**
+     * 문의 삭제 (관리자용)
+     */
+    @Operation(summary = "문의 삭제 (관리자용)",
+            description = "문의를 삭제합니다. (Soft Delete)")
+    @DeleteMapping("/{inquiryUuid}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public ApiResponse<Void> deleteInquiry(@PathVariable UUID inquiryUuid) {
 
         inquiryService.deleteInquiry(inquiryUuid);
-
-        log.info("관리자 문의 삭제 완료: inquiryUuid={}", inquiryUuid);
-
         return ApiResponse.success();
     }
 }
