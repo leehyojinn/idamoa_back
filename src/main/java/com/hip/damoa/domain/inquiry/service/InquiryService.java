@@ -186,11 +186,11 @@ public class InquiryService {
     // ===== 관리자 기능 =====
 
     /**
-     * 문의 목록 조회 (관리자용)
+     * 문의 목록 조회 (관리자용 - 삭제된 데이터 포함)
      */
     @Transactional(readOnly = true)
     public Page<InquiryListResponse> getAllInquiries(Pageable pageable) {
-        Page<Inquiry> inquiries = inquiryRepository.findByIsDeletedFalse(pageable);
+        Page<Inquiry> inquiries = inquiryRepository.findAllByOrderByCreatedAtDesc(pageable);
 
         return inquiries.map(inquiry -> {
             boolean hasAnswer = inquiryAnswerRepository.existsByInquiryId(inquiry.getId());
@@ -199,7 +199,7 @@ public class InquiryService {
     }
 
     /**
-     * 문의 검색 (관리자용) - 개별 파라미터
+     * 문의 검색 (관리자용 - 삭제된 데이터 포함) - 개별 파라미터
      */
     @Transactional(readOnly = true)
     public Page<InquiryListResponse> searchInquiries(String keyword, String inquiryType, String status,
@@ -223,16 +223,16 @@ public class InquiryService {
             }
         }
 
-        // hasAnswer에 따라 다른 쿼리 호출 (PostgreSQL 타입 추론 문제 회피)
+        // 관리자용 쿼리 사용 (삭제된 데이터 포함)
         Page<Inquiry> inquiries;
         if (hasAnswer == null) {
-            inquiries = inquiryRepository.searchInquiriesBasic(
+            inquiries = inquiryRepository.adminSearchInquiriesBasic(
                     keyword, typeEnum, statusEnum, userEmail, pageable);
         } else if (hasAnswer) {
-            inquiries = inquiryRepository.searchInquiriesWithAnswer(
+            inquiries = inquiryRepository.adminSearchInquiriesWithAnswer(
                     keyword, typeEnum, statusEnum, userEmail, pageable);
         } else {
-            inquiries = inquiryRepository.searchInquiriesWithoutAnswer(
+            inquiries = inquiryRepository.adminSearchInquiriesWithoutAnswer(
                     keyword, typeEnum, statusEnum, userEmail, pageable);
         }
 
@@ -316,11 +316,11 @@ public class InquiryService {
     }
 
     /**
-     * 문의 상세 조회 (관리자용)
+     * 문의 상세 조회 (관리자용 - 삭제된 데이터 포함)
      */
     @Transactional(readOnly = true)
     public InquiryResponse getInquiry(UUID uuid) {
-        Inquiry inquiry = inquiryRepository.findByUuidAndIsDeletedFalse(uuid)
+        Inquiry inquiry = inquiryRepository.findByUuid(uuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INQUIRY_NOT_FOUND));
 
         // 첨부파일 조회

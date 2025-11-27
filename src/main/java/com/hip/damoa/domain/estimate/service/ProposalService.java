@@ -435,6 +435,11 @@ public class ProposalService {
             throw new BusinessException(ErrorCode.PROPOSAL_CANNOT_BE_DELETED);
         }
 
+        // 견적 요청을 먼저 조회 (LazyInitializationException 방지)
+        // soft delete 작업 전에 lazy loaded 엔티티를 미리 초기화
+        EstimateRequest estimateRequest = proposal.getRequest();
+        Long estimateRequestId = estimateRequest.getId(); // 프록시 초기화 강제
+
         // 첨부파일 Soft Delete
         attachmentRepository.softDeleteByEstimateProposalId(proposal.getId(), java.time.LocalDateTime.now());
         log.info("제안 첨부파일 soft delete 완료: proposalId={}", proposalId);
@@ -444,7 +449,6 @@ public class ProposalService {
         proposalRepository.save(proposal);
 
         // 견적 요청의 제안 수 감소
-        EstimateRequest estimateRequest = proposal.getRequest();
         estimateRequest.decrementProposalCount();
         estimateRequestRepository.save(estimateRequest);
 

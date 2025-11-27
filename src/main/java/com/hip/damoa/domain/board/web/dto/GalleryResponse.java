@@ -64,6 +64,9 @@ public class GalleryResponse {
     // 북마크 여부 (로그인 사용자용)
     private Boolean isBookmarked;
 
+    // 삭제 상태 (관리자용)
+    private Boolean isDeleted;
+
     /**
      * 저작권 정보
      */
@@ -161,6 +164,7 @@ public class GalleryResponse {
                 .createdAt(board.getCreatedAt())
                 .updatedAt(board.getUpdatedAt())
                 .isBookmarked(isBookmarked)
+                .isDeleted(board.getIsDeleted())
                 .build();
     }
 }

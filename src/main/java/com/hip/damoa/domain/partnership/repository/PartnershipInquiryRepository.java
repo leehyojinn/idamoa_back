@@ -37,4 +37,24 @@ public interface PartnershipInquiryRepository extends JpaRepository<PartnershipI
 
     // 상태별 개수
     long countByStatusAndIsDeletedFalse(PartnershipStatus status);
+
+    // ===== 관리자용 쿼리 (삭제된 데이터 포함) =====
+
+    // UUID로 조회 (삭제된 데이터 포함)
+    Optional<PartnershipInquiry> findByUuid(UUID uuid);
+
+    // 전체 목록 조회 (삭제된 데이터 포함)
+    Page<PartnershipInquiry> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    // 상태별 조회 (삭제된 데이터 포함)
+    Page<PartnershipInquiry> findByStatusOrderByCreatedAtDesc(
+            PartnershipStatus status, Pageable pageable);
+
+    // 유형별 조회 (삭제된 데이터 포함)
+    Page<PartnershipInquiry> findByPartnershipTypeOrderByCreatedAtDesc(
+            PartnershipType type, Pageable pageable);
+
+    // 상태와 유형별 조회 (삭제된 데이터 포함)
+    Page<PartnershipInquiry> findByStatusAndPartnershipTypeOrderByCreatedAtDesc(
+            PartnershipStatus status, PartnershipType type, Pageable pageable);
 }

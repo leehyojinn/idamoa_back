@@ -83,6 +83,9 @@ public class PopupResponse {
     @Schema(description = "수정자", example = "admin@example.com")
     private String updatedBy;
 
+    @Schema(description = "삭제 여부 (관리자용)", example = "false")
+    private Boolean isDeleted;
+
     /**
      * Entity to DTO (이미지 URL 없음)
      */
@@ -116,6 +119,7 @@ public class PopupResponse {
                 .updatedAt(popup.getUpdatedAt())
                 .createdBy(popup.getCreatedBy())
                 .updatedBy(popup.getUpdatedBy())
+                .isDeleted(popup.getIsDeleted())
                 .build();
     }
 }

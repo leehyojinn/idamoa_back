@@ -25,6 +25,7 @@ public class PartnershipInquiryListResponse {
     private String email;
     private String status;
     private String statusDescription;
+    private Boolean isDeleted;  // 삭제 여부 (관리자용)
     private LocalDateTime createdAt;
 
     public static PartnershipInquiryListResponse from(PartnershipInquiry inquiry) {
@@ -36,6 +37,7 @@ public class PartnershipInquiryListResponse {
                 .email(inquiry.getEmail())
                 .status(inquiry.getStatus().name())
                 .statusDescription(inquiry.getStatus().getDescription())
+                .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())
                 .build();
     }

@@ -69,6 +69,9 @@ public class DocumentResponse {
     // 다운로드 여부 (로그인 사용자용)
     private Boolean hasDownloaded;
 
+    // 삭제 상태 (관리자용)
+    private Boolean isDeleted;
+
     /**
      * Entity to DTO
      */
@@ -131,6 +134,7 @@ public class DocumentResponse {
                 .updatedAt(board.getUpdatedAt())
                 .isBookmarked(isBookmarked)
                 .hasDownloaded(hasDownloaded)
+                .isDeleted(board.getIsDeleted())
                 .build();
     }
 }

@@ -50,6 +50,10 @@ public class AdminUserDetailResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 삭제 상태 (관리자용)
+    private Boolean isDeleted;
+    private LocalDateTime deletedAt;
+
     public static AdminUserDetailResponse from(User user, String name, String phoneNumber) {
         return AdminUserDetailResponse.builder()
                 .id(user.getId())
@@ -73,6 +77,8 @@ public class AdminUserDetailResponse {
                 .failedLoginCount(user.getFailedLoginCount())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
+                .isDeleted(user.getIsDeleted())
+                .deletedAt(user.getDeletedAt())
                 .build();
     }
 }

@@ -26,6 +26,7 @@ public class InquiryListResponse {
     private InquiryStatus status;
     private String userEmail;
     private boolean hasAnswer;  // 답변 여부
+    private Boolean isDeleted;  // 삭제 여부 (관리자용)
     private LocalDateTime createdAt;
 
     /**
@@ -39,6 +40,7 @@ public class InquiryListResponse {
                 .status(inquiry.getStatus())
                 .userEmail(inquiry.getUser().getEmail())
                 .hasAnswer(false)  // 기본값, Service에서 설정 필요
+                .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())
                 .build();
     }
@@ -54,6 +56,7 @@ public class InquiryListResponse {
                 .status(inquiry.getStatus())
                 .userEmail(inquiry.getUser().getEmail())
                 .hasAnswer(hasAnswer)
+                .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())
                 .build();
     }

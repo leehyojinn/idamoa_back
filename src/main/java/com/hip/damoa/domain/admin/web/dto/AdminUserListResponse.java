@@ -30,6 +30,7 @@ public class AdminUserListResponse {
     private LocalDateTime lastLoginAt;
     private Integer loginCount;
     private LocalDateTime createdAt;
+    private Boolean isDeleted;  // 삭제 여부 (관리자용)
 
     public static AdminUserListResponse from(User user, String name) {
         return AdminUserListResponse.builder()
@@ -45,6 +46,7 @@ public class AdminUserListResponse {
                 .lastLoginAt(user.getLastLoginAt())
                 .loginCount(user.getLoginCount())
                 .createdAt(user.getCreatedAt())
+                .isDeleted(user.getIsDeleted())
                 .build();
     }
 }

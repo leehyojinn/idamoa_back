@@ -60,6 +60,10 @@ public class PlannerApplicationResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 삭제 상태 (관리자용)
+    private Boolean isDeleted;
+    private LocalDateTime deletedAt;
+
     /**
      * Entity → DTO 변환 (레거시 호환 - 첨부파일 정보 없음)
      */
@@ -102,6 +106,8 @@ public class PlannerApplicationResponse {
                 .assignedAdminName(entity.getAssignedAdmin() != null ? entity.getAssignedAdmin().getEmail() : null)
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
+                .isDeleted(entity.getIsDeleted())
+                .deletedAt(entity.getDeletedAt())
                 .build();
     }
 }

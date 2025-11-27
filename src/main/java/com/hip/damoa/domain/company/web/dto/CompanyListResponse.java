@@ -43,6 +43,7 @@ public class CompanyListResponse {
     private List<CompanyFilterGroupDto> filterGroups; // 카테고리별로 그룹화된 필터
     private Boolean isLiked; // 현재 사용자의 좋아요 여부
     private LocalDateTime createdAt;
+    private Boolean isDeleted;  // 삭제 여부 (관리자용)
 
     /**
      * Entity → DTO 변환 (목록용 간단 정보)
@@ -67,6 +68,7 @@ public class CompanyListResponse {
                 .isPremium(company.isPremium())
                 .premiumTier(company.getPremiumTier())
                 .createdAt(company.getCreatedAt())
+                .isDeleted(company.getIsDeleted())
                 .build();
     }
 
@@ -94,6 +96,7 @@ public class CompanyListResponse {
                 .premiumTier(company.getPremiumTier())
                 .images(images)
                 .createdAt(company.getCreatedAt())
+                .isDeleted(company.getIsDeleted())
                 .build();
     }
 }

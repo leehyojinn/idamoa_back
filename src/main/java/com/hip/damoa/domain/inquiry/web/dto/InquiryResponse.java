@@ -29,6 +29,7 @@ public class InquiryResponse {
     private String userEmail;  // 작성자 이메일
     private InquiryAnswerResponse answer;  // 답변 정보 (있는 경우)
     private List<InquiryAttachmentResponse> attachments;  // 첨부파일 목록
+    private Boolean isDeleted;  // 삭제 여부 (관리자용)
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -43,6 +44,7 @@ public class InquiryResponse {
                 .content(inquiry.getContent())
                 .status(inquiry.getStatus())
                 .userEmail(inquiry.getUser().getEmail())
+                .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())
                 .updatedAt(inquiry.getUpdatedAt())
                 .build();
@@ -60,6 +62,7 @@ public class InquiryResponse {
                 .status(inquiry.getStatus())
                 .userEmail(inquiry.getUser().getEmail())
                 .attachments(attachments)
+                .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())
                 .updatedAt(inquiry.getUpdatedAt())
                 .build();
@@ -78,6 +81,7 @@ public class InquiryResponse {
                 .userEmail(inquiry.getUser().getEmail())
                 .answer(answer)
                 .attachments(attachments)
+                .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())
                 .updatedAt(inquiry.getUpdatedAt())
                 .build();

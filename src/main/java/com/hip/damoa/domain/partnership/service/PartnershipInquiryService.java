@@ -65,7 +65,7 @@ public class PartnershipInquiryService {
     }
 
     /**
-     * 제휴/광고 문의 목록 조회 (관리자용)
+     * 제휴/광고 문의 목록 조회 (관리자용 - 삭제된 데이터 포함)
      */
     @Transactional(readOnly = true)
     public Page<PartnershipInquiryListResponse> getInquiries(String status, String type, Pageable pageable) {
@@ -76,33 +76,34 @@ public class PartnershipInquiryService {
         PartnershipStatus statusEnum = status != null ? parsePartnershipStatus(status) : null;
         PartnershipType typeEnum = type != null ? parsePartnershipType(type) : null;
 
+        // 관리자용 쿼리 사용 (삭제된 데이터 포함)
         if (statusEnum != null && typeEnum != null) {
             inquiries = partnershipInquiryRepository
-                    .findByStatusAndPartnershipTypeAndIsDeletedFalseOrderByCreatedAtDesc(
+                    .findByStatusAndPartnershipTypeOrderByCreatedAtDesc(
                             statusEnum, typeEnum, pageable);
         } else if (statusEnum != null) {
             inquiries = partnershipInquiryRepository
-                    .findByStatusAndIsDeletedFalseOrderByCreatedAtDesc(statusEnum, pageable);
+                    .findByStatusOrderByCreatedAtDesc(statusEnum, pageable);
         } else if (typeEnum != null) {
             inquiries = partnershipInquiryRepository
-                    .findByPartnershipTypeAndIsDeletedFalseOrderByCreatedAtDesc(typeEnum, pageable);
+                    .findByPartnershipTypeOrderByCreatedAtDesc(typeEnum, pageable);
         } else {
             inquiries = partnershipInquiryRepository
-                    .findByIsDeletedFalseOrderByCreatedAtDesc(pageable);
+                    .findAllByOrderByCreatedAtDesc(pageable);
         }
 
         return inquiries.map(PartnershipInquiryListResponse::from);
     }
 
     /**
-     * 제휴/광고 문의 상세 조회 (관리자용)
+     * 제휴/광고 문의 상세 조회 (관리자용 - 삭제된 데이터 포함)
      */
     @Transactional(readOnly = true)
     public PartnershipInquiryResponse getInquiry(UUID uuid) {
         log.info("제휴/광고 문의 상세 조회: uuid={}", uuid);
 
         PartnershipInquiry inquiry = partnershipInquiryRepository
-                .findByUuidAndIsDeletedFalse(uuid)
+                .findByUuid(uuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PARTNERSHIP_INQUIRY_NOT_FOUND));
 
         return PartnershipInquiryResponse.from(inquiry);

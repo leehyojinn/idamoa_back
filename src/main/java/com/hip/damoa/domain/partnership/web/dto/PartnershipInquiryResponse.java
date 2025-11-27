@@ -27,6 +27,7 @@ public class PartnershipInquiryResponse {
     private String content;
     private String status;
     private String statusDescription;
+    private Boolean isDeleted;  // 삭제 여부 (관리자용)
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -41,6 +42,7 @@ public class PartnershipInquiryResponse {
                 .content(inquiry.getContent())
                 .status(inquiry.getStatus().name())
                 .statusDescription(inquiry.getStatus().getDescription())
+                .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())
                 .updatedAt(inquiry.getUpdatedAt())
                 .build();

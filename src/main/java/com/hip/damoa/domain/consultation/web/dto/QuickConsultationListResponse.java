@@ -42,6 +42,9 @@ public class QuickConsultationListResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 삭제 상태 (관리자용)
+    private Boolean isDeleted;
+
     /**
      * Entity → DTO 변환 (비로그인 사용자용)
      */
@@ -77,6 +80,7 @@ public class QuickConsultationListResponse {
                 .isMyConsultation(isMyConsultation)
                 .createdAt(consultation.getCreatedAt())
                 .updatedAt(consultation.getUpdatedAt())
+                .isDeleted(consultation.getIsDeleted())
                 .build();
     }
 }

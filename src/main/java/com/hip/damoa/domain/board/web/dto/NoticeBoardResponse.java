@@ -62,6 +62,9 @@ public class NoticeBoardResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 삭제 상태 (관리자용)
+    private Boolean isDeleted;
+
     /**
      * Entity to DTO (기본 - 썸네일, 첨부파일 없음)
      */
@@ -123,6 +126,7 @@ public class NoticeBoardResponse {
                 .userName(userName != null ? userName : board.getUser().getEmail())
                 .createdAt(board.getCreatedAt())
                 .updatedAt(board.getUpdatedAt())
+                .isDeleted(board.getIsDeleted())
                 .build();
     }
 }
