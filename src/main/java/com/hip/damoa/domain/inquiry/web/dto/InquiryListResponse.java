@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * 문의 목록 응답 DTO (간략 정보)
+ * 일반 문의 목록 응답 DTO (간략 정보)
  */
 @Getter
 @Builder
@@ -20,12 +20,12 @@ import java.util.UUID;
 @AllArgsConstructor
 public class InquiryListResponse {
 
-    private Long id;
     private UUID uuid;
     private InquiryType inquiryType;
-    private String name;
-    private String email;
+    private String title;
     private InquiryStatus status;
+    private String userEmail;
+    private boolean hasAnswer;  // 답변 여부
     private LocalDateTime createdAt;
 
     /**
@@ -33,12 +33,27 @@ public class InquiryListResponse {
      */
     public static InquiryListResponse from(Inquiry inquiry) {
         return InquiryListResponse.builder()
-                .id(inquiry.getId())
                 .uuid(inquiry.getUuid())
                 .inquiryType(inquiry.getInquiryType())
-                .name(inquiry.getName())
-                .email(inquiry.getEmail())
+                .title(inquiry.getTitle())
                 .status(inquiry.getStatus())
+                .userEmail(inquiry.getUser().getEmail())
+                .hasAnswer(false)  // 기본값, Service에서 설정 필요
+                .createdAt(inquiry.getCreatedAt())
+                .build();
+    }
+
+    /**
+     * Entity → DTO 변환 (답변 여부 포함)
+     */
+    public static InquiryListResponse from(Inquiry inquiry, boolean hasAnswer) {
+        return InquiryListResponse.builder()
+                .uuid(inquiry.getUuid())
+                .inquiryType(inquiry.getInquiryType())
+                .title(inquiry.getTitle())
+                .status(inquiry.getStatus())
+                .userEmail(inquiry.getUser().getEmail())
+                .hasAnswer(hasAnswer)
                 .createdAt(inquiry.getCreatedAt())
                 .build();
     }

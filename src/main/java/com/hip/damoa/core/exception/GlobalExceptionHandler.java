@@ -18,18 +18,33 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     protected ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-        final String message = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
-        log.warn("유효성 검증 실패: {}", message);
+        // 필드 이름과 에러 메시지를 포함한 상세한 메시지 생성
+        String fieldName = e.getBindingResult().getFieldError() != null
+                ? e.getBindingResult().getFieldError().getField()
+                : "unknown";
+        String rejectedValue = e.getBindingResult().getFieldError() != null
+                && e.getBindingResult().getFieldError().getRejectedValue() != null
+                ? e.getBindingResult().getFieldError().getRejectedValue().toString()
+                : "null";
+        String errorMessage = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
+
+        // 구체적인 에러 메시지 생성
+        String detailedMessage = String.format("[%s] 필드 오류: %s (입력값: '%s')",
+                fieldName, errorMessage, rejectedValue);
+
+        log.warn("유효성 검증 실패: {}", detailedMessage);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(message));
+                .body(ApiResponse.error(detailedMessage));
     }
 
     @ExceptionHandler(BusinessException.class)
     protected ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
         final ErrorCode errorCode = e.getErrorCode();
-        log.warn("비즈니스 예외 발생: {} - {}", errorCode.getCode(), errorCode.getMessage());
+        // 커스텀 메시지가 있으면 사용, 없으면 기본 에러 메시지 사용
+        final String message = e.getMessage();
+        log.warn("비즈니스 예외 발생: {} - {}", errorCode.getCode(), message);
         return ResponseEntity.status(errorCode.getStatus())
-                .body(ApiResponse.error(errorCode.getMessage()));
+                .body(ApiResponse.error(message));
     }
 
     @ExceptionHandler(AuthenticationException.class)

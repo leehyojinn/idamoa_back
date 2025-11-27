@@ -2532,3 +2532,59 @@ Database
 - V30 migration 실행 확인 (CHECK constraint 적용)
 - 이메일 발송 테스트 (UMS 통합 검증)
 - 알림 로그 조회 기능 구현 (관리자용)
+
+---
+
+### 일반 문의 수정 API 파일 첨부 기능 추가
+
+- **작업자**: Claude
+- **작업 시간**: 2025-11-27
+- **작업 내용**:
+  - 일반 문의 수정 API에 파일 수정 기능 추가
+  - DocumentBoardService의 파일 수정 패턴 참고하여 구현
+
+**생성/수정 파일**:
+1. `InquiryUpdateRequest.java`: `fileUuids` 필드 추가
+2. `InquiryService.java`: `updateMyInquiry` 메서드에 파일 수정 로직 추가
+
+**주요 변경사항**:
+1. **InquiryUpdateRequest**:
+   - `List<String> fileUuids` 필드 추가
+   - null이면 파일 변경 안함, 빈 배열이면 모든 파일 삭제
+
+2. **InquiryService.updateMyInquiry**:
+   - fileUuids != null일 때만 파일 처리
+   - 기존 첨부파일 Soft delete 후 새 첨부파일 추가 (processAttachments 재사용)
+   - 응답에 첨부파일 정보 포함
+
+**빌드 상태**: ✅ 컴파일 성공
+
+---
+
+### PartnershipInquiryService 에러 처리 정리
+
+- **작업자**: Claude
+- **작업 시간**: 2025-11-27
+- **작업 내용**:
+  - PartnershipInquiryService 에러 처리 표준화
+  - BusinessException + ErrorCode 패턴 적용
+
+**생성/수정 파일**:
+1. `ErrorCode.java`: `INVALID_PARTNERSHIP_STATUS` 추가 (PI004)
+2. `PartnershipInquiry.java`: `updateStatus(String)` → `updateStatus(PartnershipStatus)` 변경
+3. `PartnershipInquiryService.java`: 에러 처리 전면 수정
+
+**주요 변경사항**:
+1. **ErrorCode 추가**:
+   - `INVALID_PARTNERSHIP_STATUS(HttpStatus.BAD_REQUEST, "PI004", "잘못된 문의 상태입니다")`
+
+2. **PartnershipInquiryService 수정**:
+   - `INQUIRY_NOT_FOUND` → `PARTNERSHIP_INQUIRY_NOT_FOUND` 변경 (더 명확한 에러 코드)
+   - `valueOf()` 직접 호출 → `parsePartnershipType()`, `parsePartnershipStatus()` 헬퍼 메서드 사용
+   - 모든 Enum 변환에 try-catch 적용하여 `IllegalArgumentException` 처리
+
+3. **PartnershipInquiry Entity 수정**:
+   - `updateStatus(String)` → `updateStatus(PartnershipStatus)` 변경
+   - Service에서 검증 후 Enum 전달 방식으로 개선
+
+**빌드 상태**: ✅ 컴파일 성공

@@ -4,6 +4,7 @@ import com.hip.damoa.core.exception.BusinessException;
 import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.board.model.Board;
+import com.hip.damoa.domain.board.repository.BoardRepository;
 import com.hip.damoa.domain.board.service.BoardService;
 import com.hip.damoa.domain.board.service.DocumentBoardService;
 import com.hip.damoa.domain.board.web.dto.DocumentCreateRequest;
@@ -43,6 +44,7 @@ public class AdminDocumentBoardController {
 
     private final DocumentBoardService documentBoardService;
     private final BoardService boardService;
+    private final BoardRepository boardRepository;
     private final UserRepository userRepository;
 
     /**
@@ -223,6 +225,9 @@ public class AdminDocumentBoardController {
             board.publish();
         }
 
+        boardRepository.save(board);
+
+
         return ApiResponse.success();
     }
 
@@ -254,6 +259,8 @@ public class AdminDocumentBoardController {
             board.pin();
         }
 
+        boardRepository.save(board);
+
         return ApiResponse.success();
     }
 
@@ -284,6 +291,9 @@ public class AdminDocumentBoardController {
         } else {
             board.feature();
         }
+
+        boardRepository.save(board);
+
 
         return ApiResponse.success();
     }
