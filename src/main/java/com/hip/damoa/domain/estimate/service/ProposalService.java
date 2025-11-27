@@ -437,8 +437,11 @@ public class ProposalService {
 
         // 견적 요청을 먼저 조회 (LazyInitializationException 방지)
         // soft delete 작업 전에 lazy loaded 엔티티를 미리 초기화
+        // getId()만으로는 프록시 초기화 안됨 - 다른 필드 접근 필요
         EstimateRequest estimateRequest = proposal.getRequest();
-        Long estimateRequestId = estimateRequest.getId(); // 프록시 초기화 강제
+        // 프록시 강제 초기화 - getProposalCount() 접근으로 실제 엔티티 로드
+        int currentProposalCount = estimateRequest.getProposalCount();
+        log.info("견적 요청 프록시 초기화 완료: requestId={}, proposalCount={}", estimateRequest.getId(), currentProposalCount);
 
         // 첨부파일 Soft Delete
         attachmentRepository.softDeleteByEstimateProposalId(proposal.getId(), java.time.LocalDateTime.now());
@@ -690,5 +693,70 @@ public class ProposalService {
         } catch (IllegalArgumentException e) {
             throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
         }
+    }
+
+    // ===== 관리자용 UUID 기반 메서드 =====
+
+    /**
+     * 관리자 - 제안 상세 조회 (UUID 사용, 삭제된 데이터 포함)
+     */
+    @Transactional(readOnly = true)
+    public EstimateProposal getProposalByUuidForAdmin(String adminEmail, UUID proposalUuid) {
+        log.info("관리자 제안 상세 조회: adminEmail={}, proposalUuid={}", adminEmail, proposalUuid);
+
+        User admin = userRepository.findByEmail(adminEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (!admin.hasRole("ADMIN")) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        // 삭제된 데이터도 조회 가능
+        return proposalRepository.findByUuid(proposalUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROPOSAL_NOT_FOUND));
+    }
+
+    /**
+     * 관리자 - 제안 삭제 (UUID 사용)
+     */
+    @Transactional
+    public void deleteProposalByUuid(String adminEmail, UUID proposalUuid) {
+        log.info("관리자 제안 삭제 (UUID): adminEmail={}, proposalUuid={}", adminEmail, proposalUuid);
+
+        User admin = userRepository.findByEmail(adminEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (!admin.hasRole("ADMIN")) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        EstimateProposal proposal = proposalRepository.findByUuidAndIsDeletedFalse(proposalUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROPOSAL_NOT_FOUND));
+
+        // 수락된 제안은 삭제 불가
+        if ("SELECTED".equals(proposal.getStatus())) {
+            throw new BusinessException(ErrorCode.PROPOSAL_CANNOT_BE_DELETED);
+        }
+
+        // 견적 요청을 먼저 조회 (LazyInitializationException 방지)
+        // getId()만으로는 프록시 초기화 안됨 - 다른 필드 접근 필요
+        EstimateRequest estimateRequest = proposal.getRequest();
+        // 프록시 강제 초기화 - getProposalCount() 접근으로 실제 엔티티 로드
+        int currentProposalCount = estimateRequest.getProposalCount();
+        log.info("견적 요청 프록시 초기화 완료: requestId={}, proposalCount={}", estimateRequest.getId(), currentProposalCount);
+
+        // 첨부파일 Soft Delete
+        attachmentRepository.softDeleteByEstimateProposalId(proposal.getId(), java.time.LocalDateTime.now());
+        log.info("제안 첨부파일 soft delete 완료: proposalUuid={}", proposalUuid);
+
+        // 제안 Soft Delete
+        proposal.softDelete();
+        proposalRepository.save(proposal);
+
+        // 견적 요청의 제안 수 감소
+        estimateRequest.decrementProposalCount();
+        estimateRequestRepository.save(estimateRequest);
+
+        log.info("관리자 제안 삭제 완료: proposalUuid={}", proposalUuid);
     }
 }

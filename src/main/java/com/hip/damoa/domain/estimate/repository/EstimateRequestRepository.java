@@ -24,6 +24,9 @@ public interface EstimateRequestRepository extends JpaRepository<EstimateRequest
     // Find by UUID (not deleted)
     Optional<EstimateRequest> findByUuidAndIsDeletedFalse(UUID uuid);
 
+    // Find by UUID (관리자용 - 삭제된 데이터 포함)
+    Optional<EstimateRequest> findByUuid(UUID uuid);
+
     // Find by user
     Page<EstimateRequest> findByUserAndIsDeletedFalse(User user, Pageable pageable);
 
