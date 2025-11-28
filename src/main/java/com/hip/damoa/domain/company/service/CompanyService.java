@@ -263,6 +263,15 @@ public class CompanyService {
     }
 
     /**
+     * 업체 검색 (관리자용) - 삭제된 업체 포함
+     */
+    @Transactional(readOnly = true)
+    public Page<Company> searchCompaniesForAdmin(String keyword, String status, Boolean isVerified, Pageable pageable) {
+        log.info("업체 검색 (관리자): keyword={}, status={}, isVerified={}", keyword, status, isVerified);
+        return companyRepository.searchForAdmin(keyword, status, isVerified, pageable);
+    }
+
+    /**
      * 업체 목록 조회 (활성, 공개용)
      */
     @Transactional(readOnly = true)

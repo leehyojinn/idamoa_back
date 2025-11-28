@@ -1,12 +1,8 @@
 package com.hip.damoa.domain.admin.web;
 
-import com.hip.damoa.core.exception.BusinessException;
-import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.admin.service.AdminUserService;
 import com.hip.damoa.domain.admin.web.dto.*;
-import com.hip.damoa.domain.user.model.User;
-import com.hip.damoa.domain.user.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,7 +33,6 @@ import java.util.UUID;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
-    private final UserRepository userRepository;
 
     /**
      * 전체 회원 목록 조회
@@ -58,21 +53,9 @@ public class AdminUserController {
             @RequestParam(required = false) String role,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 전체 회원 목록 조회: adminEmail={}, keyword={}, status={}, role={}",
                 userDetails.getUsername(), keyword, status, role);
-
-        Page<AdminUserListResponse> response = adminUserService.getAllUsers(
-                keyword, status, role, pageable);
-
+        Page<AdminUserListResponse> response = adminUserService.getAllUsers(keyword, status, role, pageable);
         return ApiResponse.success(response);
     }
 
@@ -91,20 +74,9 @@ public class AdminUserController {
     public ApiResponse<AdminUserDetailResponse> getUserDetail(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID userUuid) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 회원 상세 정보 조회: adminEmail={}, userUuid={}",
                 userDetails.getUsername(), userUuid);
-
         AdminUserDetailResponse response = adminUserService.getUserDetail(userUuid);
-
         return ApiResponse.success(response);
     }
 
@@ -123,21 +95,9 @@ public class AdminUserController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID userUuid,
             @Valid @RequestBody AdminUserStatusUpdateRequest request) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 회원 상태 변경: adminEmail={}, userUuid={}, newStatus={}",
                 userDetails.getUsername(), userUuid, request.getStatus());
-
-        AdminUserDetailResponse response = adminUserService.updateUserStatus(
-                userUuid, request);
-
+        AdminUserDetailResponse response = adminUserService.updateUserStatus(userUuid, request);
         return ApiResponse.success(response);
     }
 
@@ -158,21 +118,9 @@ public class AdminUserController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID userUuid,
             @Valid @RequestBody AdminUserRoleUpdateRequest request) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 회원 역할 변경: adminEmail={}, userUuid={}, newRoles={}",
                 userDetails.getUsername(), userUuid, request.getRoles());
-
-        AdminUserDetailResponse response = adminUserService.updateUserRoles(
-                userUuid, request);
-
+        AdminUserDetailResponse response = adminUserService.updateUserRoles(userUuid, request);
         return ApiResponse.success(response);
     }
 
@@ -188,20 +136,9 @@ public class AdminUserController {
     public ApiResponse<Void> deleteUser(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID userUuid) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 회원 삭제: adminEmail={}, userUuid={}",
                 userDetails.getUsername(), userUuid);
-
         adminUserService.deleteUser(userUuid);
-
         return ApiResponse.success();
     }
 }

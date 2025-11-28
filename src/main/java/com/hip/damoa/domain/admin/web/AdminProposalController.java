@@ -14,7 +14,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -45,12 +44,9 @@ public class AdminProposalController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
-
-        Page<EstimateProposal> proposals = proposalService.getAllProposals(
-                userDetails.getUsername(), pageable);
-
+        log.info("[관리자] 모든 제안 조회: adminEmail={}", userDetails.getUsername());
+        Page<EstimateProposal> proposals = proposalService.getAllProposals(userDetails.getUsername(), pageable);
         Page<ProposalResponse> response = proposals.map(ProposalResponse::from);
-
         return ApiResponse.success(response);
     }
 
@@ -62,10 +58,8 @@ public class AdminProposalController {
     public ApiResponse<ProposalResponse> getProposal(
             @AuthenticationPrincipal UserDetails userDetails,
             @Parameter(description = "제안 UUID") @PathVariable UUID proposalUuid) {
-
-        EstimateProposal proposal = proposalService.getProposalByUuidForAdmin(
-                userDetails.getUsername(), proposalUuid);
-
+        log.info("[관리자] 제안 상세 조회: adminEmail={}, proposalUuid={}", userDetails.getUsername(), proposalUuid);
+        EstimateProposal proposal = proposalService.getProposalByUuidForAdmin(userDetails.getUsername(), proposalUuid);
         return ApiResponse.success(ProposalResponse.from(proposal));
     }
 
@@ -74,13 +68,11 @@ public class AdminProposalController {
      */
     @Operation(summary = "제안 삭제 (관리자)", description = "제안을 삭제합니다 (Soft Delete)")
     @DeleteMapping("/{proposalUuid}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     public ApiResponse<Void> deleteProposal(
             @AuthenticationPrincipal UserDetails userDetails,
             @Parameter(description = "제안 UUID") @PathVariable UUID proposalUuid) {
-
+        log.info("[관리자] 제안 삭제: adminEmail={}, proposalUuid={}", userDetails.getUsername(), proposalUuid);
         proposalService.deleteProposalByUuid(userDetails.getUsername(), proposalUuid);
-
         return ApiResponse.success();
     }
 }

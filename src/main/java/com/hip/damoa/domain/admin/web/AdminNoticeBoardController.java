@@ -74,7 +74,6 @@ public class AdminNoticeBoardController {
 
     @Operation(summary = "공지사항 삭제", description = "공지사항을 삭제합니다 (관리자 전용, Soft Delete)")
     @DeleteMapping("/notice/{uuid}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     public ApiResponse<Void> deleteNotice(
             @PathVariable UUID uuid,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -120,7 +119,6 @@ public class AdminNoticeBoardController {
 
     @Operation(summary = "이벤트 삭제", description = "이벤트를 삭제합니다 (관리자 전용, Soft Delete)")
     @DeleteMapping("/event/{uuid}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     public ApiResponse<Void> deleteEvent(
             @PathVariable UUID uuid,
             @AuthenticationPrincipal UserDetails userDetails) {

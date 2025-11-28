@@ -147,7 +147,6 @@ public class AdminFilterController {
             - 사용 중인 카테고리는 먼저 비활성화 후 삭제해야 합니다
             """)
     @DeleteMapping("/categories/{categoryId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     public ApiResponse<Void> deleteFilterCategory(
             @Parameter(description = "삭제할 카테고리 ID") @PathVariable Long categoryId) {
         log.info("필터 카테고리 삭제: categoryId={}", categoryId);
@@ -297,7 +296,6 @@ public class AdminFilterController {
             - 사용 중인 옵션 삭제 시 경고가 표시됩니다
             """)
     @DeleteMapping("/options/{optionId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     public ApiResponse<Void> deleteFilterOption(
             @Parameter(description = "삭제할 옵션 ID") @PathVariable Long optionId) {
         log.info("필터 옵션 삭제: optionId={}", optionId);

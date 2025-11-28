@@ -9,8 +9,6 @@ import com.hip.damoa.domain.estimate.repository.EstimateRequestRepository;
 import com.hip.damoa.domain.estimate.service.EstimateRequestService;
 import com.hip.damoa.domain.estimate.web.dto.EstimateRequestListResponse;
 import com.hip.damoa.domain.admin.web.dto.AdminEstimateRequestResponse;
-import com.hip.damoa.domain.user.model.User;
-import com.hip.damoa.domain.user.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -21,7 +19,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -44,7 +41,6 @@ public class AdminEstimateRequestController {
 
     private final EstimateRequestService estimateRequestService;
     private final EstimateRequestRepository estimateRequestRepository;
-    private final UserRepository userRepository;
     private final com.hip.damoa.domain.user.repository.UserProfileRepository userProfileRepository;
 
     /**
@@ -62,23 +58,22 @@ public class AdminEstimateRequestController {
     }
 
     /**
-     * 관리자 - 모든 견적 요청 조회 (상태 무관)
+     * 관리자 - 모든 견적 요청 조회/검색 (상태 무관)
      */
-    @Operation(summary = "모든 견적 요청 조회 (관리자)", description = "모든 견적 요청을 조회합니다 (삭제 포함)")
+    @Operation(summary = "모든 견적 요청 조회/검색 (관리자)",
+            description = "모든 견적 요청을 조회합니다 (삭제 포함).\n\n" +
+                    "**검색 필터 (모두 선택사항)**:\n" +
+                    "- `keyword`: 제목, 내용 검색\n" +
+                    "- `status`: 상태 필터 (DRAFT, PUBLISHED, CANCELLED, COMPLETED)")
     @GetMapping
     public ApiResponse<Page<EstimateRequestListResponse>> getAllEstimateRequests(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(required = false) String status,
+            @Parameter(description = "제목/내용 검색") @RequestParam(required = false) String keyword,
+            @Parameter(description = "상태 필터 (DRAFT, PUBLISHED, CANCELLED, COMPLETED)") @RequestParam(required = false) String status,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
-
-        // 권한 확인
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
+        log.info("[관리자] 견적 요청 목록 조회: adminEmail={}, keyword={}, status={}",
+                userDetails.getUsername(), keyword, status);
 
         Page<EstimateRequest> requests;
         if (status != null) {
@@ -93,7 +88,6 @@ public class AdminEstimateRequestController {
         }
 
         Page<EstimateRequestListResponse> response = requests.map(EstimateRequestListResponse::from);
-
         return ApiResponse.success(response);
     }
 
@@ -105,14 +99,8 @@ public class AdminEstimateRequestController {
     public ApiResponse<AdminEstimateRequestResponse> getEstimateRequest(
             @AuthenticationPrincipal UserDetails userDetails,
             @Parameter(description = "견적 요청 UUID") @PathVariable UUID requestUuid) {
-
-        // 권한 확인
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
+        log.info("[관리자] 견적 요청 상세 조회: adminEmail={}, requestUuid={}",
+                userDetails.getUsername(), requestUuid);
 
         // 삭제된 데이터도 조회 가능
         EstimateRequest estimateRequest = estimateRequestRepository.findByUuid(requestUuid)
@@ -128,28 +116,16 @@ public class AdminEstimateRequestController {
     @Operation(summary = "견적 요청 삭제 (관리자)", description = "모든 견적 요청을 삭제할 수 있습니다 (Soft Delete)")
     @DeleteMapping("/{requestUuid}")
     @Transactional
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     public ApiResponse<Void> deleteEstimateRequest(
             @AuthenticationPrincipal UserDetails userDetails,
             @Parameter(description = "견적 요청 UUID") @PathVariable UUID requestUuid) {
-
-        log.info("관리자 견적 요청 삭제: adminEmail={}, requestUuid={}", userDetails.getUsername(), requestUuid);
-
-        // 권한 확인
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
+        log.info("[관리자] 견적 요청 삭제: adminEmail={}, requestUuid={}", userDetails.getUsername(), requestUuid);
 
         EstimateRequest estimateRequest = estimateRequestRepository.findByUuidAndIsDeletedFalse(requestUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND));
 
         estimateRequest.softDelete();
         estimateRequestRepository.save(estimateRequest);
-
-        log.info("관리자 견적 요청 삭제 완료: uuid={}", requestUuid);
 
         return ApiResponse.success();
     }
@@ -164,17 +140,8 @@ public class AdminEstimateRequestController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Parameter(description = "견적 요청 UUID") @PathVariable UUID requestUuid,
             @Parameter(description = "변경할 상태 (PUBLISHED, CANCELLED, COMPLETED)") @RequestParam String status) {
-
-        log.info("관리자 견적 요청 상태 변경: adminEmail={}, requestUuid={}, status={}",
+        log.info("[관리자] 견적 요청 상태 변경: adminEmail={}, requestUuid={}, status={}",
                 userDetails.getUsername(), requestUuid, status);
-
-        // 권한 확인
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
 
         EstimateRequest estimateRequest = estimateRequestRepository.findByUuidAndIsDeletedFalse(requestUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND));
@@ -195,8 +162,6 @@ public class AdminEstimateRequestController {
         }
 
         estimateRequestRepository.save(estimateRequest);
-
-        log.info("관리자 견적 요청 상태 변경 완료: uuid={}, status={}", requestUuid, status);
 
         String userName = getUserName(estimateRequest);
         return ApiResponse.success(AdminEstimateRequestResponse.from(estimateRequest, userName));

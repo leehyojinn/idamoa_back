@@ -58,6 +58,7 @@ public class AdminInquiryController {
                     "- `hasAnswer`: 답변 여부 (true/false)")
     @GetMapping
     public ApiResponse<Page<InquiryListResponse>> getInquiries(
+            @AuthenticationPrincipal UserDetails userDetails,
             @Parameter(description = "제목/내용 검색어") @RequestParam(required = false) String keyword,
             @Parameter(description = "문의 유형 (BUG, PAYMENT_ERROR, ACCOUNT_ISSUE, SUGGESTION, OTHER)")
             @RequestParam(required = false) String inquiryType,
@@ -66,7 +67,8 @@ public class AdminInquiryController {
             @Parameter(description = "작성자 이메일") @RequestParam(required = false) String userEmail,
             @Parameter(description = "답변 여부") @RequestParam(required = false) Boolean hasAnswer,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-
+        log.info("[관리자] 문의 목록 조회: adminEmail={}, keyword={}, inquiryType={}, status={}",
+                userDetails.getUsername(), keyword, inquiryType, status);
         Page<InquiryListResponse> responses = inquiryService.searchInquiries(
                 keyword, inquiryType, status, userEmail, hasAnswer, pageable);
         return ApiResponse.success(responses);
@@ -79,8 +81,9 @@ public class AdminInquiryController {
             description = "특정 문의를 상세 조회합니다.")
     @GetMapping("/{inquiryUuid}")
     public ApiResponse<InquiryResponse> getInquiry(
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID inquiryUuid) {
-
+        log.info("[관리자] 문의 상세 조회: adminEmail={}, inquiryUuid={}", userDetails.getUsername(), inquiryUuid);
         InquiryResponse response = inquiryService.getInquiry(inquiryUuid);
         return ApiResponse.success(response);
     }
@@ -96,10 +99,12 @@ public class AdminInquiryController {
                     "- CLOSED: 종료")
     @PutMapping("/{inquiryUuid}/status")
     public ApiResponse<InquiryResponse> changeStatus(
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID inquiryUuid,
             @Parameter(description = "변경할 상태", example = "IN_PROGRESS")
             @RequestParam String status) {
-
+        log.info("[관리자] 문의 상태 변경: adminEmail={}, inquiryUuid={}, status={}",
+                userDetails.getUsername(), inquiryUuid, status);
         InquiryResponse response = inquiryService.changeStatus(inquiryUuid, status);
         return ApiResponse.success(response);
     }
@@ -115,9 +120,8 @@ public class AdminInquiryController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID inquiryUuid,
             @Valid @RequestBody InquiryAnswerCreateRequest request) {
-
-        InquiryAnswerResponse response = inquiryService.createAnswer(
-                userDetails.getUsername(), inquiryUuid, request);
+        log.info("[관리자] 문의 답변 작성: adminEmail={}, inquiryUuid={}", userDetails.getUsername(), inquiryUuid);
+        InquiryAnswerResponse response = inquiryService.createAnswer(userDetails.getUsername(), inquiryUuid, request);
         return ApiResponse.success(response);
     }
 
@@ -131,9 +135,8 @@ public class AdminInquiryController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID inquiryUuid,
             @Valid @RequestBody InquiryAnswerCreateRequest request) {
-
-        InquiryAnswerResponse response = inquiryService.updateAnswer(
-                userDetails.getUsername(), inquiryUuid, request);
+        log.info("[관리자] 문의 답변 수정: adminEmail={}, inquiryUuid={}", userDetails.getUsername(), inquiryUuid);
+        InquiryAnswerResponse response = inquiryService.updateAnswer(userDetails.getUsername(), inquiryUuid, request);
         return ApiResponse.success(response);
     }
 
@@ -143,9 +146,10 @@ public class AdminInquiryController {
     @Operation(summary = "문의 답변 삭제 (관리자용)",
             description = "작성된 답변을 삭제합니다.")
     @DeleteMapping("/{inquiryUuid}/answer")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ApiResponse<Void> deleteAnswer(@PathVariable UUID inquiryUuid) {
-
+    public ApiResponse<Void> deleteAnswer(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable UUID inquiryUuid) {
+        log.info("[관리자] 문의 답변 삭제: adminEmail={}, inquiryUuid={}", userDetails.getUsername(), inquiryUuid);
         inquiryService.deleteAnswer(inquiryUuid);
         return ApiResponse.success();
     }
@@ -156,9 +160,10 @@ public class AdminInquiryController {
     @Operation(summary = "문의 삭제 (관리자용)",
             description = "문의를 삭제합니다. (Soft Delete)")
     @DeleteMapping("/{inquiryUuid}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ApiResponse<Void> deleteInquiry(@PathVariable UUID inquiryUuid) {
-
+    public ApiResponse<Void> deleteInquiry(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable UUID inquiryUuid) {
+        log.info("[관리자] 문의 삭제: adminEmail={}, inquiryUuid={}", userDetails.getUsername(), inquiryUuid);
         inquiryService.deleteInquiry(inquiryUuid);
         return ApiResponse.success();
     }
