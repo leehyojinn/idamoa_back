@@ -1,5 +1,7 @@
 package com.hip.damoa.domain.company.web;
 
+import com.hip.damoa.core.exception.BusinessException;
+import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.company.model.CompanyImage;
 import com.hip.damoa.domain.company.service.CompanyImageService;
@@ -64,10 +66,13 @@ public class CompanyImageController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID companyUuid,
             @Valid @RequestBody CompanyImageRequest request) {
-
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+        log.info("업체 이미지 추가: userEmail={}, companyUuid={}, imageType={}",
+                userDetails.getUsername(), companyUuid, request.getImageType());
         CompanyImage image = companyImageService.addCompanyImage(
                 userDetails.getUsername(), companyUuid, request);
-
         return ApiResponse.success(companyImageService.toResponse(image));
     }
 
@@ -145,7 +150,11 @@ public class CompanyImageController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID companyUuid,
             @PathVariable UUID imageUuid) {
-
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+        log.info("대표 이미지 설정: userEmail={}, companyUuid={}, imageUuid={}",
+                userDetails.getUsername(), companyUuid, imageUuid);
         CompanyImage image = companyImageService.setPrimaryImage(userDetails.getUsername(), imageUuid);
         return ApiResponse.success(companyImageService.toResponse(image));
     }
@@ -168,7 +177,11 @@ public class CompanyImageController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID companyUuid,
             @PathVariable UUID imageUuid) {
-
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+        log.info("업체 이미지 삭제: userEmail={}, companyUuid={}, imageUuid={}",
+                userDetails.getUsername(), companyUuid, imageUuid);
         companyImageService.deleteCompanyImage(userDetails.getUsername(), imageUuid);
         return ApiResponse.success();
     }

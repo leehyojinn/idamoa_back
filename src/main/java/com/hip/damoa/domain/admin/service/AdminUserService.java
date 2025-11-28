@@ -90,7 +90,7 @@ public class AdminUserService {
 
         // 상태 검증
         if (!VALID_STATUSES.contains(request.getStatus())) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.INVALID_USER_STATUS);
         }
 
         // 상태 변경
@@ -123,7 +123,7 @@ public class AdminUserService {
         // 역할 검증
         for (String role : request.getRoles()) {
             if (!VALID_ROLES.contains(role)) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                throw new BusinessException(ErrorCode.INVALID_USER_ROLE);
             }
         }
 
