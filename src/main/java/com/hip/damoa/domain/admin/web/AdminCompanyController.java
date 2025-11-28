@@ -8,6 +8,7 @@ import com.hip.damoa.domain.company.web.dto.CompanyListResponse;
 import com.hip.damoa.domain.company.web.dto.CompanyResponse;
 import com.hip.damoa.domain.company.web.dto.CompanyUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -60,15 +61,25 @@ public class AdminCompanyController {
     }
 
     /**
-     * 전체 업체 목록 조회 (관리자용)
+     * 전체 업체 목록 조회/검색 (관리자용)
      */
-    @Operation(summary = "전체 업체 목록 조회 (관리자)", description = "삭제된 업체 포함 모든 업체 목록을 조회합니다")
+    @Operation(summary = "전체 업체 목록 조회/검색 (관리자)",
+            description = "삭제된 업체 포함 모든 업체 목록을 조회합니다.\n\n" +
+                    "**검색 필터 (모두 선택사항)**:\n" +
+                    "- `keyword`: 업체명, 이메일, 전화번호 검색\n" +
+                    "- `status`: 상태 필터 (ACTIVE, INACTIVE, SUSPENDED)\n" +
+                    "- `isVerified`: 인증 여부 (true/false)")
     @GetMapping
     public ApiResponse<Page<CompanyListResponse>> getAllCompanies(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Parameter(description = "업체명/이메일/전화번호 검색") @RequestParam(required = false) String keyword,
+            @Parameter(description = "상태 필터 (ACTIVE, INACTIVE, SUSPENDED)") @RequestParam(required = false) String status,
+            @Parameter(description = "인증 여부") @RequestParam(required = false) Boolean isVerified,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
-
-        Page<Company> companies = companyService.getAllCompanies(pageable);
+        log.info("[관리자] 업체 목록 조회: adminEmail={}, keyword={}, status={}, isVerified={}",
+                userDetails.getUsername(), keyword, status, isVerified);
+        Page<Company> companies = companyService.searchCompaniesForAdmin(keyword, status, isVerified, pageable);
         Page<CompanyListResponse> response = companies.map(CompanyListResponse::from);
         return ApiResponse.success(response);
     }

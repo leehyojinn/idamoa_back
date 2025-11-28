@@ -46,4 +46,35 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findByIsDeletedFalse(Pageable pageable);
 
     Page<User> findByStatusAndIsDeletedFalse(UserStatus status, Pageable pageable);
+
+    /**
+     * 관리자용 회원 검색
+     * - keyword: 이메일 검색
+     * - status: 상태 필터
+     * - role: 역할 필터 (배열 내 검색)
+     */
+    @Query(value = """
+        SELECT u.* FROM users u
+        WHERE u.is_deleted = false
+        AND (:keyword IS NULL OR :keyword = '' OR
+             LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        AND (:status IS NULL OR :status = '' OR u.status = :status)
+        AND (:role IS NULL OR :role = '' OR :role = ANY(u.roles))
+        ORDER BY u.created_at DESC
+        """,
+        countQuery = """
+        SELECT COUNT(*) FROM users u
+        WHERE u.is_deleted = false
+        AND (:keyword IS NULL OR :keyword = '' OR
+             LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        AND (:status IS NULL OR :status = '' OR u.status = :status)
+        AND (:role IS NULL OR :role = '' OR :role = ANY(u.roles))
+        """,
+        nativeQuery = true)
+    Page<User> searchForAdmin(
+        @Param("keyword") String keyword,
+        @Param("status") String status,
+        @Param("role") String role,
+        Pageable pageable
+    );
 }

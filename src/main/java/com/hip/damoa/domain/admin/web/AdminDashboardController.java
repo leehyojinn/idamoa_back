@@ -1,12 +1,8 @@
 package com.hip.damoa.domain.admin.web;
 
-import com.hip.damoa.core.exception.BusinessException;
-import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.admin.service.AdminDashboardService;
 import com.hip.damoa.domain.admin.web.dto.*;
-import com.hip.damoa.domain.user.model.User;
-import com.hip.damoa.domain.user.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,7 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminDashboardController {
 
     private final AdminDashboardService dashboardService;
-    private final UserRepository userRepository;
 
     /**
      * 대시보드 전체 요약 통계 조회
@@ -49,19 +44,8 @@ public class AdminDashboardController {
     @GetMapping("/overview")
     public ApiResponse<DashboardOverviewResponse> getOverview(
             @AuthenticationPrincipal UserDetails userDetails) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 대시보드 전체 요약 통계 조회: adminEmail={}", userDetails.getUsername());
-
         DashboardOverviewResponse response = dashboardService.getOverview();
-
         return ApiResponse.success(response);
     }
 
@@ -79,19 +63,8 @@ public class AdminDashboardController {
     @GetMapping("/users")
     public ApiResponse<UserStatisticsResponse> getUserStatistics(
             @AuthenticationPrincipal UserDetails userDetails) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 회원 상세 통계 조회: adminEmail={}", userDetails.getUsername());
-
         UserStatisticsResponse response = dashboardService.getUserStatistics();
-
         return ApiResponse.success(response);
     }
 
@@ -111,19 +84,8 @@ public class AdminDashboardController {
     @GetMapping("/companies")
     public ApiResponse<CompanyStatisticsResponse> getCompanyStatistics(
             @AuthenticationPrincipal UserDetails userDetails) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 업체 상세 통계 조회: adminEmail={}", userDetails.getUsername());
-
         CompanyStatisticsResponse response = dashboardService.getCompanyStatistics();
-
         return ApiResponse.success(response);
     }
 
@@ -141,19 +103,8 @@ public class AdminDashboardController {
     @GetMapping("/estimates")
     public ApiResponse<EstimateStatisticsResponse> getEstimateStatistics(
             @AuthenticationPrincipal UserDetails userDetails) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 견적요청 상세 통계 조회: adminEmail={}", userDetails.getUsername());
-
         EstimateStatisticsResponse response = dashboardService.getEstimateStatistics();
-
         return ApiResponse.success(response);
     }
 
@@ -170,19 +121,8 @@ public class AdminDashboardController {
     @GetMapping("/proposals")
     public ApiResponse<ProposalStatisticsResponse> getProposalStatistics(
             @AuthenticationPrincipal UserDetails userDetails) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 제안서 상세 통계 조회: adminEmail={}", userDetails.getUsername());
-
         ProposalStatisticsResponse response = dashboardService.getProposalStatistics();
-
         return ApiResponse.success(response);
     }
 
@@ -199,19 +139,8 @@ public class AdminDashboardController {
     @GetMapping("/consultations")
     public ApiResponse<ConsultationStatisticsResponse> getConsultationStatistics(
             @AuthenticationPrincipal UserDetails userDetails) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 빠른상담 상세 통계 조회: adminEmail={}", userDetails.getUsername());
-
         ConsultationStatisticsResponse response = dashboardService.getConsultationStatistics();
-
         return ApiResponse.success(response);
     }
 
@@ -226,19 +155,8 @@ public class AdminDashboardController {
     @GetMapping("/planner-applications")
     public ApiResponse<PlannerApplicationStatisticsResponse> getPlannerApplicationStatistics(
             @AuthenticationPrincipal UserDetails userDetails) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 플래너 신청 상세 통계 조회: adminEmail={}", userDetails.getUsername());
-
         PlannerApplicationStatisticsResponse response = dashboardService.getPlannerApplicationStatistics();
-
         return ApiResponse.success(response);
     }
 
@@ -254,19 +172,8 @@ public class AdminDashboardController {
     @GetMapping("/inquiries")
     public ApiResponse<InquiryStatisticsResponse> getInquiryStatistics(
             @AuthenticationPrincipal UserDetails userDetails) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 문의 상세 통계 조회: adminEmail={}", userDetails.getUsername());
-
         InquiryStatisticsResponse response = dashboardService.getInquiryStatistics();
-
         return ApiResponse.success(response);
     }
 }

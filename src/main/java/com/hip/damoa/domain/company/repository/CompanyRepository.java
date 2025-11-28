@@ -152,6 +152,26 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
     Long getTotalReviewCount();
 
     /**
+     * 관리자용 업체 검색 (삭제된 업체 포함)
+     */
+    @Query("""
+        SELECT c FROM Company c
+        WHERE (:keyword IS NULL OR :keyword = '' OR
+               LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+               LOWER(c.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+               LOWER(c.primaryPhone) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        AND (:status IS NULL OR :status = '' OR c.status = :status)
+        AND (:isVerified IS NULL OR c.verified = :isVerified)
+        ORDER BY c.createdAt DESC
+        """)
+    Page<Company> searchForAdmin(
+        @Param("keyword") String keyword,
+        @Param("status") String status,
+        @Param("isVerified") Boolean isVerified,
+        Pageable pageable
+    );
+
+    /**
      * 필터와 키워드를 모두 적용한 통합 검색
      * 필터가 1순위로 적용되고, 키워드는 필터링된 결과 내에서 검색
      */

@@ -5,7 +5,6 @@ import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.domain.admin.web.dto.*;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.model.UserProfile;
-import com.hip.damoa.domain.user.model.UserStatus;
 import com.hip.damoa.domain.user.repository.UserProfileRepository;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +14,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -52,16 +50,7 @@ public class AdminUserService {
 
         log.info("전체 회원 목록 조회: keyword={}, status={}, role={}", keyword, status, role);
 
-        Page<User> users;
-
-        // TODO: 복잡한 검색/필터는 Specification 사용 권장
-        // 현재는 간단한 조건만 처리
-        if (status != null && !status.isEmpty()) {
-            UserStatus userStatus = UserStatus.valueOf(status);
-            users = userRepository.findByStatusAndIsDeletedFalse(userStatus, pageable);
-        } else {
-            users = userRepository.findByIsDeletedFalse(pageable);
-        }
+        Page<User> users = userRepository.searchForAdmin(keyword, status, role, pageable);
 
         return users.map(user -> {
             String name = getUserName(user);

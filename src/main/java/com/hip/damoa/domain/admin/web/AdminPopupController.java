@@ -116,7 +116,6 @@ public class AdminPopupController {
                     "- ADMIN 역할 필요\n" +
                     "- 로그인 필수")
     @DeleteMapping("/{uuid}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     public ApiResponse<Void> deletePopup(
             @PathVariable UUID uuid,
             @AuthenticationPrincipal UserDetails userDetails) {

@@ -1,7 +1,5 @@
 package com.hip.damoa.domain.admin.web;
 
-import com.hip.damoa.core.exception.BusinessException;
-import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.board.model.Board;
 import com.hip.damoa.domain.board.repository.BoardRepository;
@@ -10,8 +8,6 @@ import com.hip.damoa.domain.board.service.GalleryBoardService;
 import com.hip.damoa.domain.board.web.dto.GalleryCreateRequest;
 import com.hip.damoa.domain.board.web.dto.GalleryResponse;
 import com.hip.damoa.domain.board.web.dto.GalleryUpdateRequest;
-import com.hip.damoa.domain.user.model.User;
-import com.hip.damoa.domain.user.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -45,7 +41,6 @@ public class AdminGalleryBoardController {
     private final GalleryBoardService galleryBoardService;
     private final BoardService boardService;
     private final BoardRepository boardRepository;
-    private final UserRepository userRepository;
 
     /**
      * 사진 게시글 목록 조회 (관리자용 - 미게시 포함)
@@ -63,22 +58,11 @@ public class AdminGalleryBoardController {
             @RequestParam(required = false) String keyword,
             @PageableDefault(size = 20, sort = "publishedAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 사진 게시글 목록 조회: adminEmail={}, keyword={}",
                 userDetails.getUsername(), keyword);
-
         // 관리자는 미게시 포함 전체 조회
         Page<GalleryResponse> response = galleryBoardService.searchGalleries(
                 keyword, null, null, false, false, userDetails.getUsername(), pageable);
-
         return ApiResponse.success(response);
     }
 
@@ -91,20 +75,9 @@ public class AdminGalleryBoardController {
     public ApiResponse<GalleryResponse> getGalleryDetail(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID galleryUuid) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 사진 게시글 상세 조회: adminEmail={}, galleryUuid={}",
                 userDetails.getUsername(), galleryUuid);
-
         GalleryResponse response = galleryBoardService.getGallery(galleryUuid, userDetails.getUsername());
-
         return ApiResponse.success(response);
     }
 
@@ -118,21 +91,9 @@ public class AdminGalleryBoardController {
     public ApiResponse<GalleryResponse> createGallery(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody GalleryCreateRequest request) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 사진 게시글 생성: adminEmail={}, title={}",
                 userDetails.getUsername(), request.getTitle());
-
-        GalleryResponse response = galleryBoardService.createGallery(
-                userDetails.getUsername(), request);
-
+        GalleryResponse response = galleryBoardService.createGallery(userDetails.getUsername(), request);
         return ApiResponse.success(response);
     }
 
@@ -146,21 +107,9 @@ public class AdminGalleryBoardController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID galleryUuid,
             @Valid @RequestBody GalleryUpdateRequest request) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 사진 게시글 수정: adminEmail={}, galleryUuid={}",
                 userDetails.getUsername(), galleryUuid);
-
-        GalleryResponse response = galleryBoardService.updateGallery(
-                galleryUuid, userDetails.getUsername(), request);
-
+        GalleryResponse response = galleryBoardService.updateGallery(galleryUuid, userDetails.getUsername(), request);
         return ApiResponse.success(response);
     }
 
@@ -173,22 +122,10 @@ public class AdminGalleryBoardController {
     public ApiResponse<Void> deleteGallery(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID galleryUuid) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 사진 게시글 삭제: adminEmail={}, galleryUuid={}",
                 userDetails.getUsername(), galleryUuid);
-
-        // 관리자는 소유자 확인 없이 삭제 가능하도록 처리
         Board board = boardService.getBoard(galleryUuid);
         board.softDelete();
-
         return ApiResponse.success();
     }
 
@@ -201,15 +138,6 @@ public class AdminGalleryBoardController {
     public ApiResponse<Void> togglePublish(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID galleryUuid) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 사진 게시 상태 변경: adminEmail={}, galleryUuid={}",
                 userDetails.getUsername(), galleryUuid);
 
@@ -220,7 +148,6 @@ public class AdminGalleryBoardController {
             board.publish();
         }
         boardRepository.save(board);
-
         return ApiResponse.success();
     }
 
@@ -233,15 +160,6 @@ public class AdminGalleryBoardController {
     public ApiResponse<Void> togglePin(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID galleryUuid) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 사진 고정 상태 변경: adminEmail={}, galleryUuid={}",
                 userDetails.getUsername(), galleryUuid);
 
@@ -252,7 +170,6 @@ public class AdminGalleryBoardController {
             board.pin();
         }
         boardRepository.save(board);
-
         return ApiResponse.success();
     }
 
@@ -265,15 +182,6 @@ public class AdminGalleryBoardController {
     public ApiResponse<Void> toggleFeature(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID galleryUuid) {
-
-        // ADMIN 권한 검증
-        User admin = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
-
         log.info("[관리자] 사진 추천 상태 변경: adminEmail={}, galleryUuid={}",
                 userDetails.getUsername(), galleryUuid);
 
@@ -284,7 +192,6 @@ public class AdminGalleryBoardController {
             board.feature();
         }
         boardRepository.save(board);
-
         return ApiResponse.success();
     }
 }
