@@ -113,16 +113,43 @@ public class GalleryResponse {
                                        List<FileInfo> images, boolean isBookmarked, String userName) {
         Map<String, Object> typeData = board.getTypeData();
 
-        // typeData에서 링크, 저작권 정보 추출
-        String relatedLink = (String) typeData.getOrDefault("relatedLink", "");
+        // typeData에서 링크 정보 추출 (relatedLink 또는 link 필드 확인)
+        String relatedLink = "";
+        Object relatedLinkObj = typeData.get("relatedLink");
+        if (relatedLinkObj instanceof String && !((String) relatedLinkObj).isEmpty()) {
+            relatedLink = (String) relatedLinkObj;
+        } else {
+            Object linkObj = typeData.get("link");
+            if (linkObj instanceof String) {
+                relatedLink = (String) linkObj;
+            }
+        }
 
-        @SuppressWarnings("unchecked")
-        Map<String, String> copyrightMap = (Map<String, String>) typeData.getOrDefault("copyright", Map.of());
-        CopyrightInfo copyright = CopyrightInfo.builder()
-                .owner(copyrightMap.getOrDefault("owner", ""))
-                .license(copyrightMap.getOrDefault("license", "All Rights Reserved"))
-                .attribution(copyrightMap.getOrDefault("attribution", "선택"))
-                .build();
+        // copyright 필드 안전 처리 (Map 또는 String일 수 있음)
+        CopyrightInfo copyright;
+        Object copyrightObj = typeData.get("copyright");
+        if (copyrightObj instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, String> copyrightMap = (Map<String, String>) copyrightObj;
+            copyright = CopyrightInfo.builder()
+                    .owner(copyrightMap.getOrDefault("owner", ""))
+                    .license(copyrightMap.getOrDefault("license", "All Rights Reserved"))
+                    .attribution(copyrightMap.getOrDefault("attribution", "선택"))
+                    .build();
+        } else if (copyrightObj instanceof String && !((String) copyrightObj).isEmpty()) {
+            // copyright가 문자열인 경우 owner로 사용
+            copyright = CopyrightInfo.builder()
+                    .owner((String) copyrightObj)
+                    .license("All Rights Reserved")
+                    .attribution("선택")
+                    .build();
+        } else {
+            copyright = CopyrightInfo.builder()
+                    .owner("")
+                    .license("All Rights Reserved")
+                    .attribution("선택")
+                    .build();
+        }
 
         return GalleryResponse.builder()
                 .uuid(board.getUuid())
@@ -158,9 +185,9 @@ public class GalleryResponse {
                         })
                         .collect(Collectors.toList()))
                 .tags(board.getTags())
-                .userId(board.getUser().getId())
-                .userEmail(board.getUser().getEmail())
-                .userName(userName != null ? userName : board.getUser().getEmail())
+                .userId(board.getUser() != null ? board.getUser().getId() : null)
+                .userEmail(board.getUser() != null ? board.getUser().getEmail() : null)
+                .userName(userName != null ? userName : (board.getUser() != null ? board.getUser().getEmail() : null))
                 .createdAt(board.getCreatedAt())
                 .updatedAt(board.getUpdatedAt())
                 .isBookmarked(isBookmarked)
