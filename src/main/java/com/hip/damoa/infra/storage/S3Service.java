@@ -55,6 +55,7 @@ public class S3Service {
                 .key(s3Key)
                 .contentType(file.getContentType())
                 .contentLength(file.getSize())
+                .acl(ObjectCannedACL.PUBLIC_READ)  // 퍼블릭 읽기 권한 설정
                 .build();
 
             s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 제휴/광고 문의 컨트롤러 (공개 API)
  */
+@Slf4j
 @Tag(name = "18. Partnership Inquiry", description = "제휴/광고 문의 API")
 @RestController
 @RequiredArgsConstructor
@@ -48,10 +50,9 @@ public class PartnershipInquiryController {
     public ApiResponse<PartnershipInquiryResponse> createInquiry(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody PartnershipInquiryCreateRequest request) {
-
         String userEmail = userDetails != null ? userDetails.getUsername() : null;
+        log.info("제휴/광고 문의 생성: userEmail={}, type={}", userEmail, request.getPartnershipType());
         PartnershipInquiryResponse response = partnershipInquiryService.createInquiry(userEmail, request);
-
         return ApiResponse.success(response);
     }
 }

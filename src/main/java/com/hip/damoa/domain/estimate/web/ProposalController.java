@@ -92,10 +92,9 @@ public class ProposalController {
         if (userDetails == null) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
-
+        log.info("제안 생성: userEmail={}, requestUuid={}", userDetails.getUsername(), requestUuid);
         EstimateProposal proposal = proposalService.createProposalByUuid(
                 userDetails.getUsername(), requestUuid, request);
-
         return ApiResponse.success(ProposalResponse.from(proposal));
     }
 
@@ -124,10 +123,9 @@ public class ProposalController {
         if (userDetails == null) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
-
+        log.info("제안 수정: userEmail={}, proposalUuid={}", userDetails.getUsername(), proposalUuid);
         EstimateProposal proposal = proposalService.updateProposalByUuid(
                 userDetails.getUsername(), proposalUuid, request);
-
         return ApiResponse.success(ProposalResponse.from(proposal));
     }
 
@@ -155,9 +153,8 @@ public class ProposalController {
         if (userDetails == null) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
-
+        log.info("제안 철회: userEmail={}, proposalUuid={}", userDetails.getUsername(), proposalUuid);
         proposalService.withdrawProposalByUuid(userDetails.getUsername(), proposalUuid);
-
         return ApiResponse.success();
     }
 
@@ -298,10 +295,9 @@ public class ProposalController {
         if (userDetails == null) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
-
+        log.info("제안 수락: userEmail={}, proposalUuid={}", userDetails.getUsername(), proposalUuid);
         EstimateProposal proposal = proposalService.acceptProposalByUuid(
                 userDetails.getUsername(), proposalUuid);
-
         return ApiResponse.success(ProposalResponse.from(proposal));
     }
 
@@ -333,10 +329,9 @@ public class ProposalController {
         if (userDetails == null) {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
-
+        log.info("제안 거절: userEmail={}, proposalUuid={}", userDetails.getUsername(), proposalUuid);
         EstimateProposal proposal = proposalService.rejectProposalByUuid(
                 userDetails.getUsername(), proposalUuid, reason);
-
         return ApiResponse.success(ProposalResponse.from(proposal));
     }
 }

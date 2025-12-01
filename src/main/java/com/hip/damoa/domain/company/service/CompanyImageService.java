@@ -49,7 +49,7 @@ public class CompanyImageService {
 
         // 소유자 또는 관리자만 가능
         if (!company.getOwner().getId().equals(user.getId()) && !user.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_COMPANY_OWNER);
         }
 
         // 대표 이미지 설정 시 기존 대표 이미지 해제
@@ -120,7 +120,7 @@ public class CompanyImageService {
 
         // 소유자 또는 관리자만 가능
         if (!company.getOwner().getId().equals(user.getId()) && !user.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_COMPANY_OWNER);
         }
 
         // Soft Delete
@@ -147,7 +147,7 @@ public class CompanyImageService {
 
         // 소유자 또는 관리자만 가능
         if (!company.getOwner().getId().equals(user.getId()) && !user.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_COMPANY_OWNER);
         }
 
         // 기존 대표 이미지 해제

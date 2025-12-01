@@ -59,7 +59,7 @@ public class DocumentBoardService {
 
         // 파일 검증
         if (request.getFileUuids() == null || request.getFileUuids().isEmpty()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.DOCUMENT_FILE_REQUIRED);
         }
 
         // Board 생성
@@ -467,7 +467,7 @@ public class DocumentBoardService {
                 saveDocumentFile(board, fileUuid, BoardAttachment.AttachmentType.DOCUMENT, displayOrder++);
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid file UUID format: {}", uuidString);
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                throw new BusinessException(ErrorCode.INVALID_UUID_FORMAT);
             }
         }
 

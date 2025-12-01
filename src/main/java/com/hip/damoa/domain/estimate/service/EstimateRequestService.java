@@ -149,7 +149,7 @@ public class EstimateRequestService {
 
         // 권한 확인
         if (!estimateRequest.getUser().getId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_REQUEST_OWNER);
         }
 
         // 매칭된 견적 요청은 수정 불가
@@ -279,7 +279,7 @@ public class EstimateRequestService {
 
         // 권한 확인
         if (!estimateRequest.getUser().getId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_REQUEST_OWNER);
         }
 
         // 상태 확인
@@ -350,7 +350,7 @@ public class EstimateRequestService {
 
         // 권한 확인
         if (!estimateRequest.getUser().getId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_REQUEST_OWNER);
         }
 
         // 매칭된 견적 요청은 삭제 불가

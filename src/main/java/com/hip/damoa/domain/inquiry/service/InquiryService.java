@@ -132,7 +132,7 @@ public class InquiryService {
 
         // PENDING 상태일 때만 수정 가능
         if (inquiry.getStatus() != InquiryStatus.PENDING) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.INQUIRY_NOT_EDITABLE);
         }
 
         inquiry.updateContent(request.getTitle(), request.getContent());
@@ -174,7 +174,7 @@ public class InquiryService {
 
         // PENDING 상태일 때만 삭제 가능
         if (inquiry.getStatus() != InquiryStatus.PENDING) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.INQUIRY_NOT_EDITABLE);
         }
 
         inquiry.softDelete();
@@ -210,7 +210,7 @@ public class InquiryService {
             try {
                 typeEnum = InquiryType.valueOf(inquiryType);
             } catch (IllegalArgumentException e) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                throw new BusinessException(ErrorCode.INVALID_INQUIRY_TYPE);
             }
         }
 
@@ -219,7 +219,7 @@ public class InquiryService {
             try {
                 statusEnum = InquiryStatus.valueOf(status);
             } catch (IllegalArgumentException e) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                throw new BusinessException(ErrorCode.INVALID_INQUIRY_STATUS);
             }
         }
 
@@ -359,7 +359,7 @@ public class InquiryService {
                 inquiry.close();
                 break;
             default:
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                throw new BusinessException(ErrorCode.INVALID_INQUIRY_STATUS);
         }
 
         inquiryRepository.save(inquiry);
@@ -490,7 +490,7 @@ public class InquiryService {
                 log.info("파일 연결 완료: fileId={}, inquiryId={}", file.getId(), inquiry.getId());
             } catch (IllegalArgumentException e) {
                 log.error("잘못된 UUID 형식: {}", fileUuidStr);
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                throw new BusinessException(ErrorCode.INVALID_UUID_FORMAT);
             }
         }
 

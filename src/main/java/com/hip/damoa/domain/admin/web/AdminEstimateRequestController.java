@@ -81,7 +81,7 @@ public class AdminEstimateRequestController {
                 EstimateStatus statusEnum = EstimateStatus.valueOf(status);
                 requests = estimateRequestRepository.findByStatus(statusEnum, pageable);
             } catch (IllegalArgumentException e) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                throw new BusinessException(ErrorCode.INVALID_ESTIMATE_STATUS);
             }
         } else {
             requests = estimateRequestRepository.findAll(pageable);
@@ -158,7 +158,7 @@ public class AdminEstimateRequestController {
                 estimateRequest.complete();
                 break;
             default:
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                throw new BusinessException(ErrorCode.INVALID_ESTIMATE_STATUS);
         }
 
         estimateRequestRepository.save(estimateRequest);

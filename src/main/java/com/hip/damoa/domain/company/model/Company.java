@@ -69,10 +69,10 @@ public class Company extends BaseEntity {
 
     // keywords 필드 제거 - 통합 검색 기능으로 대체
 
-    @Column(name = "primary_phone", length = 20)
+    @Column(name = "primary_phone", length = 50)
     private String primaryPhone;
 
-    @Column(name = "secondary_phone", length = 20)
+    @Column(name = "secondary_phone", length = 50)
     private String secondaryPhone;
 
     @Column(name = "emergency_contact", length = 20)

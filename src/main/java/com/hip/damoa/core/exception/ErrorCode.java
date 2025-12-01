@@ -16,6 +16,10 @@ public enum ErrorCode {
     NOT_FOUND(HttpStatus.NOT_FOUND, "C005", "리소스를 찾을 수 없습니다"),
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "C006", "중복된 리소스입니다"),
     RESOURCE_IN_USE(HttpStatus.CONFLICT, "C007", "사용 중인 리소스는 삭제할 수 없습니다"),
+    INVALID_UUID_FORMAT(HttpStatus.BAD_REQUEST, "C008", "유효하지 않은 UUID 형식입니다"),
+    INVALID_USER_STATUS(HttpStatus.BAD_REQUEST, "C009", "유효하지 않은 회원 상태입니다 (ACTIVE, INACTIVE, SUSPENDED, PENDING 중 선택)"),
+    INVALID_USER_ROLE(HttpStatus.BAD_REQUEST, "C010", "유효하지 않은 회원 역할입니다 (USER, COMPANY, ADMIN 중 선택)"),
+    INVALID_ESTIMATE_STATUS(HttpStatus.BAD_REQUEST, "C011", "유효하지 않은 견적 상태입니다"),
 
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "사용자를 찾을 수 없습니다"),
@@ -93,11 +97,22 @@ public enum ErrorCode {
 
     // Authorization
     FORBIDDEN(HttpStatus.FORBIDDEN, "A001", "접근 권한이 없습니다"),
+    COMPANY_ROLE_REQUIRED(HttpStatus.FORBIDDEN, "A002", "업체 회원만 이용할 수 있습니다"),
+    ADMIN_ROLE_REQUIRED(HttpStatus.FORBIDDEN, "A003", "관리자만 이용할 수 있습니다"),
+    NOT_COMPANY_OWNER(HttpStatus.FORBIDDEN, "A004", "본인 업체만 수정/삭제할 수 있습니다"),
+    NOT_PROPOSAL_OWNER(HttpStatus.FORBIDDEN, "A005", "본인이 제출한 제안서만 수정/삭제할 수 있습니다"),
+    NOT_REQUEST_OWNER(HttpStatus.FORBIDDEN, "A006", "본인의 견적 요청만 수정/삭제할 수 있습니다"),
+    NOT_REVIEW_AUTHOR(HttpStatus.FORBIDDEN, "A007", "본인이 작성한 리뷰만 수정/삭제할 수 있습니다"),
+    NOT_REVIEW_COMPANY_OWNER(HttpStatus.FORBIDDEN, "A008", "본인 업체에 대한 리뷰에만 답변할 수 있습니다"),
+    NOT_FILE_OWNER(HttpStatus.FORBIDDEN, "A009", "본인이 업로드한 파일만 삭제할 수 있습니다"),
+    PROPOSAL_ACCESS_DENIED(HttpStatus.FORBIDDEN, "A010", "제안서 조회 권한이 없습니다"),
+    NOT_BOARD_AUTHOR(HttpStatus.FORBIDDEN, "A011", "본인이 작성한 게시글만 수정/삭제할 수 있습니다"),
 
     // Company
     COMPANY_PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "CP001", "업체 프로필을 찾을 수 없습니다"),
     COMPANY_ALREADY_EXISTS(HttpStatus.CONFLICT, "CP002", "이미 이 사용자의 업체가 존재합니다"),
     COMPANY_SLUG_ALREADY_EXISTS(HttpStatus.CONFLICT, "CP003", "이미 존재하는 업체 슬러그입니다"),
+    REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "CP004", "리뷰를 찾을 수 없습니다"),
 
     // Contest
     CONTEST_NOT_FOUND(HttpStatus.NOT_FOUND, "CT001", "콘테스트를 찾을 수 없습니다"),
@@ -169,6 +184,8 @@ public enum ErrorCode {
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "BD008", "카테고리를 찾을 수 없습니다"),
     EVENT_NOT_EDITABLE(HttpStatus.BAD_REQUEST, "BD009", "이벤트 게시글이 아니므로 이벤트 상태를 변경할 수 없습니다"),
     INVALID_EVENT_STATUS(HttpStatus.BAD_REQUEST, "BD010", "유효하지 않은 이벤트 상태값입니다. ACTIVE 또는 ENDED만 가능합니다"),
+    GALLERY_IMAGE_REQUIRED(HttpStatus.BAD_REQUEST, "BD011", "사진 게시글에는 최소 1개 이상의 이미지가 필요합니다"),
+    DOCUMENT_FILE_REQUIRED(HttpStatus.BAD_REQUEST, "BD012", "자료 게시글에는 최소 1개 이상의 파일이 필요합니다"),
 
     // Filter
     FILTER_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "FC001", "필터 카테고리를 찾을 수 없습니다"),
@@ -215,10 +232,14 @@ public enum ErrorCode {
     CHAT_MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CH002", "채팅 메시지를 찾을 수 없습니다"),
     CHAT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CH003", "채팅방에 접근할 권한이 없습니다"),
     CHAT_MESSAGE_EMPTY(HttpStatus.BAD_REQUEST, "CH004", "메시지 내용이 비어있습니다"),
+    CHAT_COMPANY_UUID_REQUIRED(HttpStatus.BAD_REQUEST, "CH005", "채팅방 생성 시 업체 UUID가 필요합니다"),
 
     // Inquiry
     INQUIRY_NOT_FOUND(HttpStatus.NOT_FOUND, "IQ001", "문의를 찾을 수 없습니다"),
     ANSWER_NOT_FOUND(HttpStatus.NOT_FOUND, "IQ002", "답변을 찾을 수 없습니다"),
+    INQUIRY_NOT_EDITABLE(HttpStatus.BAD_REQUEST, "IQ003", "대기중 상태의 문의만 수정/삭제할 수 있습니다"),
+    INVALID_INQUIRY_TYPE(HttpStatus.BAD_REQUEST, "IQ004", "유효하지 않은 문의 유형입니다"),
+    INVALID_INQUIRY_STATUS(HttpStatus.BAD_REQUEST, "IQ005", "유효하지 않은 문의 상태입니다"),
 
     // Partnership Inquiry
     INVALID_PARTNERSHIP_TYPE(HttpStatus.BAD_REQUEST, "PI001", "잘못된 문의 유형입니다"),

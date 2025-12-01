@@ -124,7 +124,7 @@ public class CompanyReviewService {
     @Transactional(readOnly = true)
     public CompanyReviewResponse getReview(UUID reviewUuid) {
         CompanyReview review = reviewRepository.findByUuidAndIsDeletedFalse(reviewUuid)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN)); // REVIEW_NOT_FOUND 에러코드 추가 필요
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
 
         // 트랜잭션 내에서 Response 생성 (Lazy Loading 문제 방지)
         return toResponse(review);
@@ -141,11 +141,11 @@ public class CompanyReviewService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         CompanyReview review = reviewRepository.findByUuidAndIsDeletedFalse(reviewUuid)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
 
         // 리뷰 작성자인지 확인
         if (!review.getUser().getId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_REVIEW_AUTHOR);
         }
 
         // UUID 배열을 File ID 배열로 변환
@@ -179,11 +179,11 @@ public class CompanyReviewService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         CompanyReview review = reviewRepository.findByUuidAndIsDeletedFalse(reviewUuid)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
 
         // 리뷰 작성자인지 확인
         if (!review.getUser().getId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_REVIEW_AUTHOR);
         }
 
         Long companyId = review.getCompany().getId();
@@ -212,11 +212,11 @@ public class CompanyReviewService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         CompanyReview review = reviewRepository.findByUuidAndIsDeletedFalse(reviewUuid)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
 
         // 업체 소유자인지 확인
         if (!review.getCompany().getOwner().getId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_REVIEW_COMPANY_OWNER);
         }
 
         review.addReply(reply);
@@ -237,11 +237,11 @@ public class CompanyReviewService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         CompanyReview review = reviewRepository.findByUuidAndIsDeletedFalse(reviewUuid)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
 
         // 업체 소유자인지 확인
         if (!review.getCompany().getOwner().getId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_REVIEW_COMPANY_OWNER);
         }
 
         review.updateReply(reply);
@@ -262,11 +262,11 @@ public class CompanyReviewService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         CompanyReview review = reviewRepository.findByUuidAndIsDeletedFalse(reviewUuid)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FORBIDDEN));
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
 
         // 업체 소유자인지 확인
         if (!review.getCompany().getOwner().getId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_REVIEW_COMPANY_OWNER);
         }
 
         review.deleteReply();

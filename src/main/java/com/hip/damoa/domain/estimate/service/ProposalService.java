@@ -64,7 +64,7 @@ public class ProposalService {
 
         // COMPANY 역할 확인
         if (!user.hasRole("COMPANY")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.COMPANY_ROLE_REQUIRED);
         }
 
         // 업체 조회
@@ -155,7 +155,7 @@ public class ProposalService {
 
         // 권한 확인
         if (!proposal.getCompany().getId().equals(company.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_PROPOSAL_OWNER);
         }
 
         // 수정 가능한 상태 확인 (SUBMITTED, VIEWED만 수정 가능)
@@ -214,7 +214,7 @@ public class ProposalService {
 
         // 권한 확인
         if (!proposal.getCompany().getId().equals(company.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_PROPOSAL_OWNER);
         }
 
         // 철회 가능한 상태 확인 (수락된 제안은 철회 불가)
@@ -321,7 +321,7 @@ public class ProposalService {
         // 권한이 없는 경우
         if (!isRequestOwner && !isProposalOwner) {
             log.warn("제안 조회 권한 없음: userEmail={}, proposalId={}", userEmail, proposalId);
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.PROPOSAL_ACCESS_DENIED);
         }
 
         // 확인 처리 (요청자만)
@@ -348,7 +348,7 @@ public class ProposalService {
 
         // 권한 확인
         if (!proposal.getRequest().getUser().getId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_REQUEST_OWNER);
         }
 
         // 수락 가능한 상태 확인
@@ -385,7 +385,7 @@ public class ProposalService {
 
         // 권한 확인
         if (!proposal.getRequest().getUser().getId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_REQUEST_OWNER);
         }
 
         proposal.reject(reason);
@@ -407,7 +407,7 @@ public class ProposalService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.ADMIN_ROLE_REQUIRED);
         }
 
         return proposalRepository.findAll(pageable);
@@ -424,7 +424,7 @@ public class ProposalService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.ADMIN_ROLE_REQUIRED);
         }
 
         EstimateProposal proposal = proposalRepository.findById(proposalId)
@@ -708,7 +708,7 @@ public class ProposalService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.ADMIN_ROLE_REQUIRED);
         }
 
         // 삭제된 데이터도 조회 가능
@@ -727,7 +727,7 @@ public class ProposalService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.ADMIN_ROLE_REQUIRED);
         }
 
         EstimateProposal proposal = proposalRepository.findByUuidAndIsDeletedFalse(proposalUuid)

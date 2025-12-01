@@ -68,7 +68,7 @@ public class ChatService {
 
         if (isRequestOwner) {
             // 견적 요청 작성자인 경우 - 업체 정보 필요 (에러, 업체 UUID가 필요함)
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.CHAT_COMPANY_UUID_REQUIRED);
         } else {
             // 업체 소유자인 경우 - 해당 업체의 채팅방 조회/생성
             Company company = companyRepository.findByOwnerAndIsDeletedFalse(currentUser)

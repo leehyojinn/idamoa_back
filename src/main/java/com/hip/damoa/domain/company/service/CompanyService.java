@@ -67,7 +67,7 @@ public class CompanyService {
 
         // COMPANY 역할 확인
         if (!user.hasRole("COMPANY")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.COMPANY_ROLE_REQUIRED);
         }
 
         // 이미 업체가 있는지 확인 (한 사용자당 하나의 업체만)
@@ -139,7 +139,7 @@ public class CompanyService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.ADMIN_ROLE_REQUIRED);
         }
 
         // 소유자 조회 (ownerId가 있는 경우만)
@@ -297,7 +297,7 @@ public class CompanyService {
 
         // 권한 확인 (소유자만)
         if (!company.getOwner().getId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_COMPANY_OWNER);
         }
 
         // Slug 변경 시 중복 확인
@@ -343,7 +343,7 @@ public class CompanyService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.ADMIN_ROLE_REQUIRED);
         }
 
         // 업체 조회
@@ -396,7 +396,7 @@ public class CompanyService {
 
         // 권한 확인
         if (!company.getOwner().getId().equals(user.getId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_COMPANY_OWNER);
         }
 
         // Soft Delete
@@ -417,7 +417,7 @@ public class CompanyService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.ADMIN_ROLE_REQUIRED);
         }
 
         Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
@@ -441,7 +441,7 @@ public class CompanyService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.ADMIN_ROLE_REQUIRED);
         }
 
         Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)
@@ -466,7 +466,7 @@ public class CompanyService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (!admin.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.ADMIN_ROLE_REQUIRED);
         }
 
         Company company = companyRepository.findByUuidAndIsDeletedFalse(companyUuid)

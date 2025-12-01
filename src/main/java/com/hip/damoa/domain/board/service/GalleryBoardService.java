@@ -54,7 +54,7 @@ public class GalleryBoardService {
 
         // 이미지 검증
         if (request.getImageUuids() == null || request.getImageUuids().isEmpty()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.GALLERY_IMAGE_REQUIRED);
         }
 
         // Board 생성
@@ -308,7 +308,7 @@ public class GalleryBoardService {
                 saveGalleryImage(board, imageUuid, displayOrder++);
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid UUID format: {}", uuidString);
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+                throw new BusinessException(ErrorCode.INVALID_UUID_FORMAT);
             }
         }
 

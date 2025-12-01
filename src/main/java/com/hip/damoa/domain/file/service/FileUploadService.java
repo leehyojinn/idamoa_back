@@ -171,7 +171,7 @@ public class FileUploadService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         log.info("metadata: {}",metadata);
         if (!user.getEmail().equals(metadata.get("userEmail"))) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_FILE_OWNER);
         }
 
         // File 엔티티 생성
@@ -227,7 +227,7 @@ public class FileUploadService {
 
         // 권한 확인 (업로더 또는 관리자)
         if (!file.getUploader().getId().equals(user.getId()) && !user.hasRole("ADMIN")) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+            throw new BusinessException(ErrorCode.NOT_FILE_OWNER);
         }
 
         // S3에서 삭제
