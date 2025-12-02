@@ -55,7 +55,10 @@ public class AdminInquiryController {
                     "  - `ANSWERED`: 답변완료\n" +
                     "  - `CLOSED`: 종료\n" +
                     "- `userEmail`: 작성자 이메일\n" +
-                    "- `hasAnswer`: 답변 여부 (true/false)")
+                    "- `hasAnswer`: 답변 여부 (true/false)\n\n" +
+                    "**정렬**\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc")
     @GetMapping
     public ApiResponse<Page<InquiryListResponse>> getInquiries(
             @AuthenticationPrincipal UserDetails userDetails,

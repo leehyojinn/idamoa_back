@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -43,14 +44,16 @@ public class AdminUserController {
                     "- status: 상태별 필터 (ACTIVE, INACTIVE, SUSPENDED, PENDING) (선택)\n" +
                     "- role: 역할별 필터 (USER, COMPANY, ADMIN) (선택)\n\n" +
                     "**정렬**\n" +
-                    "- 기본: createdAt DESC (최신순)")
+                    "- 기본값: created_at DESC (최신순)\n" +
+                    "- 사용법: sort=created_at,desc 또는 sort=created_at,asc\n" +
+                    "- ⚠️ camelCase(createdAt) 사용 불가, snake_case(created_at) 사용")
     @GetMapping
     public ApiResponse<Page<AdminUserListResponse>> getAllUsers(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String role,
-            @PageableDefault(size = 20)
+            @PageableDefault(size = 20, sort = "created_at", direction = Sort.Direction.DESC)
             Pageable pageable) {
         log.info("[관리자] 전체 회원 목록 조회: adminEmail={}, keyword={}, status={}, role={}",
                 userDetails.getUsername(), keyword, status, role);

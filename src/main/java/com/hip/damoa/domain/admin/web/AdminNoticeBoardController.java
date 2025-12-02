@@ -173,7 +173,10 @@ public class AdminNoticeBoardController {
                     "**특징:**\n" +
                     "- 발행되지 않은 게시글도 조회 가능\n" +
                     "- 삭제된 게시글 제외\n" +
-                    "- 고정 여부 필터링 가능")
+                    "- 고정 여부 필터링 가능\n\n" +
+                    "**정렬**\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc")
     @GetMapping("/notice/search")
     public ApiResponse<Page<NoticeBoardResponse>> searchNotices(
             @RequestParam(required = false) String keyword,
@@ -203,7 +206,10 @@ public class AdminNoticeBoardController {
                     "**특징:**\n" +
                     "- 발행되지 않은 게시글도 조회 가능\n" +
                     "- 삭제된 게시글 제외\n" +
-                    "- 이벤트 상태 필터링 가능")
+                    "- 이벤트 상태 필터링 가능\n\n" +
+                    "**정렬**\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc")
     @GetMapping("/event/search")
     public ApiResponse<Page<NoticeBoardResponse>> searchEvents(
             @RequestParam(required = false) String keyword,
@@ -233,7 +239,10 @@ public class AdminNoticeBoardController {
             description = "공지사항 및 이벤트를 통합 검색합니다 (관리자 전용)\n\n" +
                     "**특징:**\n" +
                     "- 모든 게시판 타입 통합 검색\n" +
-                    "- 발행되지 않은 게시글도 조회 가능")
+                    "- 발행되지 않은 게시글도 조회 가능\n\n" +
+                    "**정렬**\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc")
     @GetMapping("/notice-event/search")
     public ApiResponse<Page<NoticeBoardResponse>> searchAll(
             @RequestParam(required = false) String keyword,

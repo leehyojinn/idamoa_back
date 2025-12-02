@@ -64,7 +64,10 @@ public class AdminEstimateRequestController {
             description = "모든 견적 요청을 조회합니다 (삭제 포함).\n\n" +
                     "**검색 필터 (모두 선택사항)**:\n" +
                     "- `keyword`: 제목, 내용 검색\n" +
-                    "- `status`: 상태 필터 (DRAFT, PUBLISHED, CANCELLED, COMPLETED)")
+                    "- `status`: 상태 필터 (DRAFT, PUBLISHED, CANCELLED, COMPLETED)\n\n" +
+                    "**정렬**\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc")
     @GetMapping
     public ApiResponse<Page<EstimateRequestListResponse>> getAllEstimateRequests(
             @AuthenticationPrincipal UserDetails userDetails,

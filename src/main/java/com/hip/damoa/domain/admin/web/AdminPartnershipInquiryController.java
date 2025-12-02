@@ -35,7 +35,11 @@ public class AdminPartnershipInquiryController {
 
     private final PartnershipInquiryService partnershipInquiryService;
 
-    @Operation(summary = "제휴/광고 문의 목록 조회", description = "제휴/광고 문의 목록을 조회합니다. 상태와 유형으로 필터링할 수 있습니다.")
+    @Operation(summary = "제휴/광고 문의 목록 조회",
+            description = "제휴/광고 문의 목록을 조회합니다. 상태와 유형으로 필터링할 수 있습니다.\n\n" +
+                    "**정렬**\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc")
     @GetMapping
     public ApiResponse<Page<PartnershipInquiryListResponse>> getInquiries(
             @AuthenticationPrincipal UserDetails userDetails,

@@ -38,7 +38,11 @@ public class AdminProposalController {
     /**
      * 관리자 - 모든 제안 조회
      */
-    @Operation(summary = "모든 제안 조회 (관리자)", description = "모든 제안을 조회합니다 (삭제된 데이터 포함)")
+    @Operation(summary = "모든 제안 조회 (관리자)",
+            description = "모든 제안을 조회합니다 (삭제된 데이터 포함)\n\n" +
+                    "**정렬**\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc")
     @GetMapping
     public ApiResponse<Page<ProposalResponse>> getAllProposals(
             @AuthenticationPrincipal UserDetails userDetails,

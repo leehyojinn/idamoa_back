@@ -39,7 +39,11 @@ public class AdminQuickConsultationController {
     /**
      * 전체 상담 목록 조회 (관리자 전용)
      */
-    @Operation(summary = "[관리자] 전체 상담 목록 조회", description = "모든 상담 내역을 조회합니다.")
+    @Operation(summary = "[관리자] 전체 상담 목록 조회",
+            description = "모든 상담 내역을 조회합니다.\n\n" +
+                    "**정렬**\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc")
     @GetMapping
     public ApiResponse<Page<QuickConsultationListResponse>> getAllConsultations(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -63,7 +67,11 @@ public class AdminQuickConsultationController {
     /**
      * 상태별 상담 목록 조회 (관리자 전용)
      */
-    @Operation(summary = "[관리자] 상태별 상담 목록 조회", description = "특정 상태의 상담 내역을 조회합니다.")
+    @Operation(summary = "[관리자] 상태별 상담 목록 조회",
+            description = "특정 상태의 상담 내역을 조회합니다.\n\n" +
+                    "**정렬**\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc")
     @GetMapping("/status/{status}")
     public ApiResponse<Page<QuickConsultationListResponse>> getConsultationsByStatus(
             @AuthenticationPrincipal UserDetails userDetails,

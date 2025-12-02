@@ -51,7 +51,9 @@ public class AdminDocumentBoardController {
                     "- keyword: 제목/내용으로 검색 (선택)\n" +
                     "- categoryId: 카테고리별 필터 (선택)\n\n" +
                     "**정렬**\n" +
-                    "- 기본: publishedAt DESC (최신순)")
+                    "- 기본값: publishedAt DESC (최신순)\n" +
+                    "- 사용법: sort=publishedAt,desc 또는 sort=publishedAt,asc\n" +
+                    "- 기타 옵션: createdAt, viewCount, likeCount")
     @GetMapping
     public ApiResponse<Page<DocumentResponse>> getAllDocuments(
             @AuthenticationPrincipal UserDetails userDetails,

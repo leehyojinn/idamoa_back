@@ -56,7 +56,6 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         AND (CAST(:serviceAreasSize AS INTEGER) = 0 OR c.service_areas && CAST(:serviceAreas AS text[]))
         AND (CAST(:tagsSize AS INTEGER) = 0 OR c.tags && CAST(:tags AS text[]))
         AND (CAST(:filterCount AS INTEGER) = 0 OR cfo.filter_option_id IN (:filterOptionIds))
-        ORDER BY c.created_at DESC
         """,
         countQuery = """
         SELECT COUNT(DISTINCT c.id) FROM companies c

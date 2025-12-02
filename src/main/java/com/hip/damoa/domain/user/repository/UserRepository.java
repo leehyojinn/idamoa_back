@@ -60,7 +60,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
              LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')))
         AND (:status IS NULL OR :status = '' OR u.status = :status)
         AND (:role IS NULL OR :role = '' OR :role = ANY(u.roles))
-        ORDER BY u.created_at DESC
         """,
         countQuery = """
         SELECT COUNT(*) FROM users u
