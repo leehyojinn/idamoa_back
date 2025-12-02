@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -51,7 +50,7 @@ public class AdminUserController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String role,
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            @PageableDefault(size = 20)
             Pageable pageable) {
         log.info("[관리자] 전체 회원 목록 조회: adminEmail={}, keyword={}, status={}, role={}",
                 userDetails.getUsername(), keyword, status, role);
