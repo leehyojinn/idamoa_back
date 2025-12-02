@@ -68,7 +68,10 @@ public class AdminCompanyController {
                     "**검색 필터 (모두 선택사항)**:\n" +
                     "- `keyword`: 업체명, 이메일, 전화번호 검색\n" +
                     "- `status`: 상태 필터 (ACTIVE, INACTIVE, SUSPENDED)\n" +
-                    "- `isVerified`: 인증 여부 (true/false)")
+                    "- `isVerified`: 인증 여부 (true/false)\n\n" +
+                    "**정렬**\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc")
     @GetMapping
     public ApiResponse<Page<CompanyListResponse>> getAllCompanies(
             @AuthenticationPrincipal UserDetails userDetails,

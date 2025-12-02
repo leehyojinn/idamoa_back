@@ -40,8 +40,10 @@ public class AdminPlannerApplicationController {
      */
     @Operation(summary = "[관리자] 전체 플래너 신청서 목록 조회",
             description = "모든 플래너 신청서를 조회합니다.\n\n" +
-                    "- 상태별 필터링 가능\n" +
-                    "- 최신순 정렬")
+                    "- 상태별 필터링 가능\n\n" +
+                    "**정렬**\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc")
     @GetMapping
     public ApiResponse<Page<PlannerApplicationListResponse>> getAllApplications(
             @AuthenticationPrincipal UserDetails userDetails,
