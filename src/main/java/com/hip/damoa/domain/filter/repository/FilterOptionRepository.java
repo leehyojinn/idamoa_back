@@ -16,4 +16,12 @@ public interface FilterOptionRepository extends JpaRepository<FilterOption, Long
 
     // FilterService용 추가 메서드 (정렬 포함)
     List<FilterOption> findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(FilterCategory category);
+
+    // 계층 트리 조회용 메서드
+    List<FilterOption> findByParentAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(FilterOption parent);
+
+    List<FilterOption> findByCategoryAndParentIsNullAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(FilterCategory category);
+
+    // 마이그레이션용 전체 옵션 조회
+    List<FilterOption> findByIsDeletedFalseOrderByCategoryIdAscDisplayOrderAsc();
 }
