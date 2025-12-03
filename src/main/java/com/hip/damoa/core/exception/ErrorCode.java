@@ -200,6 +200,7 @@ public enum ErrorCode {
     FILTER_ENTITY_TYPE_MISMATCH(HttpStatus.BAD_REQUEST, "FC010", "필터 엔티티 타입이 일치하지 않습니다"),
     FILTER_INVALID_METADATA(HttpStatus.BAD_REQUEST, "FC011", "유효하지 않은 필터 메타데이터입니다"),
     FILTER_BOARD_TYPES_REQUIRED(HttpStatus.BAD_REQUEST, "FC012", "BOARD 타입 필터는 board_types 메타데이터가 필수입니다"),
+    FILTER_SAME_OPTION_MIGRATION(HttpStatus.BAD_REQUEST, "FC013", "동일한 필터 옵션으로는 마이그레이션할 수 없습니다"),
 
     // Notification
     TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "NT001", "알림 템플릿을 찾을 수 없습니다"),

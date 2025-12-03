@@ -84,4 +84,55 @@ public class FilterController {
         List<FilterCategoryResponse> categories = filterService.getCategoriesByFilterType(filterType);
         return ApiResponse.success(categories);
     }
+
+    @Operation(
+            summary = "필터 계층 트리 조회",
+            description = "특정 카테고리의 필터 옵션을 계층 트리 구조로 조회합니다. " +
+                    "parent_id 기반으로 루트 옵션부터 모든 하위 옵션을 재귀적으로 반환합니다.\n\n" +
+                    "**응답 구조 예시 (business_type 카테고리)**:\n" +
+                    "```json\n" +
+                    "[\n" +
+                    "  {\n" +
+                    "    \"id\": 1,\n" +
+                    "    \"code\": \"hospital\",\n" +
+                    "    \"name\": \"병원 인테리어\",\n" +
+                    "    \"depth\": 0,\n" +
+                    "    \"children\": [\n" +
+                    "      {\n" +
+                    "        \"id\": 2,\n" +
+                    "        \"code\": \"hospital_clinic\",\n" +
+                    "        \"name\": \"의원급\",\n" +
+                    "        \"depth\": 1,\n" +
+                    "        \"children\": [\n" +
+                    "          { \"id\": 3, \"code\": \"clinic_dermatology\", \"name\": \"피부과\", \"depth\": 2, \"children\": [] }\n" +
+                    "        ]\n" +
+                    "      }\n" +
+                    "    ]\n" +
+                    "  },\n" +
+                    "  { \"id\": 10, \"code\": \"cafe\", \"name\": \"카페 인테리어\", \"depth\": 0, \"children\": [...] }\n" +
+                    "]\n" +
+                    "```"
+    )
+    @GetMapping("/{categoryCode}/tree")
+    public ApiResponse<List<FilterOptionResponse>> getFilterTree(
+            @Parameter(description = "카테고리 코드 (예: business_type, region)", required = true)
+            @PathVariable String categoryCode) {
+
+        List<FilterOptionResponse> tree = filterService.getFilterTree(categoryCode);
+        return ApiResponse.success(tree);
+    }
+
+    @Operation(
+            summary = "필터 옵션의 자식 옵션 조회",
+            description = "특정 필터 옵션의 직계 자식 옵션만 조회합니다. " +
+                    "Lazy loading 방식으로 필요할 때만 자식을 조회할 수 있습니다."
+    )
+    @GetMapping("/options/{optionId}/children")
+    public ApiResponse<List<FilterOptionResponse>> getChildOptions(
+            @Parameter(description = "부모 필터 옵션 ID", required = true)
+            @PathVariable Long optionId) {
+
+        List<FilterOptionResponse> children = filterService.getChildOptions(optionId);
+        return ApiResponse.success(children);
+    }
 }

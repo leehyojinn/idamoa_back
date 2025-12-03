@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,6 +31,7 @@ public class FilterService {
 
     /**
      * 모든 활성 카테고리와 옵션 조회
+     * supportsHierarchy가 true인 카테고리는 트리 구조로, false인 카테고리는 평면 구조로 반환
      */
     @Transactional(readOnly = true)
     public List<FilterCategoryResponse> getAllActiveCategories() {
@@ -39,12 +41,23 @@ public class FilterService {
 
         List<FilterCategoryResponse> response = categories.stream()
                 .map(category -> {
-                    List<FilterOption> options = filterOptionRepository
-                            .findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(category);
+                    List<FilterOptionResponse> optionResponses;
 
-                    List<FilterOptionResponse> optionResponses = options.stream()
-                            .map(FilterOptionResponse::from)
-                            .collect(Collectors.toList());
+                    if (Boolean.TRUE.equals(category.getSupportsHierarchy())) {
+                        // 계층 구조 지원 카테고리: 트리 형태로 반환
+                        List<FilterOption> rootOptions = filterOptionRepository
+                                .findByCategoryAndParentIsNullAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(category);
+                        optionResponses = rootOptions.stream()
+                                .map(this::buildTreeNode)
+                                .collect(Collectors.toList());
+                    } else {
+                        // 일반 카테고리: 평면 구조로 반환
+                        List<FilterOption> options = filterOptionRepository
+                                .findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(category);
+                        optionResponses = options.stream()
+                                .map(FilterOptionResponse::from)
+                                .collect(Collectors.toList());
+                    }
 
                     return FilterCategoryResponse.from(category, optionResponses);
                 })
@@ -231,6 +244,81 @@ public class FilterService {
                 .collect(Collectors.toList());
 
         log.info("자료실 필터 목록 조회 완료: {}개 카테고리", response.size());
+        return response;
+    }
+
+    /**
+     * 카테고리 코드로 계층 트리 조회
+     * 루트 옵션부터 시작하여 모든 하위 옵션을 계층 구조로 반환
+     */
+    @Transactional(readOnly = true)
+    public List<FilterOptionResponse> getFilterTree(String categoryCode) {
+        log.info("필터 트리 조회 시작: categoryCode={}", categoryCode);
+
+        FilterCategory category = filterCategoryRepository.findByCode(categoryCode)
+                .orElseThrow(() -> {
+                    log.error("필터 카테고리를 찾을 수 없음: categoryCode={}", categoryCode);
+                    return new BusinessException(ErrorCode.FILTER_CATEGORY_NOT_FOUND);
+                });
+
+        if (!category.getIsActive()) {
+            log.error("비활성화된 필터 카테고리: categoryCode={}", categoryCode);
+            throw new BusinessException(ErrorCode.FILTER_CATEGORY_NOT_FOUND);
+        }
+
+        // 루트 레벨 옵션 조회 (parent가 null인 옵션들)
+        List<FilterOption> rootOptions = filterOptionRepository
+                .findByCategoryAndParentIsNullAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(category);
+
+        // 각 루트 옵션에 대해 재귀적으로 자식 트리 구성
+        List<FilterOptionResponse> treeResponse = rootOptions.stream()
+                .map(this::buildTreeNode)
+                .collect(Collectors.toList());
+
+        log.info("필터 트리 조회 완료: categoryCode={}, 루트 옵션 개수={}", categoryCode, treeResponse.size());
+        return treeResponse;
+    }
+
+    /**
+     * 재귀적으로 필터 옵션 트리 노드 구성
+     */
+    private FilterOptionResponse buildTreeNode(FilterOption option) {
+        // 해당 옵션의 자식 옵션 조회
+        List<FilterOption> children = filterOptionRepository
+                .findByParentAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(option);
+
+        // 자식이 있으면 재귀적으로 트리 구성
+        List<FilterOptionResponse> childResponses = new ArrayList<>();
+        if (!children.isEmpty()) {
+            childResponses = children.stream()
+                    .map(this::buildTreeNode)
+                    .collect(Collectors.toList());
+        }
+
+        return FilterOptionResponse.fromWithChildren(option, childResponses);
+    }
+
+    /**
+     * 특정 필터 옵션의 직계 자식 옵션만 조회
+     */
+    @Transactional(readOnly = true)
+    public List<FilterOptionResponse> getChildOptions(Long parentOptionId) {
+        log.info("자식 필터 옵션 조회 시작: parentOptionId={}", parentOptionId);
+
+        FilterOption parentOption = filterOptionRepository.findById(parentOptionId)
+                .orElseThrow(() -> {
+                    log.error("부모 필터 옵션을 찾을 수 없음: parentOptionId={}", parentOptionId);
+                    return new BusinessException(ErrorCode.FILTER_OPTION_NOT_FOUND);
+                });
+
+        List<FilterOption> children = filterOptionRepository
+                .findByParentAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(parentOption);
+
+        List<FilterOptionResponse> response = children.stream()
+                .map(FilterOptionResponse::from)
+                .collect(Collectors.toList());
+
+        log.info("자식 필터 옵션 조회 완료: parentOptionId={}, 자식 개수={}", parentOptionId, response.size());
         return response;
     }
 }

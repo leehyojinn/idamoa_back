@@ -351,4 +351,71 @@ public class AdminFilterController {
         List<FilterOptionResponse> options = adminFilterService.reorderFilterOptions(request);
         return ApiResponse.success(options);
     }
+
+    // ==================== 필터 옵션 마이그레이션 ====================
+
+    @Operation(summary = "마이그레이션용 전체 필터 옵션 목록 조회",
+            description = """
+            필터 옵션 마이그레이션을 위한 전체 옵션 목록을 조회합니다.
+
+            **용도**
+            - 마이그레이션 드롭다운 메뉴용으로 모든 필터 옵션을 조회합니다
+            - 카테고리별로 정렬되어 반환됩니다
+            """)
+    @GetMapping("/options/all")
+    public ApiResponse<List<FilterOptionResponse>> getAllFilterOptionsForMigration() {
+        log.info("마이그레이션용 전체 필터 옵션 목록 조회");
+        List<FilterOptionResponse> options = adminFilterService.getAllFilterOptionsForMigration();
+        return ApiResponse.success(options);
+    }
+
+    @Operation(summary = "필터 옵션 마이그레이션 미리보기",
+            description = """
+            필터 옵션 마이그레이션 실행 전에 영향받는 데이터를 미리 확인합니다.
+
+            **미리보기 정보**
+            - 소스/타겟 옵션의 상세 정보
+            - 영향받는 업체/게시글 수
+            - 중복으로 인해 건너뛸 업체/게시글 수
+            - 영향받는 업체 샘플 목록 (최대 10개)
+
+            **마이그레이션이란?**
+            - 기존 필터 옵션(소스)을 사용하는 모든 데이터를 새 필터 옵션(타겟)으로 변경
+            - 소스 옵션과 타겟 옵션을 모두 가진 데이터는 중복으로 처리되어 건너뜀
+            """)
+    @PostMapping("/options/migrate/preview")
+    public ApiResponse<FilterMigratePreviewResponse> previewFilterMigration(
+            @Valid @RequestBody FilterMigrateRequest request) {
+        log.info("필터 옵션 마이그레이션 미리보기: sourceOptionId={}, targetOptionId={}",
+                request.getSourceOptionId(), request.getTargetOptionId());
+        FilterMigratePreviewResponse preview = adminFilterService.previewFilterMigration(request);
+        return ApiResponse.success(preview);
+    }
+
+    @Operation(summary = "필터 옵션 마이그레이션 실행",
+            description = """
+            필터 옵션 마이그레이션을 실행합니다.
+
+            **마이그레이션 과정**
+            1. 소스 옵션을 사용하는 모든 업체/게시글을 타겟 옵션으로 변경
+            2. 이미 타겟 옵션을 가진 경우 중복 처리 (소스 레코드 삭제)
+            3. 선택적으로 소스 옵션 비활성화 또는 삭제
+
+            **옵션 설정**
+            - deactivateSource: 마이그레이션 후 소스 옵션 비활성화 (기본값: false)
+            - deleteSource: 마이그레이션 후 소스 옵션 삭제 (기본값: false)
+
+            **주의사항**
+            - 이 작업은 되돌릴 수 없습니다
+            - 먼저 미리보기 API로 영향 범위를 확인하세요
+            """)
+    @PostMapping("/options/migrate")
+    public ApiResponse<FilterMigrateResponse> migrateFilterOption(
+            @Valid @RequestBody FilterMigrateRequest request) {
+        log.info("필터 옵션 마이그레이션 실행: sourceOptionId={}, targetOptionId={}, deactivateSource={}, deleteSource={}",
+                request.getSourceOptionId(), request.getTargetOptionId(),
+                request.getDeactivateSource(), request.getDeleteSource());
+        FilterMigrateResponse result = adminFilterService.migrateFilterOption(request);
+        return ApiResponse.success(result);
+    }
 }

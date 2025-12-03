@@ -26,13 +26,53 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: 필터 관리자 기능 리팩토링 완료
-**마지막 업데이트**: 2025-11-26
+**프로젝트 단계**: 지역 필터 마이그레이션 완료
+**마지막 업데이트**: 2025-12-03
 **다음 우선순위**: 필터 기능 프론트엔드 연동 및 테스트
 
 ---
 
 ## 📝 작업 로그
+
+### 2025-12-03
+
+#### ✅ 완료 (Completed)
+
+**[FILTER-REGION-001] 지역 필터 마이그레이션 완료** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-03
+- **작업 내용**:
+  - V54: 회사 지역 필터 재매핑 (tags 배열 기반)
+    - 17개 지역 태그(seoul, gyeonggi 등) → 한글 필터명(서울, 경기 등) 매핑
+    - 기존 tags 배열에서 지역 태그 추출하여 company_filter_options 연결
+  - V55: location_shortname 데이터 마이그레이션
+    - V44 덤프 파일에서 566개 UUID-location_shortname 매핑 추출
+    - 레거시 location_shortname 데이터를 지역 필터로 변환
+    - companies.uuid 기준으로 조인하여 매핑 생성
+
+**마이그레이션 결과**:
+- 총 지역 필터 매핑: **1,607개**
+- 지역 필터 연결된 회사: **565개**
+- 지역별 업체 수:
+  | 지역 | 업체 수 | 지역 | 업체 수 |
+  |------|---------|------|---------|
+  | 서울 | 217 | 세종 | 79 |
+  | 경기 | 138 | 강원 | 82 |
+  | 인천 | 95 | 충북 | 79 |
+  | 부산 | 125 | 충남 | 86 |
+  | 대구 | 98 | 전북 | 83 |
+  | 광주 | 91 | 전남 | 79 |
+  | 대전 | 97 | 경북 | 83 |
+  | 울산 | 0 | 경남 | 90 |
+  |      |     | 제주 | 85 |
+
+**생성된 파일**:
+- `src/main/resources/db/migration/V54__Remap_company_region_filters.sql`
+- `src/main/resources/db/migration/V55__Map_location_shortname_to_region_filters.sql`
+
+**빌드/마이그레이션 테스트**: 성공 ✅
+
+---
 
 ### 2025-11-26
 
@@ -2588,3 +2628,63 @@ Database
    - Service에서 검증 후 Enum 전달 방식으로 개선
 
 **빌드 상태**: ✅ 컴파일 성공
+
+---
+
+### 2025-12-03
+
+#### ✅ 완료 (Completed)
+
+**[PLATFORM-001] 통합 인테리어 플랫폼 전환 - 업종(business_type) 필터 시스템 구축** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-03
+- **작업 내용**:
+  - 병원 중심 시스템 → 통합 인테리어 플랫폼("인테리어다모아") 전환 기반 마련
+  - parent_id 기반 계층적 업종 분류 체계 구축
+  - 기존 병원 데이터를 새 업종 필터로 자동 마이그레이션
+
+**생성 파일 (2개)**:
+1. `src/main/resources/db/migration/V52__Add_business_type_filter.sql`
+   - 업종(business_type) 카테고리 생성 (계층 구조 지원, max_depth=3)
+   - Level 0: 6개 업종 대분류 (병원, 카페, 사무실, 주거, 교육, 상업)
+   - Level 1: 각 업종별 세부 분류 (의원급/병원급, 스페셜티/디저트 카페 등)
+   - Level 2: 진료과 세부 분류 (피부과, 치과, 내과 등 10개)
+
+2. `src/main/resources/db/migration/V53__Migrate_existing_hospital_data.sql`
+   - department 필터 보유 업체에 hospital 필터 자동 추가
+   - 기존 진료과별 세부 매핑 (피부과→clinic_dermatology 등)
+   - 중간 계층(hospital_clinic) 자동 추가
+
+**주요 구현 사항**:
+1. **parent_id 기반 계층 구조**:
+   - FilterOption.parent_id를 활용한 계층 구조
+   - depth 필드로 레벨 구분 (0=대분류, 1=중분류, 2=세부)
+   - path 필드로 전체 경로 저장 (/hospital/clinic/dermatology)
+
+2. **업종 대분류 (depth=0)**:
+   - hospital (병원 인테리어)
+   - cafe (카페 인테리어)
+   - office (사무실 인테리어)
+   - residential (주거 인테리어)
+   - education (교육시설 인테리어)
+   - commercial (상업시설 인테리어)
+
+3. **병원 세부 분류 (depth=1,2)**:
+   - hospital_clinic (의원급) → clinic_dermatology, clinic_dentistry 등
+   - hospital_general (병원급)
+   - hospital_oriental (한방병원)
+
+4. **데이터 마이그레이션**:
+   - 기존 병원 업체 자동 매핑 (department 필터 기반)
+   - 진료과별 세부 필터 자동 추가
+   - 중복 방지 로직 (NOT EXISTS)
+
+**빌드 상태**: ✅ 컴파일 성공
+
+**계획 문서**: `C:\Users\USER\.claude\plans\steady-crafting-moth.md`
+
+**다음 단계** (선택사항):
+- FilterService에 계층 트리 조회 메서드 추가
+- FilterController에 API 엔드포인트 추가 (GET /api/filters/tree/{categoryCode})
+- 프론트엔드 업종 선택 UI 개발 (회원가입, 검색 페이지)
+

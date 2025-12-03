@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -29,6 +31,13 @@ public class FilterOptionResponse {
     private Integer usageCount;
     private Boolean isActive;
 
+    // 계층 구조 정보
+    private Integer depth;
+    private Long parentId;
+    private String path;
+    @Builder.Default
+    private List<FilterOptionResponse> children = new ArrayList<>();
+
     // 카테고리 정보
     private Long categoryId;
     private String categoryCode;
@@ -47,9 +56,26 @@ public class FilterOptionResponse {
                 .color(option.getColor())
                 .usageCount(option.getUsageCount())
                 .isActive(option.getIsActive())
+                .depth(option.getDepth())
+                .parentId(option.getParent() != null ? option.getParent().getId() : null)
+                .path(option.getPath())
+                .children(new ArrayList<>())
                 .categoryId(option.getCategory() != null ? option.getCategory().getId() : null)
                 .categoryCode(option.getCategory() != null ? option.getCategory().getCode() : null)
                 .categoryName(option.getCategory() != null ? option.getCategory().getName() : null)
                 .build();
+    }
+
+    /**
+     * 계층 구조용 변환 (children 포함)
+     */
+    public static FilterOptionResponse fromWithChildren(FilterOption option, List<FilterOptionResponse> children) {
+        FilterOptionResponse response = from(option);
+        response.children = children != null ? children : new ArrayList<>();
+        return response;
+    }
+
+    public void setChildren(List<FilterOptionResponse> children) {
+        this.children = children;
     }
 }

@@ -4,6 +4,8 @@ import com.hip.damoa.core.exception.BusinessException;
 import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.domain.admin.web.dto.*;
 import com.hip.damoa.domain.board.repository.BoardRepository;
+import com.hip.damoa.domain.company.model.CompanyFilterOption;
+import com.hip.damoa.domain.company.repository.CompanyFilterOptionRepository;
 import com.hip.damoa.domain.company.repository.CompanyRepository;
 import com.hip.damoa.domain.filter.model.FilterCategory;
 import com.hip.damoa.domain.filter.model.FilterOption;
@@ -21,7 +23,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,6 +43,7 @@ public class AdminFilterService {
     private final FilterOptionRepository filterOptionRepository;
     private final CompanyRepository companyRepository;
     private final BoardRepository boardRepository;
+    private final CompanyFilterOptionRepository companyFilterOptionRepository;
 
     // ==================== 필터 카테고리 관리 ====================
 
@@ -556,5 +561,171 @@ public class AdminFilterService {
 
     private Specification<FilterOption> optionIsActive(Boolean isActive) {
         return (root, query, cb) -> cb.equal(root.get("isActive"), isActive);
+    }
+
+    // ==================== 필터 옵션 마이그레이션 ====================
+
+    /**
+     * 필터 옵션 마이그레이션 미리보기
+     * 실제 마이그레이션 전에 영향받는 업체/게시글 수를 미리 확인
+     */
+    @Transactional(readOnly = true)
+    public FilterMigratePreviewResponse previewFilterMigration(FilterMigrateRequest request) {
+        log.info("필터 옵션 마이그레이션 미리보기: sourceOptionId={}, targetOptionId={}",
+                request.getSourceOptionId(), request.getTargetOptionId());
+
+        // 동일한 옵션 체크
+        if (request.getSourceOptionId().equals(request.getTargetOptionId())) {
+            throw new BusinessException(ErrorCode.FILTER_SAME_OPTION_MIGRATION);
+        }
+
+        FilterOption sourceOption = filterOptionRepository.findById(request.getSourceOptionId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILTER_OPTION_NOT_FOUND));
+
+        FilterOption targetOption = filterOptionRepository.findById(request.getTargetOptionId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILTER_OPTION_NOT_FOUND));
+
+        // 영향받는 업체 수
+        int affectedCompanyCount = companyFilterOptionRepository
+                .countDistinctCompanyByFilterOption(sourceOption);
+
+        // 중복 업체 수 (이미 타겟 옵션을 가진 경우)
+        List<Long> duplicateCompanyIds = companyFilterOptionRepository
+                .findCompanyIdsWithBothOptions(sourceOption, targetOption);
+
+        // 샘플 업체 조회
+        List<CompanyFilterOption> samples = companyFilterOptionRepository
+                .findByFilterOptionWithCompany(sourceOption, PageRequest.of(0, 10));
+
+        List<FilterMigratePreviewResponse.AffectedCompanyInfo> companySamples = samples.stream()
+                .map(cfo -> FilterMigratePreviewResponse.AffectedCompanyInfo.builder()
+                        .id(cfo.getCompany().getId())
+                        .name(cfo.getCompany().getName())
+                        .hasDuplicate(duplicateCompanyIds.contains(cfo.getCompany().getId()))
+                        .build())
+                .collect(Collectors.toList());
+
+        log.info("마이그레이션 미리보기 완료: affectedCompanies={}, duplicates={}",
+                affectedCompanyCount, duplicateCompanyIds.size());
+
+        return FilterMigratePreviewResponse.builder()
+                .sourceOption(FilterMigratePreviewResponse.OptionInfo.builder()
+                        .id(sourceOption.getId())
+                        .code(sourceOption.getCode())
+                        .name(sourceOption.getName())
+                        .categoryCode(sourceOption.getCategory().getCode())
+                        .categoryName(sourceOption.getCategory().getName())
+                        .usageCount(sourceOption.getUsageCount())
+                        .build())
+                .targetOption(FilterMigratePreviewResponse.OptionInfo.builder()
+                        .id(targetOption.getId())
+                        .code(targetOption.getCode())
+                        .name(targetOption.getName())
+                        .categoryCode(targetOption.getCategory().getCode())
+                        .categoryName(targetOption.getCategory().getName())
+                        .usageCount(targetOption.getUsageCount())
+                        .build())
+                .affectedCompanyCount(affectedCompanyCount)
+                .affectedBoardCount(0) // TODO: board_filter_options 구현 필요
+                .duplicateCompanyCount(duplicateCompanyIds.size())
+                .duplicateBoardCount(0) // TODO: board_filter_options 구현 필요
+                .affectedCompanySamples(companySamples)
+                .build();
+    }
+
+    /**
+     * 필터 옵션 마이그레이션 실행
+     */
+    @Transactional
+    public FilterMigrateResponse migrateFilterOption(FilterMigrateRequest request) {
+        long startTime = System.currentTimeMillis();
+
+        log.info("필터 옵션 마이그레이션 시작: sourceOptionId={}, targetOptionId={}",
+                request.getSourceOptionId(), request.getTargetOptionId());
+
+        // 동일한 옵션 체크
+        if (request.getSourceOptionId().equals(request.getTargetOptionId())) {
+            throw new BusinessException(ErrorCode.FILTER_SAME_OPTION_MIGRATION);
+        }
+
+        FilterOption sourceOption = filterOptionRepository.findById(request.getSourceOptionId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILTER_OPTION_NOT_FOUND));
+
+        FilterOption targetOption = filterOptionRepository.findById(request.getTargetOptionId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILTER_OPTION_NOT_FOUND));
+
+        // 중복 업체 ID 조회
+        List<Long> duplicateCompanyIds = companyFilterOptionRepository
+                .findCompanyIdsWithBothOptions(sourceOption, targetOption);
+
+        // 중복이 아닌 업체들의 source 옵션을 target으로 변경
+        int migratedCompanyCount = companyFilterOptionRepository
+                .bulkUpdateFilterOption(sourceOption, targetOption,
+                        duplicateCompanyIds.isEmpty() ? Collections.singletonList(-1L) : duplicateCompanyIds);
+
+        // 중복인 경우 source 옵션 레코드 삭제
+        int deletedCount = 0;
+        if (!duplicateCompanyIds.isEmpty()) {
+            deletedCount = companyFilterOptionRepository
+                    .bulkDeleteByFilterOptionAndCompanyIds(sourceOption, duplicateCompanyIds);
+        }
+
+        // usage_count 업데이트
+        int totalMigrated = migratedCompanyCount + deletedCount;
+        sourceOption.setUsageCount(sourceOption.getUsageCount() - totalMigrated);
+        targetOption.setUsageCount(targetOption.getUsageCount() + migratedCompanyCount);
+        filterOptionRepository.save(sourceOption);
+        filterOptionRepository.save(targetOption);
+
+        // 선택적으로 source 옵션 비활성화
+        if (Boolean.TRUE.equals(request.getDeactivateSource())) {
+            sourceOption.deactivate();
+            filterOptionRepository.save(sourceOption);
+            log.info("소스 옵션 비활성화: optionId={}", sourceOption.getId());
+        }
+
+        // 선택적으로 source 옵션 soft delete
+        boolean sourceDeleted = false;
+        if (Boolean.TRUE.equals(request.getDeleteSource())) {
+            sourceOption.softDelete();
+            filterOptionRepository.save(sourceOption);
+            sourceDeleted = true;
+            log.info("소스 옵션 삭제: optionId={}", sourceOption.getId());
+        }
+
+        long processingTimeMs = System.currentTimeMillis() - startTime;
+
+        log.info("필터 옵션 마이그레이션 완료: migratedCount={}, duplicateCount={}, deletedCount={}, processingTime={}ms",
+                migratedCompanyCount, duplicateCompanyIds.size(), deletedCount, processingTimeMs);
+
+        return FilterMigrateResponse.builder()
+                .sourceOptionCode(sourceOption.getCode())
+                .sourceOptionName(sourceOption.getName())
+                .targetOptionCode(targetOption.getCode())
+                .targetOptionName(targetOption.getName())
+                .migratedCompanyCount(migratedCompanyCount)
+                .migratedBoardCount(0) // TODO: board_filter_options 구현 필요
+                .skippedCompanyCount(duplicateCompanyIds.size())
+                .skippedBoardCount(0) // TODO: board_filter_options 구현 필요
+                .sourceDeactivated(Boolean.TRUE.equals(request.getDeactivateSource()))
+                .sourceDeleted(sourceDeleted)
+                .completedAt(LocalDateTime.now())
+                .processingTimeMs(processingTimeMs)
+                .build();
+    }
+
+    /**
+     * 모든 필터 옵션 목록 조회 (마이그레이션용 드롭다운)
+     */
+    @Transactional(readOnly = true)
+    public List<FilterOptionResponse> getAllFilterOptionsForMigration() {
+        log.info("마이그레이션용 전체 필터 옵션 목록 조회");
+
+        List<FilterOption> options = filterOptionRepository
+                .findByIsDeletedFalseOrderByCategoryIdAscDisplayOrderAsc();
+
+        return options.stream()
+                .map(option -> FilterOptionResponse.from(option, option.getChildren().size()))
+                .collect(Collectors.toList());
     }
 }
