@@ -144,6 +144,39 @@ public enum ErrorCode {
     IDEMPOTENCY_KEY_ALREADY_EXISTS(HttpStatus.CONFLICT, "PY005", "이미 존재하는 멱등성 키입니다"),
     PAYMENT_REQUIRED(HttpStatus.PAYMENT_REQUIRED, "PY006", "결제가 필요합니다"),
     PAYMENT_NOT_COMPLETED(HttpStatus.BAD_REQUEST, "PY007", "완료되지 않은 결제입니다"),
+    PAYMENT_AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST, "PY008", "결제 금액이 일치하지 않습니다"),
+
+    // Credit
+    CREDIT_NOT_FOUND(HttpStatus.NOT_FOUND, "CR001", "크레딧 정보를 찾을 수 없습니다"),
+    INVALID_CREDIT_PACKAGE(HttpStatus.BAD_REQUEST, "CR002", "유효하지 않은 충전 패키지입니다"),
+    CREDIT_PURCHASE_FAILED(HttpStatus.BAD_REQUEST, "CR003", "크레딧 충전에 실패했습니다"),
+    CREDIT_REFUND_FAILED(HttpStatus.BAD_REQUEST, "CR004", "크레딧 환불에 실패했습니다"),
+    REFUND_AMOUNT_TOO_SMALL(HttpStatus.BAD_REQUEST, "CR005", "최소 환불 금액은 1,000원입니다"),
+    REFUND_EXCEEDS_BALANCE(HttpStatus.BAD_REQUEST, "CR006", "환불 금액이 잔액을 초과합니다"),
+    CREDIT_ALREADY_REFUNDED(HttpStatus.CONFLICT, "CR007", "이미 환불된 크레딧입니다"),
+    PAYMENT_SESSION_EXPIRED(HttpStatus.BAD_REQUEST, "CR008", "결제 세션이 만료되었습니다"),
+    REFUND_NOT_FOUND(HttpStatus.NOT_FOUND, "CR013", "환불 정보를 찾을 수 없습니다"),
+    REFUND_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "CR014", "이미 처리된 환불 요청입니다"),
+    CREDIT_PACKAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CR009", "크레딧 패키지를 찾을 수 없습니다"),
+    CREDIT_PACKAGE_ALREADY_EXISTS(HttpStatus.CONFLICT, "CR010", "동일한 단위 금액의 패키지가 이미 존재합니다"),
+    BONUS_NOT_APPLICABLE(HttpStatus.BAD_REQUEST, "CR011", "3만원 미만 패키지는 보너스를 적용할 수 없습니다"),
+    INVALID_QUANTITY(HttpStatus.BAD_REQUEST, "CR012", "수량은 1 이상이어야 합니다"),
+
+    // Company
+    COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "CO001", "업체를 찾을 수 없습니다"),
+    COMPANY_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CO002", "업체 접근 권한이 없습니다"),
+
+    // Ad Campaign
+    AD_CAMPAIGN_NOT_FOUND(HttpStatus.NOT_FOUND, "AD001", "광고 캠페인을 찾을 수 없습니다"),
+    AD_CAMPAIGN_ALREADY_ACTIVE(HttpStatus.CONFLICT, "AD002", "이미 활성 캠페인이 존재합니다"),
+    AD_CAMPAIGN_EXPIRED(HttpStatus.BAD_REQUEST, "AD003", "만료된 캠페인입니다"),
+    AD_MIN_DAILY_AMOUNT_NOT_MET(HttpStatus.BAD_REQUEST, "AD004", "최소 일당 금액(500원)을 충족하지 않습니다"),
+    AD_INVALID_DURATION(HttpStatus.BAD_REQUEST, "AD005", "유효하지 않은 광고 기간입니다. 7일, 14일, 30일 중 선택해주세요"),
+    AD_CAMPAIGN_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "AD006", "활성 상태가 아닌 캠페인입니다"),
+    AD_PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "AD007", "광고 결제 내역을 찾을 수 없습니다"),
+    AD_CAMPAIGN_CANNOT_BE_CANCELLED(HttpStatus.BAD_REQUEST, "AD008", "캠페인을 취소할 수 없습니다"),
+    AD_CAMPAIGN_ALREADY_EXISTS(HttpStatus.CONFLICT, "AD009", "이미 해당 업체의 캠페인이 존재합니다"),
+    AD_CAMPAIGN_ALREADY_ENDED(HttpStatus.BAD_REQUEST, "AD010", "이미 종료된 캠페인입니다"),
 
     // Invoice
     INVOICE_NOT_FOUND(HttpStatus.NOT_FOUND, "IV001", "청구서를 찾을 수 없습니다"),

@@ -481,7 +481,8 @@ public class CompanyService {
     }
 
     /**
-     * 업체 검색 (공개용, 필터링 + 정렬)
+     * 업체 검색 (공개용, 필터링 + 광고 우선순위 정렬)
+     * 정렬 순서: 광고 우선순위 → 좋아요 → 리뷰 → 조회수
      * 필터가 1순위로 적용되고, 키워드는 필터링된 결과 내에서 검색
      */
     @Transactional(readOnly = true)
@@ -506,27 +507,21 @@ public class CompanyService {
             });
         }
 
-        // Native Query용 정렬 생성 (DB 컬럼명 사용)
-        Pageable nativeQueryPageable = createNativeQuerySortedPageable(pageable, searchRequest.getSortBy());
+        // 광고 우선순위 정렬을 사용하므로 페이징 정보만 전달 (정렬은 쿼리에서 처리)
+        Pageable pageableOnly = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
 
         Page<Company> results;
 
         // 필터가 없으면 전체 조회 (키워드 검색만 적용)
-        if (filterOptionsByCategory.isEmpty()) {
-            log.info("필터가 없어 전체 업체를 조회합니다. 키워드: {}", searchRequest.getKeyword());
+        if (filterOptionsByCategory.isEmpty() &&
+            (searchRequest.getKeyword() == null || searchRequest.getKeyword().isEmpty()) &&
+            searchRequest.getMinRating() == null) {
+            log.info("필터/키워드 없이 전체 업체를 광고 우선순위로 조회합니다.");
 
-            // 필터 없이 키워드와 최소 평점만으로 검색
-            results = companyRepository.searchWithFiltersAndKeyword(
-                searchRequest.getKeyword(),
-                searchRequest.getMinRating(),
-                false, // hasFilters = false (필터 없음)
-                new Long[0], // 빈 배열
-                0, // categoryCount = 0
-                nativeQueryPageable
-            );
+            // 광고 우선순위 기반 전체 조회
+            results = companyRepository.findAllWithAdPriority(pageableOnly);
         } else {
-            // 필터가 있으면 필터 적용
-            log.info("필터를 적용하여 업체를 조회합니다.");
+            log.info("필터/키워드를 적용하여 광고 우선순위로 업체를 조회합니다.");
 
             // 모든 필터 옵션 ID를 하나의 배열로 변환
             List<Long> allFilterOptionIds = new java.util.ArrayList<>();
@@ -535,15 +530,16 @@ public class CompanyService {
 
             // 카테고리 개수 (AND 조건 확인용)
             Integer categoryCount = filterOptionsByCategory.size();
+            boolean hasFilters = !filterOptionsByCategory.isEmpty();
 
-            // 통합 검색 실행 (필터 + 키워드)
-            results = companyRepository.searchWithFiltersAndKeyword(
+            // 광고 우선순위 기반 통합 검색 (필터 + 키워드)
+            results = companyRepository.searchWithAdPriority(
                 searchRequest.getKeyword(),
                 searchRequest.getMinRating(),
-                true, // hasFilters = true (필터 있음)
+                hasFilters,
                 filterOptionIdArray,
                 categoryCount,
-                nativeQueryPageable
+                pageableOnly
             );
         }
 

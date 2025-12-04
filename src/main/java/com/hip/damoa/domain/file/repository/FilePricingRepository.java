@@ -1,6 +1,8 @@
 package com.hip.damoa.domain.file.repository;
 
 import com.hip.damoa.domain.file.model.FilePricing;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -15,6 +17,9 @@ public interface FilePricingRepository extends JpaRepository<FilePricing, Long> 
 
     // 유료 파일 목록
     List<FilePricing> findByIsPaidTrueAndIsActiveTrue();
+
+    // 유료 파일 목록 (페이징)
+    Page<FilePricing> findByIsPaidTrueAndIsActiveTrue(Pageable pageable);
 
     // 활성화된 가격 정보
     List<FilePricing> findByIsActiveTrue();
