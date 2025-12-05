@@ -2,17 +2,21 @@ package com.hip.damoa.domain.file.web;
 
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.file.model.File;
+import com.hip.damoa.domain.file.service.FileDownloadService;
 import com.hip.damoa.domain.file.service.FileUploadService;
-import com.hip.damoa.domain.file.web.dto.FileUploadCompleteRequest;
-import com.hip.damoa.domain.file.web.dto.FileUploadResponse;
-import com.hip.damoa.domain.file.web.dto.PresignedUrlRequest;
-import com.hip.damoa.domain.file.web.dto.PresignedUrlResponse;
+import com.hip.damoa.domain.file.web.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,10 +27,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * 파일 업로드 REST API (Presigned URL 방식)
+ * 파일 업로드/다운로드 REST API
  */
 @Slf4j
-@Tag(name = "04. File", description = "파일 업로드 API (Presigned URL)")
+@Tag(name = "04. File", description = "파일 업로드/다운로드 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor
@@ -34,6 +38,7 @@ import java.util.stream.Collectors;
 public class FileController {
 
     private final FileUploadService fileUploadService;
+    private final FileDownloadService fileDownloadService;
 
     /**
      * Presigned URL 생성 (1단계: 클라이언트가 S3 업로드용 URL 요청)
@@ -210,5 +215,100 @@ public class FileController {
 
         fileUploadService.deleteFile(userDetails.getUsername(), fileUuid);
         return ApiResponse.success();
+    }
+
+    // ========== 파일 다운로드/구매 API ==========
+
+    @Operation(summary = "파일 다운로드 (유료 파일 크레딧 차감)", description = """
+            파일을 다운로드합니다.
+
+            **무료 파일**: 바로 다운로드 URL 반환
+            **유료 파일**:
+            - 이미 구매한 파일: 무료 재다운로드
+            - 미구매 파일: 크레딧 자동 차감 후 다운로드 URL 반환
+
+            **응답**:
+            - downloadUrl: Presigned 다운로드 URL (15분 유효)
+            - price: 차감된 크레딧 (무료/재다운로드: 0)
+
+            **에러**:
+            - `FILE_NOT_FOUND`: 파일이 존재하지 않음
+            - `INSUFFICIENT_CREDITS`: 크레딧 부족
+            - `DOWNLOAD_LIMIT_EXCEEDED`: 다운로드 제한 초과
+            """)
+    @PostMapping("/{fileUuid}/download")
+    public ApiResponse<FileDownloadResponse> downloadFile(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Parameter(description = "파일 UUID") @PathVariable UUID fileUuid,
+            HttpServletRequest request) {
+
+        String ipAddress = getClientIp(request);
+        String userAgent = request.getHeader("User-Agent");
+        String referer = request.getHeader("Referer");
+
+        FileDownloadResponse response = fileDownloadService.downloadFile(
+                fileUuid, userDetails.getUsername(), ipAddress, userAgent, referer);
+
+        return ApiResponse.success(response);
+    }
+
+    @Operation(summary = "파일 구매 상태 확인", description = """
+            파일의 구매 상태를 확인합니다.
+
+            **응답 정보**:
+            - isPaid: 유료 파일 여부
+            - price: 파일 가격 (무료: 0)
+            - hasPurchased: 이미 구매했는지 여부
+            - canDownload: 다운로드 가능 여부 (구매함 또는 크레딧 충분)
+
+            **활용**:
+            - 다운로드 버튼 클릭 전 미리 확인
+            - 구매 필요 여부 안내 UI 표시
+            """)
+    @GetMapping("/{fileUuid}/purchase-status")
+    public ApiResponse<FilePurchaseStatusResponse> getPurchaseStatus(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Parameter(description = "파일 UUID") @PathVariable UUID fileUuid) {
+
+        return ApiResponse.success(
+                fileDownloadService.getPurchaseStatus(fileUuid, userDetails.getUsername()));
+    }
+
+    @Operation(summary = "내가 구매한 파일 목록", description = """
+            로그인한 사용자가 구매한 파일 목록을 조회합니다.
+
+            **정렬**: 구매일시 내림차순 (최신 구매 순)
+
+            **응답 정보**:
+            - fileUuid, fileName: 파일 정보
+            - pricePaid: 구매 시 지불한 크레딧
+            - purchasedAt: 구매일시
+
+            **활용**:
+            - 마이페이지 > 구매 내역
+            - 구매한 파일 재다운로드
+            """)
+    @GetMapping("/my-purchases")
+    public ApiResponse<Page<PurchasedFileResponse>> getMyPurchasedFiles(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+
+        return ApiResponse.success(
+                fileDownloadService.getMyPurchasedFiles(userDetails.getUsername(), pageable));
+    }
+
+    // ========== Helper Methods ==========
+
+    private String getClientIp(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.isEmpty()) {
+            return xRealIp;
+        }
+        return request.getRemoteAddr();
     }
 }

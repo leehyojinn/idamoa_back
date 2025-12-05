@@ -8,21 +8,28 @@ import com.hip.damoa.domain.file.model.FilePricing;
 import com.hip.damoa.domain.file.repository.FileDownloadRepository;
 import com.hip.damoa.domain.file.repository.FilePricingRepository;
 import com.hip.damoa.domain.file.repository.FileRepository;
+import com.hip.damoa.domain.file.web.dto.FileDownloadResponse;
+import com.hip.damoa.domain.file.web.dto.FilePurchaseStatusResponse;
+import com.hip.damoa.domain.file.web.dto.PurchasedFileResponse;
+import com.hip.damoa.domain.payment.model.CreditTransaction;
+import com.hip.damoa.domain.payment.service.CreditService;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * 파일 다운로드 Service
  *
- * 파일 다운로드 및 과금 처리
- * TODO: Payment 시스템 연동 필요
+ * 파일 다운로드 및 크레딧 기반 과금 처리
  */
 @Slf4j
 @Service
@@ -33,6 +40,7 @@ public class FileDownloadService {
     private final FilePricingRepository filePricingRepository;
     private final FileDownloadRepository fileDownloadRepository;
     private final UserRepository userRepository;
+    private final CreditService creditService;
 
     /**
      * 파일 다운로드 요청 (결제 확인 + Presigned URL 생성)
@@ -85,17 +93,17 @@ public class FileDownloadService {
     }
 
     /**
-     * 유료 파일 다운로드 처리
+     * 유료 파일 다운로드 처리 (크레딧 자동 차감)
      */
     private String handlePaidDownload(File file, User user, FilePricing pricing,
                                        String ipAddress, String userAgent, String referer) {
         log.info("유료 파일 다운로드: fileId={}, userId={}, price={}", file.getId(), user.getId(), pricing.getPrice());
 
-        // 이미 다운로드한 이력이 있는지 확인
-        boolean hasDownloaded = fileDownloadRepository.existsByFileIdAndUserId(file.getId(), user.getId());
+        // 이미 다운로드한 이력이 있는지 확인 (구매 이력)
+        boolean hasPurchased = fileDownloadRepository.existsByFileIdAndUserIdAndIsFreeFalse(file.getId(), user.getId());
 
-        if (hasDownloaded) {
-            log.info("이미 다운로드한 파일입니다. 재다운로드 허용: fileId={}, userId={}", file.getId(), user.getId());
+        if (hasPurchased) {
+            log.info("이미 구매한 파일입니다. 재다운로드 허용: fileId={}, userId={}", file.getId(), user.getId());
 
             // 재다운로드 로그 기록 (무료로 처리)
             FileDownload fileDownload = FileDownload.createFreeDownload(
@@ -113,39 +121,25 @@ public class FileDownloadService {
             }
         }
 
-        // 결제 내역 확인 (최근 결제 내역 중 해당 파일에 대한 결제 찾기)
-        // 실제로는 결제 시스템과 연동하여 확인해야 함
-        // 여기서는 간단히 처리
-        throw new BusinessException(ErrorCode.PAYMENT_REQUIRED);
-    }
+        // 크레딧 잔액 확인
+        BigDecimal price = BigDecimal.valueOf(pricing.getPrice());
+        if (!creditService.hasEnoughCredits(user.getEmail(), price)) {
+            throw new BusinessException(ErrorCode.INSUFFICIENT_CREDITS);
+        }
 
-    /**
-     * 파일 구매 후 다운로드
-     * TODO: Payment 시스템 구현 후 활성화
-     */
-    @Transactional
-    public String downloadAfterPayment(UUID fileUuid, String userEmail, Long paymentId,
-                                        String ipAddress, String userAgent, String referer) {
-        log.info("결제 후 파일 다운로드: fileUuid={}, userEmail={}, paymentId={}", fileUuid, userEmail, paymentId);
+        // 크레딧 차감
+        CreditTransaction creditTx = creditService.spendCredits(
+                user,
+                price,
+                "파일 다운로드: " + file.getOriginalFilename(),
+                CreditService.ENTITY_FILE_DOWNLOAD,
+                file.getId()
+        );
 
-        // 파일 조회
-        File file = fileRepository.findByUuid(fileUuid)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
-
-        // 사용자 조회
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        // TODO: Payment 시스템 구현 후 결제 확인 로직 추가
-        // Payment payment = paymentRepository.findById(paymentId)...
-
-        // 파일 가격 정보 조회
-        FilePricing pricing = filePricingRepository.findByFileId(file.getId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_PRICING_NOT_FOUND));
-
-        // 다운로드 로그 기록 (유료) - Payment 없이 임시 처리
+        // 다운로드 로그 기록 (유료)
         FileDownload fileDownload = FileDownload.createPaidDownload(
-                file, user, ipAddress, userAgent, referer, null, pricing.getPrice());
+                file, user, ipAddress, userAgent, referer,
+                null, pricing.getPrice());
         fileDownloadRepository.save(fileDownload);
 
         // 파일 다운로드 카운트 증가
@@ -154,8 +148,83 @@ public class FileDownloadService {
         // Presigned URL 생성
         String downloadUrl = generatePresignedDownloadUrl(file);
 
-        log.info("유료 파일 다운로드 URL 생성 완료: fileId={}, paymentId={}", file.getId(), paymentId);
+        log.info("유료 파일 다운로드 완료: fileId={}, userId={}, price={}, txId={}",
+                file.getId(), user.getId(), pricing.getPrice(), creditTx.getId());
+
         return downloadUrl;
+    }
+
+    /**
+     * 파일 구매 여부 확인
+     */
+    @Transactional(readOnly = true)
+    public FilePurchaseStatusResponse getPurchaseStatus(UUID fileUuid, String userEmail) {
+        File file = fileRepository.findByUuid(fileUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        FilePricing pricing = filePricingRepository.findByFileId(file.getId()).orElse(null);
+
+        // 무료 파일인 경우
+        if (pricing == null || pricing.isFree()) {
+            return FilePurchaseStatusResponse.builder()
+                    .fileUuid(fileUuid)
+                    .isPaid(false)
+                    .price(0)
+                    .hasPurchased(true)  // 무료이므로 구매 필요 없음
+                    .canDownload(true)
+                    .build();
+        }
+
+        // 구매 이력 확인
+        boolean hasPurchased = fileDownloadRepository.existsByFileIdAndUserIdAndIsFreeFalse(file.getId(), user.getId());
+
+        // 크레딧 잔액 확인
+        boolean hasEnoughCredits = creditService.hasEnoughCredits(userEmail, BigDecimal.valueOf(pricing.getPrice()));
+
+        return FilePurchaseStatusResponse.builder()
+                .fileUuid(fileUuid)
+                .isPaid(true)
+                .price(pricing.getPrice())
+                .hasPurchased(hasPurchased)
+                .canDownload(hasPurchased || hasEnoughCredits)
+                .build();
+    }
+
+    /**
+     * 내가 구매한 파일 목록 조회
+     */
+    @Transactional(readOnly = true)
+    public Page<PurchasedFileResponse> getMyPurchasedFiles(String userEmail, Pageable pageable) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        return fileDownloadRepository.findPurchasedFilesByUserId(user.getId(), pageable)
+                .map(fd -> PurchasedFileResponse.from(fd.getFile(), fd.getPricePaid(), fd.getCreatedAt()));
+    }
+
+    /**
+     * 파일 다운로드 응답 생성 (컨트롤러용)
+     */
+    @Transactional
+    public FileDownloadResponse downloadFile(UUID fileUuid, String userEmail,
+                                              String ipAddress, String userAgent, String referer) {
+        String downloadUrl = requestDownload(fileUuid, userEmail, ipAddress, userAgent, referer);
+
+        File file = fileRepository.findByUuid(fileUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+
+        FilePricing pricing = filePricingRepository.findByFileId(file.getId()).orElse(null);
+        Integer price = (pricing != null && !pricing.isFree()) ? pricing.getPrice() : 0;
+
+        return FileDownloadResponse.builder()
+                .fileUuid(fileUuid)
+                .fileName(file.getOriginalFilename())
+                .downloadUrl(downloadUrl)
+                .price(price)
+                .build();
     }
 
     /**

@@ -49,6 +49,9 @@ public class TossPaymentsGateway implements PaymentGateway {
     @Value("${payment.toss.fail-url}")
     private String failUrl;
 
+    @Value("${payment.toss.webhook-key:}")
+    private String webhookKey;
+
     public TossPaymentsGateway() {
         this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
@@ -72,15 +75,28 @@ public class TossPaymentsGateway implements PaymentGateway {
 
     @Override
     public PaymentApprovalResponse approvePayment(String pgToken, String orderId) {
+        // 금액이 없는 경우 - 기본값으로 처리 (실제로는 사용되지 않음)
+        throw new BusinessException(ErrorCode.PAYMENT_FAILED);
+    }
+
+    @Override
+    public PaymentApprovalResponse approvePayment(String paymentKey, String orderId, BigDecimal amount) {
         try {
             HttpHeaders headers = createAuthHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
+            // 토스페이먼츠 결제 승인 API 요청
+            // paymentKey: 토스에서 결제 성공 후 반환한 키
+            // orderId: 우리 서버에서 생성한 주문 ID
+            // amount: 결제 금액
             Map<String, Object> body = Map.of(
+                "paymentKey", paymentKey,
                 "orderId", orderId,
-                "amount", pgToken,  // In Toss, pgToken is actually the amount
-                "paymentKey", orderId  // Should be the actual paymentKey from frontend
+                "amount", amount.intValue()
             );
+
+            log.info("Toss Payments confirm request: orderId={}, paymentKey={}, amount={}",
+                orderId, paymentKey, amount);
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
             String url = PAYMENT_URL + "/confirm";
@@ -92,21 +108,29 @@ public class TossPaymentsGateway implements PaymentGateway {
                 throw new BusinessException(ErrorCode.PAYMENT_FAILED);
             }
 
-            String paymentKey = (String) responseBody.get("paymentKey");
+            String returnedPaymentKey = (String) responseBody.get("paymentKey");
             String method = (String) responseBody.get("method");
             Integer totalAmount = (Integer) responseBody.get("totalAmount");
             String approvedAtStr = (String) responseBody.get("approvedAt");
-            String receiptUrl = (String) responseBody.get("receipt");
+
+            // receipt는 Map 형태일 수 있음
+            String receiptUrl = null;
+            Object receiptObj = responseBody.get("receipt");
+            if (receiptObj instanceof Map) {
+                receiptUrl = (String) ((Map<?, ?>) receiptObj).get("url");
+            } else if (receiptObj instanceof String) {
+                receiptUrl = (String) receiptObj;
+            }
 
             LocalDateTime approvedAt = LocalDateTime.parse(approvedAtStr, DateTimeFormatter.ISO_DATE_TIME);
 
             log.info("Toss Payments approved: orderId={}, paymentKey={}, amount={}",
-                orderId, paymentKey, totalAmount);
+                orderId, returnedPaymentKey, totalAmount);
 
             return PaymentApprovalResponse.builder()
-                .pgTransactionId(paymentKey)
+                .pgTransactionId(returnedPaymentKey)
                 .orderId(orderId)
-                .paymentMethod("TOSS_" + method.toUpperCase())
+                .paymentMethod("TOSS_" + (method != null ? method.toUpperCase() : "CARD"))
                 .amount(BigDecimal.valueOf(totalAmount))
                 .approvedAt(approvedAt)
                 .receiptUrl(receiptUrl)
@@ -203,9 +227,29 @@ public class TossPaymentsGateway implements PaymentGateway {
 
     @Override
     public boolean verifyWebhookSignature(String signature, String payload) {
-        // Toss Payments uses Basic Auth with secret key
-        // Webhook verification should be done by checking the Authorization header
-        return true;
+        if (webhookKey == null || webhookKey.isEmpty()) {
+            log.warn("Webhook key is not configured, skipping verification");
+            return true;
+        }
+
+        try {
+            // HMAC-SHA256으로 서명 검증
+            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            javax.crypto.spec.SecretKeySpec secretKeySpec =
+                    new javax.crypto.spec.SecretKeySpec(webhookKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+            mac.init(secretKeySpec);
+            byte[] hash = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+            String expectedSignature = Base64.getEncoder().encodeToString(hash);
+
+            boolean isValid = expectedSignature.equals(signature);
+            if (!isValid) {
+                log.warn("Webhook signature mismatch: expected={}, actual={}", expectedSignature, signature);
+            }
+            return isValid;
+        } catch (Exception e) {
+            log.error("Failed to verify webhook signature", e);
+            return false;
+        }
     }
 
     /**

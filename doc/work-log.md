@@ -26,13 +26,253 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: 지역 필터 마이그레이션 완료
-**마지막 업데이트**: 2025-12-03
-**다음 우선순위**: 필터 기능 프론트엔드 연동 및 테스트
+**프로젝트 단계**: 광고 캠페인 자동 갱신 시스템 구현 완료
+**마지막 업데이트**: 2025-12-04
+**다음 우선순위**: 전체 테스트 및 운영 배포 준비
 
 ---
 
 ## 📝 작업 로그
+
+### 2025-12-04
+
+#### ✅ 완료 (Completed)
+
+**[AD-CAMPAIGN-002] 광고 캠페인 자동 갱신 시스템 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-04
+- **작업 내용**:
+  - 광고 캠페인 자동 갱신 기능 구현
+  - 연장(extend) 기능 제거
+  - 자동 갱신 토글 기능 추가
+
+**자동 갱신 규칙**:
+- 자동 갱신 시 누적 결제 금액(초기 + 추가)으로 결제
+- 갱신 3일 전 알림 발송
+- 크레딧 부족 시 자동 갱신 중단
+- 취소 시 현재 사이클은 끝까지 진행 (환불 없음)
+
+**1일 가치 계산**:
+- `1일 가치 = Σ(결제금액 / 결제시점 남은일수)`
+- 예: 7일 3,500원(500원/일) + 2일차 3,500원 추가(583원/일) = 총 1,083원/일
+
+**수정/생성된 파일**:
+- `V61__Ad_campaign_auto_renewal.sql` - 자동 갱신 관련 컬럼 마이그레이션
+- `AdCampaign.java` - accumulatedPayment, cycleStartDate, renewalNotified 필드 추가
+- `AdCampaignRepository.java` - 자동 갱신/알림 쿼리 추가
+- `AdCampaignService.java` - extendCampaign 제거, toggleAutoRenew/processAutoRenewals/sendRenewalNotifications 추가
+- `AdCampaignScheduler.java` - 자동 갱신 처리(23:55), 갱신 알림 발송(09:00) 스케줄 추가
+- `AdCampaignController.java` - extend 엔드포인트 제거, auto-renew 토글 엔드포인트 추가
+- `AdCampaignResponse.java` - 자동 갱신 관련 필드 추가
+
+---
+
+**[PAYMENT-CREDIT-001] 크레딧 기반 결제 시스템 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-04
+- **작업 내용**:
+  - **Phase 1: 기반 작업**
+    - CreditPackage Enum 생성 (16개 충전 패키지, 보너스 계산 로직)
+    - Repository 인터페이스 생성 (Credit, CreditTransaction, Payment)
+    - Flyway 마이그레이션 V56 작성
+    - ErrorCode 추가 (Credit, Ad Campaign 관련)
+
+  - **Phase 2: 크레딧 시스템**
+    - CreditService 구현 (충전/사용/환불 비즈니스 로직)
+    - CreditController 및 DTO 생성
+    - PG 결제 연동 (TossPayments, KakaoPay)
+    - Redis 결제 세션 관리
+
+  - **Phase 3: 광고 시스템**
+    - AdPayment 엔티티 및 Repository 생성
+    - AdCampaign 엔티티에 신규 필드 추가
+    - AdCampaignService 구현 (캠페인 생성/결제/취소, 우선순위 계산)
+    - AdCampaignScheduler 구현 (일일 만료 처리, 우선순위 재계산)
+    - AdCampaignController 구현
+
+  - **Phase 4: 파일 다운로드**
+    - FileDownloadService 크레딧 연동 유료 다운로드 완성
+    - AdminFilePricingService 구현 (관리자 파일 가격 설정)
+    - FileDownloadRepository, FilePricingRepository 쿼리 추가
+
+**충전 패키지 정책**:
+| 금액 | 보너스율 |
+|------|----------|
+| 1만원 | 0% |
+| 3만원 | 5~8% |
+| 5만원 | 6~10% |
+| 10만원 | 10% (최대 40,000원) |
+
+**광고 시스템 정책**:
+- 기간: 7일, 14일, 30일
+- 최소: 500원/일
+- 우선순위: (총 결제금액 / 남은 일수) × 30
+
+**환불 정책**:
+- 수수료: 10% (100원 단위 올림)
+- 최소: 1,000원
+
+**생성된 파일**: 총 35개
+- `domain/payment/model/CreditPackage.java`
+- `domain/payment/repository/CreditRepository.java`
+- `domain/payment/repository/CreditTransactionRepository.java`
+- `domain/payment/repository/PaymentRepository.java`
+- `domain/payment/service/CreditService.java`
+- `domain/payment/web/CreditController.java`
+- `domain/payment/web/dto/` (6개 DTO)
+- `domain/ad/model/AdPayment.java`
+- `domain/ad/repository/AdCampaignRepository.java`
+- `domain/ad/repository/AdPaymentRepository.java`
+- `domain/ad/service/AdCampaignService.java`
+- `domain/ad/web/AdCampaignController.java`
+- `domain/ad/web/dto/` (6개 DTO)
+- `domain/file/service/AdminFilePricingService.java`
+- `domain/file/web/dto/` (5개 DTO)
+- `infra/scheduler/AdCampaignScheduler.java`
+- `resources/db/migration/V56__Credit_and_ad_payment_system.sql`
+
+**수정된 파일**:
+- `domain/ad/model/AdCampaign.java` - 신규 필드 추가
+- `domain/file/service/FileDownloadService.java` - 크레딧 연동
+- `domain/file/repository/FileDownloadRepository.java` - 구매 확인 쿼리
+- `domain/file/repository/FilePricingRepository.java` - 페이징 쿼리
+- `core/exception/ErrorCode.java` - 에러 코드 추가
+
+**문서**:
+- `doc/credit-payment-system.md` - 구현 상세 문서
+
+---
+
+**[PAYMENT-CREDIT-002] 컨트롤러 연동 및 업체 정렬 수정** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-04 (추가)
+- **작업 내용**:
+  1. **FileController 파일 다운로드/구매 API 추가**
+     - `POST /api/files/{uuid}/download` - 파일 다운로드 (크레딧 차감)
+     - `GET /api/files/{uuid}/purchase-status` - 구매 여부 확인
+     - `GET /api/files/my-purchases` - 내가 구매한 파일 목록
+
+  2. **AdminFileController 파일 가격 설정 API 추가**
+     - `POST /api/admin/files/{uuid}/pricing` - 파일 가격 설정
+     - `GET /api/admin/files/{uuid}/pricing` - 파일 가격 정보 조회
+     - `GET /api/admin/files/paid` - 유료 파일 목록
+     - `POST /api/admin/files/{uuid}/pricing/free` - 무료 전환
+     - `DELETE /api/admin/files/{uuid}/pricing` - 가격 비활성화
+
+  3. **Company 정렬 수정 (광고 우선순위 기반)**
+     - 정렬 순서: 광고 우선순위(DESC) → 좋아요(DESC) → 리뷰(DESC) → 조회수(DESC)
+     - `CompanyRepository.findAllWithAdPriority()` 추가
+     - `CompanyRepository.searchWithAdPriority()` 추가
+     - `CompanyService.searchCompanies()` 광고 우선순위 정렬 적용
+
+  4. **ErrorCode 추가**
+     - `COMPANY_NOT_FOUND` (CO001)
+     - `COMPANY_ACCESS_DENIED` (CO002)
+     - `AD_CAMPAIGN_ALREADY_EXISTS` (AD009)
+     - `AD_CAMPAIGN_ALREADY_ENDED` (AD010)
+
+**수정된 파일**:
+- `domain/file/web/FileController.java` - 다운로드/구매 API 추가
+- `domain/admin/web/AdminFileController.java` - 신규 (파일 가격 관리)
+- `domain/company/repository/CompanyRepository.java` - 광고 우선순위 정렬 쿼리
+- `domain/company/service/CompanyService.java` - 광고 우선순위 적용
+- `domain/file/web/dto/FilePricingResponse.java` - mimeType 사용으로 수정
+- `domain/file/web/dto/PurchasedFileResponse.java` - mimeType 사용으로 수정
+- `domain/payment/service/CreditService.java` - customerName 수정
+- `core/exception/ErrorCode.java` - Company, Ad 에러 코드 추가
+
+**빌드 상태**: ✅ BUILD SUCCESSFUL
+
+---
+
+**[PAYMENT-CREDIT-003] 광고 우선순위 1일 가치 기반 변경 및 크레딧 패키지 동적 관리** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-04 (추가)
+- **작업 내용**:
+
+  1. **광고 우선순위 계산 변경 (30일 환산 → 1일 가치)**
+     - 기존: `value30d = (결제금액 / 남은일수) × 30`
+     - 변경: `dailyValue = 결제금액 / 적용일수`
+     - 예: 7일에 700원 → 100원/일, 추가 600원(6일) → +100원/일, 총 200원/일
+     - AdPayment: `value30d` → `dailyValue`
+     - AdCampaign: `totalValue30d` → `totalDailyValue`
+     - V57 마이그레이션 생성
+
+  2. **CreditPackage Enum → Entity 변환**
+     - 고정 Enum 대신 DB 관리형 Entity로 변경
+     - 단위 금액: 1만원, 3만원, 5만원, 10만원
+     - 수량: 무제한 (x1, x2, x3, ... xN)
+     - 보너스: 3만원 이상부터 적용 가능
+     - 관리자가 동적으로 패키지 생성/수정/삭제
+
+  3. **관리자 크레딧 패키지 관리 API**
+     - `GET /api/admin/credit-packages` - 패키지 목록
+     - `POST /api/admin/credit-packages` - 패키지 생성
+     - `PUT /api/admin/credit-packages/{uuid}` - 패키지 수정
+     - `PATCH /api/admin/credit-packages/{uuid}/toggle-active` - 활성화 토글
+     - `PATCH /api/admin/credit-packages/bonus-rate` - 단위금액별 보너스율 일괄 변경
+     - `DELETE /api/admin/credit-packages/{uuid}` - 패키지 삭제
+
+  4. **CreditService 수정**
+     - Enum 대신 CreditPackageRepository 사용
+     - 활성 패키지만 충전 가능
+
+  5. **문서 업데이트**
+     - `doc/credit-flow.md` - 동적 패키지 관리 섹션 추가
+
+**생성된 파일**:
+- `domain/payment/model/CreditPackage.java` - Entity로 변환
+- `domain/payment/repository/CreditPackageRepository.java`
+- `domain/payment/service/AdminCreditPackageService.java`
+- `domain/payment/web/AdminCreditPackageController.java`
+- `domain/payment/web/dto/CreditPackageCreateRequest.java`
+- `domain/payment/web/dto/CreditPackageUpdateRequest.java`
+- `resources/db/migration/V57__Rename_value30d_to_daily_value.sql`
+- `resources/db/migration/V58__Create_credit_packages_table.sql`
+
+**수정된 파일**:
+- `domain/ad/model/AdPayment.java` - dailyValue 필드
+- `domain/ad/model/AdCampaign.java` - totalDailyValue 필드
+- `domain/ad/service/AdCampaignService.java` - 1일 가치 기반 우선순위
+- `domain/ad/repository/AdPaymentRepository.java` - sumDailyValueForCampaign()
+- `domain/ad/web/dto/AdPaymentResponse.java`
+- `domain/ad/web/dto/AdCampaignResponse.java`
+- `domain/ad/web/dto/AdCampaignRankingResponse.java`
+- `domain/payment/service/CreditService.java` - Repository 사용
+- `domain/payment/web/dto/CreditPackageResponse.java` - Entity 기반
+- `core/exception/ErrorCode.java` - CREDIT_PACKAGE_NOT_FOUND 등 추가
+- `doc/credit-flow.md` - 관리자 패키지 관리 추가
+
+**빌드 상태**: ✅ BUILD SUCCESSFUL
+
+---
+
+#### 🔜 다음 작업 (TODO)
+
+1. **FileController 연동**
+   - 파일 다운로드 API 추가 (`POST /api/files/{uuid}/download`)
+   - 구매 상태 확인 API 추가 (`GET /api/files/{uuid}/purchase-status`)
+   - 구매 파일 목록 API 추가 (`GET /api/files/my-purchases`)
+
+2. **AdminController 연동**
+   - 파일 가격 설정 API 추가 (`POST /api/admin/files/{uuid}/pricing`)
+   - 유료 파일 목록 API 추가 (`GET /api/admin/files/paid`)
+
+3. **Company 정렬 수정**
+   - CompanyRepository에 광고 우선순위 기반 정렬 쿼리 추가
+   - CompanyService에서 광고 적용된 업체 목록 조회 로직 수정
+
+4. **테스트 작성**
+   - 크레딧 충전/사용/환불 테스트
+   - 광고 우선순위 계산 테스트
+   - 유료 다운로드 테스트
+
+5. **프론트엔드 연동**
+   - 크레딧 충전 페이지
+   - 광고 캠페인 관리 페이지
+   - 파일 구매/다운로드 UI
+
+---
 
 ### 2025-12-03
 
@@ -1315,6 +1555,30 @@ CHECK (status IN ('PENDING', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'DELETED'))
   - **검색 기능**: 제목/내용 키워드 검색
   - **인기 게시물**: 조회수 기준 정렬
   - **권한 제어**: CONTENT_* 권한으로 관리자만 생성/수정/삭제 가능
+
+**[HTML-TEST-001] 크레딧 테스트 HTML 페이지 수정** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-04
+- **작업 내용**:
+  - V59 마이그레이션 추가: credit_packages 테이블에 metadata JSONB 컬럼 추가
+  - credit-purchase-test.html 수정:
+    - 잔액 표시 필드명 수정 (`availableCredits` → `balance`)
+    - 패키지 렌더링 필드명 수정 (`packageCode` → `code`, `paymentAmount` → `unitAmount`)
+    - 수량 입력 필드 추가 및 총액 계산 함수 구현
+    - purchaseCredits() 함수에 quantity 파라미터 추가
+  - ad-campaign-test.html 수정:
+    - 잔액 표시 필드명 수정
+  - admin-credit-test.html 수정:
+    - 사용자 테이블 필드명 수정 (`userUuid`, `userEmail`)
+    - 패키지 테이블 필드명 수정 (`code`, `unitAmount`, `isActive`)
+    - 통계 필드명 수정 (`totalUsers`, `pendingRefundCount`)
+    - 패키지 생성 모달 및 함수 수정
+
+- **수정 파일**:
+  - `src/main/resources/db/migration/V59__Add_metadata_to_credit_packages.sql` (신규)
+  - `src/main/resources/static/credit-purchase-test.html`
+  - `src/main/resources/static/ad-campaign-test.html`
+  - `src/main/resources/static/admin-credit-test.html`
 
 ---
 

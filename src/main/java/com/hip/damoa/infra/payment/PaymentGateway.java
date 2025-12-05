@@ -20,6 +20,14 @@ public interface PaymentGateway {
     PaymentApprovalResponse approvePayment(String pgToken, String orderId);
 
     /**
+     * 결제 승인 (금액 포함 - 토스페이먼츠 등 금액 검증이 필요한 PG용)
+     */
+    default PaymentApprovalResponse approvePayment(String pgToken, String orderId, BigDecimal amount) {
+        // 기본적으로 기존 메서드 호출 (금액이 필요 없는 PG용)
+        return approvePayment(pgToken, orderId);
+    }
+
+    /**
      * 결제 취소/환불
      */
     PaymentCancelResponse cancelPayment(String pgTransactionId, BigDecimal amount, String reason);

@@ -235,4 +235,107 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         @Param("categoryCount") Integer categoryCount,
         Pageable pageable
     );
+
+    /**
+     * 업체 목록 조회 (광고 우선순위 기반 정렬)
+     * 정렬 순서: 1. 광고 우선순위 (DESC) → 2. 좋아요 (DESC) → 3. 리뷰 수 (DESC) → 4. 조회수 (DESC)
+     *
+     * 광고 우선순위는 ACTIVE 상태의 LISTING 타입 광고 캠페인을 가진 업체가 상위에 노출됩니다.
+     * 광고가 있는 업체들은 priority_score가 높은 순서대로 정렬됩니다.
+     * 광고가 없는 업체들은 좋아요 → 리뷰 → 조회수 순으로 정렬됩니다.
+     */
+    @Query(value = """
+        SELECT c.* FROM companies c
+        LEFT JOIN ad_campaigns ac ON ac.company_id = c.id
+            AND ac.status = 'ACTIVE'
+            AND ac.ad_type = 'LISTING'
+            AND (ac.end_date IS NULL OR ac.end_date >= CURRENT_DATE)
+        WHERE c.is_deleted = false
+        AND c.status = 'ACTIVE'
+        ORDER BY
+            CASE WHEN ac.id IS NOT NULL THEN 0 ELSE 1 END,
+            COALESCE(ac.priority_score, 0) DESC,
+            COALESCE(ac.secondary_score, 0) DESC,
+            c.like_count DESC,
+            c.review_count DESC,
+            c.view_count DESC
+        """,
+        countQuery = """
+        SELECT COUNT(*) FROM companies c
+        WHERE c.is_deleted = false
+        AND c.status = 'ACTIVE'
+        """,
+        nativeQuery = true)
+    Page<Company> findAllWithAdPriority(Pageable pageable);
+
+    /**
+     * 업체 목록 조회 (광고 우선순위 + 필터 + 키워드 검색)
+     * 정렬 순서: 1. 광고 우선순위 (DESC) → 2. 좋아요 (DESC) → 3. 리뷰 수 (DESC) → 4. 조회수 (DESC)
+     */
+    @Query(value = """
+        SELECT DISTINCT c.* FROM companies c
+        LEFT JOIN ad_campaigns ac ON ac.company_id = c.id
+            AND ac.status = 'ACTIVE'
+            AND ac.ad_type = 'LISTING'
+            AND (ac.end_date IS NULL OR ac.end_date >= CURRENT_DATE)
+        WHERE c.is_deleted = false
+        AND c.status = 'ACTIVE'
+        AND (:minRating IS NULL OR c.avg_rating >= :minRating)
+        AND (:hasFilters = false OR (
+            SELECT COUNT(DISTINCT fo.category_id)
+            FROM company_filter_options cfo
+            JOIN filter_options fo ON cfo.filter_option_id = fo.id
+            WHERE cfo.company_id = c.id
+            AND cfo.filter_option_id IN (:filterOptionIds)
+        ) = :categoryCount)
+        AND (:keyword IS NULL OR :keyword = '' OR (
+            LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.detail_content) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.address) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR EXISTS (
+                SELECT 1 FROM unnest(c.tags) AS tag
+                WHERE LOWER(tag) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            )
+        ))
+        ORDER BY
+            CASE WHEN ac.id IS NOT NULL THEN 0 ELSE 1 END,
+            COALESCE(ac.priority_score, 0) DESC,
+            COALESCE(ac.secondary_score, 0) DESC,
+            c.like_count DESC,
+            c.review_count DESC,
+            c.view_count DESC
+        """,
+        countQuery = """
+        SELECT COUNT(DISTINCT c.id) FROM companies c
+        WHERE c.is_deleted = false
+        AND c.status = 'ACTIVE'
+        AND (:minRating IS NULL OR c.avg_rating >= :minRating)
+        AND (:hasFilters = false OR (
+            SELECT COUNT(DISTINCT fo.category_id)
+            FROM company_filter_options cfo
+            JOIN filter_options fo ON cfo.filter_option_id = fo.id
+            WHERE cfo.company_id = c.id
+            AND cfo.filter_option_id IN (:filterOptionIds)
+        ) = :categoryCount)
+        AND (:keyword IS NULL OR :keyword = '' OR (
+            LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.detail_content) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(c.address) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR EXISTS (
+                SELECT 1 FROM unnest(c.tags) AS tag
+                WHERE LOWER(tag) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            )
+        ))
+        """,
+        nativeQuery = true)
+    Page<Company> searchWithAdPriority(
+        @Param("keyword") String keyword,
+        @Param("minRating") BigDecimal minRating,
+        @Param("hasFilters") boolean hasFilters,
+        @Param("filterOptionIds") Long[] filterOptionIds,
+        @Param("categoryCount") Integer categoryCount,
+        Pageable pageable
+    );
 }

@@ -26,8 +26,12 @@ public class CreditTransaction extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "credit_id", nullable = false)
+    private Credit credit;
+
     @Column(name = "transaction_type", nullable = false, length = 20)
-    private String transactionType; // EARN, SPEND, EXPIRE, REFUND
+    private String transactionType; // EARN, SPEND, EXPIRE, REFUND, ADMIN_GRANT, ADMIN_DEDUCT
 
     @Column(name = "amount", precision = 12, scale = 2, nullable = false)
     private BigDecimal amount;

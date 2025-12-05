@@ -61,4 +61,20 @@ public interface FileDownloadRepository extends JpaRepository<FileDownload, Long
 
     // 최근 다운로드 내역
     List<FileDownload> findTop10ByFileIdOrderByCreatedAtDesc(Long fileId);
+
+    // 사용자의 특정 파일 유료 구매 여부 (isFree=false인 다운로드 이력)
+    boolean existsByFileIdAndUserIdAndIsFreeFalse(Long fileId, Long userId);
+
+    // 사용자가 구매한 파일 목록 (유료 다운로드 이력)
+    @Query("""
+        SELECT fd FROM FileDownload fd
+        WHERE fd.user.id = :userId
+          AND fd.isFree = false
+        ORDER BY fd.createdAt DESC
+        """)
+    Page<FileDownload> findPurchasedFilesByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    // 사용자의 총 구매 금액
+    @Query("SELECT COALESCE(SUM(fd.pricePaid), 0) FROM FileDownload fd WHERE fd.user.id = :userId AND fd.isFree = false")
+    Long sumPricePaidByUserId(@Param("userId") Long userId);
 }

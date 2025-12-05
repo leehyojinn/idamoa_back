@@ -73,4 +73,30 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
 
     // Check if refund exists for payment
     boolean existsByPaymentAndStatus(Payment payment, String status);
+
+    // ========== Admin 쿼리 ==========
+
+    /**
+     * UUID로 환불 조회
+     */
+    Optional<Refund> findByUuid(java.util.UUID uuid);
+
+    /**
+     * 모든 환불 내역 조회 (페이징)
+     */
+    Page<Refund> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    /**
+     * 키워드 검색 (사용자 이메일/이름, 환불 사유)
+     */
+    @Query("SELECT r FROM Refund r JOIN r.payment p JOIN p.user u " +
+           "WHERE u.email LIKE %:keyword% OR r.refundReason LIKE %:keyword% " +
+           "ORDER BY r.createdAt DESC")
+    Page<Refund> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    /**
+     * 총 환불 건수 (상태별)
+     */
+    @Query("SELECT COUNT(r) FROM Refund r WHERE r.status = :status")
+    long countByStatusQuery(@Param("status") String status);
 }

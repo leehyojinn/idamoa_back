@@ -60,6 +60,12 @@ public class Payment extends BaseEntity {
     @Column(name = "transaction_id", length = 200)
     private String transactionId;
 
+    /**
+     * PG사 거래 ID (결제 승인 후 PG에서 반환)
+     */
+    @Column(name = "pg_transaction_id", length = 200)
+    private String pgTransactionId;
+
     @Column(name = "receipt_url", length = 500)
     private String receiptUrl;
 
@@ -91,5 +97,19 @@ public class Payment extends BaseEntity {
 
     public void refund() {
         this.status = "REFUNDED";
+    }
+
+    /**
+     * PG 거래 ID 설정 (결제 승인 후)
+     */
+    public void setPgTransactionId(String pgTransactionId) {
+        this.pgTransactionId = pgTransactionId;
+    }
+
+    /**
+     * 영수증 URL 설정
+     */
+    public void setReceiptUrl(String receiptUrl) {
+        this.receiptUrl = receiptUrl;
     }
 }
