@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-@Tag(name = "06. Ad Campaign", description = "광고 캠페인 관련 API")
+@Tag(name = "05-2. Ad Campaign", description = "광고 캠페인 관련 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

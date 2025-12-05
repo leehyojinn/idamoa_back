@@ -93,10 +93,11 @@ payment:
     cancel-url: ${PAYMENT_CANCEL_URL:http://localhost:8080/api/payments/kakaopay/cancel}
     fail-url: ${PAYMENT_FAIL_URL:http://localhost:8080/api/payments/kakaopay/fail}
   toss:
-    secret-key: ${TOSS_SECRET_KEY:test_sk_XXXXXXXXXXXXXXXXXXXXXXXXXXXX}  # 실제: 발급받은 Secret Key
-    client-key: ${TOSS_CLIENT_KEY:test_ck_XXXXXXXXXXXXXXXXXXXXXXXXXXXX}  # 실제: 발급받은 Client Key
-    success-url: ${PAYMENT_APPROVAL_URL:http://localhost:8080/api/payments/toss/success}
-    fail-url: ${PAYMENT_FAIL_URL:http://localhost:8080/api/payments/toss/fail}
+    client-key: ${TOSS_CLIENT_KEY:test_ck_KNbdOvk5rkyGP1GeJA7A3n07xlzm}
+    secret-key: ${TOSS_SECRET_KEY:test_sk_DpexMgkW36Nq70KGL6ZJ3GbR5ozO}
+    webhook-key: ${TOSS_WEBHOOK_KEY:}  # 웹훅 검증용 보안키
+    success-url: ${TOSS_SUCCESS_URL:http://localhost:8080/credit-purchase-test.html}
+    fail-url: ${TOSS_FAIL_URL:http://localhost:8080/credit-purchase-test.html}
   inicis:
     mid: ${INICIS_MID:INIpayTest}  # 테스트: INIpayTest, 실제: 발급받은 MID
     sign-key: ${INICIS_SIGN_KEY:SU5JTElURV9UUklQTEVERVNfS0VZU1RS}  # 실제: 발급받은 Sign Key

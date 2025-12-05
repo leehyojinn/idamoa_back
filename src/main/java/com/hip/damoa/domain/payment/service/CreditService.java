@@ -230,10 +230,12 @@ public class CreditService {
         User user = payment.getUser();
 
         // 결제 승인 (실제 PG 연동)
+        // pgToken은 토스의 경우 paymentKey, 카카오페이의 경우 pg_token
         PaymentGateway gateway = selectGateway(payment.getPaymentMethod());
         PaymentApprovalResponse approvalResponse;
         try {
-            approvalResponse = gateway.approvePayment(pgToken, orderId);
+            // 새로운 메서드 호출 (금액 포함) - 토스페이먼츠 등 금액 검증 필요한 PG용
+            approvalResponse = gateway.approvePayment(pgToken, orderId, expectedAmount);
         } catch (Exception e) {
             log.error("PG 결제 승인 실패: orderId={}", orderId, e);
             payment.fail(e.getMessage());
