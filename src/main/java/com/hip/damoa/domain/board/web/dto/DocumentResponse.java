@@ -3,6 +3,7 @@ package com.hip.damoa.domain.board.web.dto;
 import com.hip.damoa.domain.board.model.Board;
 import com.hip.damoa.domain.board.model.BoardFilterOption;
 import com.hip.damoa.domain.filter.model.FilterOption;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,60 +18,125 @@ import java.util.stream.Collectors;
 /**
  * Document 게시글 Response DTO
  */
+@Schema(description = "자료실 게시글 응답")
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class DocumentResponse {
 
+    @Schema(description = "게시글 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID uuid;
+
+    @Schema(description = "제목", example = "병원 인테리어 설계도면 모음")
     private String title;
+
+    @Schema(description = "내용", example = "치과, 안과, 피부과 인테리어 설계도면입니다.")
     private String content;
+
+    @Schema(description = "게시판 타입", example = "DOCUMENT")
     private String boardType;
+
+    @Schema(description = "카테고리 ID", example = "1")
     private Long categoryId;
+
+    @Schema(description = "카테고리명", example = "설계도면")
     private String categoryName;
 
     // Document 특화 데이터
-    private List<FileInfo> files;  // 문서 파일 정보 (가격 포함)
-    private FileInfo thumbnail;    // 썸네일 파일 정보
+    @Schema(description = """
+            첨부 파일 목록 (가격 정보 포함)
+
+            각 파일에 isPaid, price 정보가 포함됩니다:
+            - isPaid: 유료 파일 여부
+            - price: 파일 가격 (원)
+            """)
+    private List<FileInfo> files;
+
+    @Schema(description = "썸네일 파일 정보")
+    private FileInfo thumbnail;
+
+    @Schema(description = "[레거시] 유료 게시글 여부 (일괄 가격 방식). 개별 가격 방식에서는 files[].isPaid 사용", example = "true")
     private Boolean isPaid;
+
+    @Schema(description = "[레거시] 게시글 기본 가격 (원). 개별 가격 방식에서는 files[].price 사용", example = "5000")
     private Integer price;
-    private Map<String, Integer> filePrices;  // 파일별 가격 맵 (uuid -> price)
+
+    @Schema(description = """
+            파일별 가격 맵 (uuid -> price)
+
+            예시:
+            {
+              "550e8400-e29b-41d4-a716-446655440000": 5000,
+              "550e8400-e29b-41d4-a716-446655440001": 3000
+            }
+
+            - 맵에 없는 파일은 무료
+            - files[].isPaid, files[].price로도 확인 가능
+            """, example = "{\"550e8400-e29b-41d4-a716-446655440000\": 5000}")
+    private Map<String, Integer> filePrices;
 
     // 통계
+    @Schema(description = "조회수", example = "150")
     private Integer viewCount;
+
+    @Schema(description = "좋아요 수", example = "25")
     private Integer likeCount;
+
+    @Schema(description = "댓글 수", example = "10")
     private Integer commentCount;
-    private Long downloadCount; // 다운로드 횟수
+
+    @Schema(description = "다운로드 횟수", example = "45")
+    private Long downloadCount;
 
     // 상태
+    @Schema(description = "고정 여부", example = "false")
     private Boolean isPinned;
+
+    @Schema(description = "추천 여부", example = "false")
     private Boolean isFeatured;
+
+    @Schema(description = "게시 여부", example = "true")
     private Boolean isPublished;
+
+    @Schema(description = "게시일시", example = "2024-01-15T10:30:00")
     private LocalDateTime publishedAt;
 
     // 필터
+    @Schema(description = "필터 옵션 목록")
     private List<GalleryResponse.FilterOptionSummary> filterOptions;
 
     // 태그
+    @Schema(description = "태그 배열", example = "[\"인테리어\", \"설계도면\", \"병원\"]")
     private String[] tags;
 
     // 작성자
+    @Schema(description = "작성자 ID", example = "1")
     private Long userId;
+
+    @Schema(description = "작성자 이메일", example = "user@example.com")
     private String userEmail;
+
+    @Schema(description = "작성자 이름", example = "홍길동")
     private String userName;
 
     // 시간
+    @Schema(description = "생성일시", example = "2024-01-15T10:30:00")
     private LocalDateTime createdAt;
+
+    @Schema(description = "수정일시", example = "2024-01-15T10:30:00")
     private LocalDateTime updatedAt;
 
     // 북마크 여부 (로그인 사용자용)
+    @Schema(description = "현재 사용자의 북마크 여부 (로그인 시)", example = "false")
     private Boolean isBookmarked;
 
     // 다운로드 여부 (로그인 사용자용)
+    @Schema(description = "현재 사용자의 다운로드 여부 (로그인 시)", example = "false")
     private Boolean hasDownloaded;
 
     // 삭제 상태 (관리자용)
+    @Schema(description = "삭제 여부 (관리자용)", example = "false")
     private Boolean isDeleted;
 
     /**

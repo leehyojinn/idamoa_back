@@ -9,6 +9,10 @@ import com.hip.damoa.domain.board.web.dto.DocumentCreateRequest;
 import com.hip.damoa.domain.board.web.dto.DocumentResponse;
 import com.hip.damoa.domain.board.web.dto.DocumentUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -123,25 +127,134 @@ public class DocumentBoardController {
     }
 
     @Operation(summary = "Document 게시글 조회",
-            description = "특정 자료실 게시글을 조회합니다.\n\n" +
-                    "**응답 포함 정보:**\n" +
-                    "- 제목, 내용, 파일 목록\n" +
-                    "- 작성자 정보 (이름, 프로필 이미지)\n" +
-                    "- 조회수, 좋아요 수, 북마크 수, 다운로드 수\n" +
-                    "- 썸네일 이미지 URL (있는 경우)\n" +
-                    "- 유료 파일 여부 및 가격\n" +
-                    "- 필터 옵션 정보\n" +
-                    "- 태그 목록\n" +
-                    "- 로그인한 경우: 북마크 여부 포함\n\n" +
-                    "**조회수 증가:**\n" +
-                    "- 게시글 조회 시 조회수 자동 증가\n" +
-                    "- 동일 사용자 중복 조회도 카운트됨\n\n" +
-                    "**파일 다운로드:**\n" +
-                    "- 무료 파일: 누구나 다운로드 가능\n" +
-                    "- 유료 파일: 결제 후 다운로드 가능\n\n" +
-                    "**권한:**\n" +
-                    "- 비로그인 사용자도 조회 가능\n" +
-                    "- 비공개 게시글은 작성자만 조회 가능")
+            description = """
+                    특정 자료실 게시글을 조회합니다.
+
+                    ## 응답 포함 정보
+                    - 제목, 내용, 파일 목록
+                    - 작성자 정보 (이름, 프로필 이미지)
+                    - 조회수, 좋아요 수, 북마크 수, 다운로드 수
+                    - 썸네일 이미지 URL (있는 경우)
+                    - **유료 파일 여부 및 가격** (⭐ 중요)
+                    - 필터 옵션 정보
+                    - 태그 목록
+                    - 로그인한 경우: 북마크 여부 포함
+
+                    ## 파일 가격 정보 확인 방법
+
+                    ### 방법 1: files 배열에서 확인 (권장)
+                    각 파일의 `isPaid`, `price` 필드로 확인:
+                    ```json
+                    "files": [
+                      {"uuid": "...", "isPaid": true, "price": 5000, ...},
+                      {"uuid": "...", "isPaid": false, "price": 0, ...}
+                    ]
+                    ```
+
+                    ### 방법 2: filePrices 맵에서 확인
+                    파일 UUID를 키로 가격 조회:
+                    ```json
+                    "filePrices": {
+                      "550e8400-...": 5000,
+                      "660e9500-...": 3000
+                    }
+                    ```
+
+                    ## 파일 다운로드
+                    - 무료 파일: 누구나 다운로드 가능
+                    - 유료 파일: 크레딧 결제 후 다운로드 가능
+                    - 다운로드 API: `POST /api/files/{fileUuid}/download`
+
+                    ## 권한
+                    - 비로그인 사용자도 조회 가능
+                    - 비공개 게시글은 작성자만 조회 가능
+                    """)
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "조회 성공",
+            content = @Content(
+                    mediaType = "application/json",
+                    examples = @ExampleObject(value = """
+                            {
+                              "success": true,
+                              "data": {
+                                "uuid": "550e8400-e29b-41d4-a716-446655440000",
+                                "title": "병원 인테리어 설계도면 모음",
+                                "content": "치과, 안과, 피부과 인테리어 설계도면입니다.",
+                                "boardType": "DOCUMENT",
+                                "categoryId": 1,
+                                "categoryName": "설계도면",
+                                "files": [
+                                  {
+                                    "uuid": "file-uuid-001",
+                                    "originalFilename": "치과_설계도면.dwg",
+                                    "fileUrl": "https://s3.../치과_설계도면.dwg",
+                                    "fileSize": 2048576,
+                                    "mimeType": "application/octet-stream",
+                                    "fileExtension": "dwg",
+                                    "isPaid": true,
+                                    "price": 5000
+                                  },
+                                  {
+                                    "uuid": "file-uuid-002",
+                                    "originalFilename": "안과_설계도면.dwg",
+                                    "fileUrl": "https://s3.../안과_설계도면.dwg",
+                                    "fileSize": 1536000,
+                                    "mimeType": "application/octet-stream",
+                                    "fileExtension": "dwg",
+                                    "isPaid": true,
+                                    "price": 3000
+                                  },
+                                  {
+                                    "uuid": "file-uuid-003",
+                                    "originalFilename": "미리보기.pdf",
+                                    "fileUrl": "https://s3.../미리보기.pdf",
+                                    "fileSize": 512000,
+                                    "mimeType": "application/pdf",
+                                    "fileExtension": "pdf",
+                                    "isPaid": false,
+                                    "price": 0
+                                  }
+                                ],
+                                "thumbnail": {
+                                  "uuid": "thumb-uuid-001",
+                                  "originalFilename": "thumbnail.jpg",
+                                  "fileUrl": "https://s3.../thumbnail.jpg",
+                                  "fileSize": 102400,
+                                  "isPaid": false,
+                                  "price": 0
+                                },
+                                "isPaid": true,
+                                "price": 5000,
+                                "filePrices": {
+                                  "file-uuid-001": 5000,
+                                  "file-uuid-002": 3000
+                                },
+                                "viewCount": 150,
+                                "likeCount": 25,
+                                "commentCount": 10,
+                                "downloadCount": 45,
+                                "isPinned": false,
+                                "isFeatured": false,
+                                "isPublished": true,
+                                "publishedAt": "2024-01-15T10:30:00",
+                                "filterOptions": [],
+                                "tags": ["인테리어", "설계도면", "병원"],
+                                "userId": 1,
+                                "userEmail": "user@example.com",
+                                "userName": "홍길동",
+                                "createdAt": "2024-01-15T10:30:00",
+                                "updatedAt": "2024-01-15T10:30:00",
+                                "isBookmarked": false,
+                                "hasDownloaded": false,
+                                "isDeleted": false
+                              },
+                              "errorCode": null,
+                              "message": null
+                            }
+                            """)
+            )
+    )
     @GetMapping("/{uuid}")
     public ApiResponse<DocumentResponse> getDocument(
             @PathVariable UUID uuid,
@@ -156,34 +269,34 @@ public class DocumentBoardController {
     }
 
     @Operation(summary = "Document 게시글 검색 (통합)",
-            description = "자료실 검색 및 목록 조회 통합 API입니다.\n\n" +
-                    "**검색 조건 (모두 선택적, 복합 검색 가능):**\n" +
-                    "- keyword: 제목, 내용, 태그에서 검색\n" +
-                    "- filterOptionIds: 필터 옵션 ID 배열 (예: 파일 형식, 카테고리)\n" +
-                    "- onlyBookmarked: true 설정 시 북마크한 게시글만 조회 (로그인 필요)\n" +
-                    "- onlyMyPosts: true 설정 시 내가 작성한 게시글만 조회 (로그인 필요)\n\n" +
-                    "**복합 검색 예시:**\n" +
-                    "- keyword + filterOptionIds: 특정 키워드와 필터 옵션을 모두 만족하는 게시글\n" +
-                    "- keyword + onlyMyPosts: 내가 작성한 게시글 중 키워드를 포함하는 게시글\n" +
-                    "- 모든 조건 조합 가능 (AND 연산)\n\n" +
-                    "**페이지네이션:**\n" +
-                    "- size: 페이지당 항목 수 (기본 20)\n" +
-                    "- page: 페이지 번호 (0부터 시작)\n" +
-                    "- sort: 정렬 기준 (기본: publishedAt,DESC - 최신순)\n\n" +
-                    "**응답:**\n" +
-                    "- 게시글 목록 (제목, 썸네일, 작성자, 조회수, 다운로드 수 등)\n" +
-                    "- 유료 파일 여부 및 가격 표시\n" +
-                    "- 로그인한 경우 각 게시글의 북마크 여부 포함\n" +
-                    "- 페이지 정보 (totalElements, totalPages 등)\n\n" +
-                    "**정렬 옵션:**\n" +
-                    "- publishedAt,DESC: 최신순 (기본값)\n" +
-                    "- viewCount,DESC: 조회수 높은 순\n" +
-                    "- createdAt,DESC: 생성일 최신순\n\n" +
-                    "**활용:**\n" +
-                    "- 자료실 메인 페이지\n" +
-                    "- 필터링된 자료 목록\n" +
-                    "- 내가 북마크한 자료\n" +
-                    "- 내가 작성한 자료")
+            description = """
+                    자료실 검색 및 목록 조회 통합 API입니다.
+
+                    ## 검색 조건 (모두 선택적, 복합 검색 가능)
+                    - keyword: 제목, 내용, 태그에서 검색
+                    - filterOptionIds: 필터 옵션 ID 배열 (예: 파일 형식, 카테고리)
+                    - onlyBookmarked: true 설정 시 북마크한 게시글만 조회 (로그인 필요)
+                    - onlyMyPosts: true 설정 시 내가 작성한 게시글만 조회 (로그인 필요)
+
+                    ## 응답 - 파일 가격 정보
+                    각 게시글의 files 배열에서 파일별 가격 정보 확인:
+                    ```json
+                    "files": [
+                      {"uuid": "...", "isPaid": true, "price": 5000, ...},
+                      {"uuid": "...", "isPaid": false, "price": 0, ...}
+                    ]
+                    ```
+
+                    ## 페이지네이션
+                    - size: 페이지당 항목 수 (기본 20)
+                    - page: 페이지 번호 (0부터 시작)
+                    - sort: 정렬 기준 (기본: publishedAt,DESC - 최신순)
+
+                    ## 정렬 옵션
+                    - publishedAt,DESC: 최신순 (기본값)
+                    - viewCount,DESC: 조회수 높은 순
+                    - createdAt,DESC: 생성일 최신순
+                    """)
     @GetMapping("/search")
     public ApiResponse<Page<DocumentResponse>> searchDocuments(
             @RequestParam(required = false) String keyword,
