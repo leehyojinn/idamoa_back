@@ -97,7 +97,10 @@ public class AdminFileController {
     @Operation(summary = "유료 파일 목록 조회", description = """
             가격이 설정된 유료 파일 목록을 조회합니다.
 
-            **정렬**: 생성일 내림차순
+            ## 정렬
+            - 기본값: createdAt DESC (최신순)
+            - 사용법: sort=createdAt,desc 또는 sort=createdAt,asc
+            - 기타 옵션: price, updatedAt
 
             **응답**: 파일별 가격 정보 및 통계
             """)

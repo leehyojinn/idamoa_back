@@ -265,18 +265,14 @@ public class CompanyController {
                     "**조회 조건:**\n" +
                     "- isActive=true인 업체만 조회\n" +
                     "- 삭제되지 않은 업체만 포함\n\n" +
-                    "**페이지네이션:**\n" +
-                    "- size: 페이지당 항목 수 (기본 20)\n" +
-                    "- page: 페이지 번호 (0부터 시작)\n" +
-                    "- sort: 정렬 기준 (기본: createdAt,DESC - 최신순)\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: rating, reviewCount\n\n" +
                     "**응답:**\n" +
                     "- 업체 목록 (이름, 설명, 대표 이미지, 평점 등)\n" +
                     "- 로그인한 경우 각 업체의 좋아요 여부 포함\n" +
                     "- 페이지 정보 (totalElements, totalPages 등)\n\n" +
-                    "**정렬 옵션:**\n" +
-                    "- createdAt,DESC: 최신순 (기본값)\n" +
-                    "- rating,DESC: 평점 높은 순\n" +
-                    "- reviewCount,DESC: 리뷰 많은 순\n\n" +
                     "**권한:**\n" +
                     "- 누구나 조회 가능 (로그인 불필요)\n\n" +
                     "**활용:**\n" +

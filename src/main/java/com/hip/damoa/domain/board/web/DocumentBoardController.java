@@ -325,10 +325,10 @@ public class DocumentBoardController {
                     "- 본인이 작성한 Document 게시글만 조회\n" +
                     "- 삭제되지 않은 게시글만 포함\n" +
                     "- 공개/비공개 상태 모두 포함\n\n" +
-                    "**페이지네이션:**\n" +
-                    "- size: 페이지당 항목 수 (기본 20)\n" +
-                    "- page: 페이지 번호 (0부터 시작)\n" +
-                    "- sort: 정렬 기준 (기본: createdAt,DESC - 최신 작성순)\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신 작성순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: viewCount, downloadCount\n\n" +
                     "**응답 정보:**\n" +
                     "- 게시글 목록 (제목, 파일, 조회수, 다운로드 수 등)\n" +
                     "- 북마크 여부 및 다운로드 여부 포함\n\n" +

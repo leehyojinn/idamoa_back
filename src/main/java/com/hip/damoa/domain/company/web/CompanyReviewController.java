@@ -83,8 +83,10 @@ public class CompanyReviewController {
      */
     @Operation(summary = "업체 리뷰 목록 조회",
             description = "특정 업체의 모든 리뷰를 조회합니다.\n\n" +
-                    "**정렬:**\n" +
-                    "- 최신순 (createdAt DESC) 기본 정렬\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: rating\n\n" +
                     "**페이지네이션:**\n" +
                     "- size: 페이지당 항목 수 (기본 20)\n" +
                     "- page: 페이지 번호 (0부터 시작)\n\n" +

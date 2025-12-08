@@ -47,8 +47,10 @@ public class AdminPaymentController {
             - keyword: 검색 (사용자 이메일/이름, 거래ID)
             - startDate, endDate: 기간 필터
 
-            **정렬**
-            - 기본적으로 생성일 내림차순으로 정렬됩니다
+            ## 정렬
+            - 기본값: createdAt DESC (최신순)
+            - 사용법: sort=createdAt,desc 또는 sort=createdAt,asc
+            - 기타 옵션: amount, status
             """)
     @GetMapping
     public ApiResponse<Page<AdminPaymentResponse>> getPayments(
@@ -89,7 +91,13 @@ public class AdminPaymentController {
     }
 
     @Operation(summary = "특정 사용자 결제 내역 조회",
-            description = "특정 사용자의 결제 내역을 조회합니다.")
+            description = """
+            특정 사용자의 결제 내역을 조회합니다.
+
+            ## 정렬
+            - 기본값: createdAt DESC (최신순)
+            - 사용법: sort=createdAt,desc 또는 sort=createdAt,asc
+            """)
     @GetMapping("/users/{userUuid}")
     public ApiResponse<Page<AdminPaymentResponse>> getUserPayments(
             @Parameter(description = "사용자 UUID") @PathVariable UUID userUuid,

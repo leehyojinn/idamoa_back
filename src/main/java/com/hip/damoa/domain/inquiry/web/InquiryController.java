@@ -58,7 +58,11 @@ public class InquiryController {
      * 내 문의 목록 조회
      */
     @Operation(summary = "내 문의 목록 조회",
-            description = "로그인한 사용자의 문의 목록을 조회합니다.")
+            description = "로그인한 사용자의 문의 목록을 조회합니다.\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: updatedAt, status")
     @GetMapping("/my")
     public ApiResponse<Page<InquiryListResponse>> getMyInquiries(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -77,7 +81,11 @@ public class InquiryController {
                     "- keyword: 제목/내용 검색어\n" +
                     "- inquiryType: 문의 유형\n" +
                     "- status: 문의 상태\n" +
-                    "- startDate/endDate: 작성일 범위")
+                    "- startDate/endDate: 작성일 범위\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: updatedAt, status")
     @GetMapping("/my/search")
     public ApiResponse<Page<InquiryListResponse>> searchMyInquiries(
             @AuthenticationPrincipal UserDetails userDetails,

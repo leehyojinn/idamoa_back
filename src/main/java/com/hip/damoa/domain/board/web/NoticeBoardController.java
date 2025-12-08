@@ -87,10 +87,10 @@ public class NoticeBoardController {
                     "- 이벤트인 경우 이벤트 상태 및 기간 포함\n" +
                     "- 고정 게시글 (isPinned=true) 포함\n" +
                     "- 페이지 정보 (totalElements, totalPages 등)\n\n" +
-                    "**정렬 옵션:**\n" +
-                    "- publishedAt,DESC: 최신순 (기본값)\n" +
-                    "- viewCount,DESC: 조회수 높은 순\n" +
-                    "- createdAt,DESC: 생성일 최신순\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: publishedAt DESC (최신순)\n" +
+                    "- 사용법: sort=publishedAt,desc 또는 sort=publishedAt,asc\n" +
+                    "- 기타 옵션: viewCount, createdAt\n\n" +
                     "**활용:**\n" +
                     "- 공지사항 메인 페이지\n" +
                     "- 이벤트 목록 페이지\n" +

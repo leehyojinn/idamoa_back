@@ -42,9 +42,14 @@ public class AdminAdCampaignController {
     @Operation(summary = "전체 캠페인 목록 조회", description = """
             모든 광고 캠페인 목록을 조회합니다.
 
-            **필터 옵션**:
+            ## 필터 옵션
             - status: DRAFT, ACTIVE, PAUSED, COMPLETED, CANCELLED
             - companyName: 회사명 검색 (부분 일치)
+
+            ## 정렬
+            - 기본값: createdAt DESC (최신순)
+            - 사용법: sort=createdAt,desc 또는 sort=createdAt,asc
+            - 기타 옵션: priorityScore, startDate, endDate
             """)
     @GetMapping
     public ApiResponse<Page<AdCampaignResponse>> getAllCampaigns(

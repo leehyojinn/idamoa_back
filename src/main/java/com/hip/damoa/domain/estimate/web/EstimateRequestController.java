@@ -219,8 +219,10 @@ public class EstimateRequestController {
                     "- COMPLETED: 완료 (프로젝트 완료)\n" +
                     "- CANCELLED: 취소됨\n" +
                     "- DRAFT: 작성중 (임시 저장, 향후 기능)\n\n" +
-                    "**정렬**\n" +
-                    "- 최신순 정렬 (createdAt DESC)")
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: status, updatedAt")
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/my")
     public ApiResponse<Page<EstimateRequestListResponse>> getMyEstimateRequests(
@@ -249,11 +251,13 @@ public class EstimateRequestController {
                     "- isPublic=true인 견적만 조회\n" +
                     "- PUBLISHED 상태 이상의 견적\n" +
                     "- 인증 없이 누구나 조회 가능\n\n" +
-                    "**정렬**\n" +
-                    "- 최신순 정렬 (createdAt DESC)\n\n" +
                     "**활용 예시**\n" +
                     "- 업체들이 제안할 견적 찾기\n" +
-                    "- 메인 페이지 견적 목록 표시")
+                    "- 메인 페이지 견적 목록 표시\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: viewCount, updatedAt")
     @GetMapping
     public ApiResponse<Page<EstimateRequestListResponse>> getPublicEstimateRequests(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)

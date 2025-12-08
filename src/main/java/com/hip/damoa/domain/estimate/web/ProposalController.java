@@ -172,8 +172,10 @@ public class ProposalController {
                     "- SELECTED: 수락됨\n" +
                     "- REJECTED: 거절됨\n" +
                     "- WITHDRAWN: 철회됨\n\n" +
-                    "**정렬**\n" +
-                    "- 최신순 정렬 (createdAt DESC)")
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: status, price")
     @GetMapping("/my")
     public ApiResponse<Page<ProposalResponse>> getMyProposals(
             @AuthenticationPrincipal UserDetails userDetails,

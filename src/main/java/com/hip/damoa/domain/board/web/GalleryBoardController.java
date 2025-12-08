@@ -132,10 +132,10 @@ public class GalleryBoardController {
                     "- 게시글 목록 (제목, 썸네일 이미지, 작성자, 조회수 등)\n" +
                     "- 로그인한 경우 각 게시글의 북마크 여부 포함\n" +
                     "- 페이지 정보 (totalElements, totalPages 등)\n\n" +
-                    "**정렬 옵션:**\n" +
-                    "- publishedAt,DESC: 최신순 (기본값)\n" +
-                    "- viewCount,DESC: 조회수 높은 순\n" +
-                    "- createdAt,DESC: 생성일 최신순\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: publishedAt DESC (최신순)\n" +
+                    "- 사용법: sort=publishedAt,desc 또는 sort=publishedAt,asc\n" +
+                    "- 기타 옵션: viewCount, createdAt\n\n" +
                     "**활용:**\n" +
                     "- 사진 게시판 메인 페이지\n" +
                     "- 필터링된 갤러리 목록\n" +
@@ -260,8 +260,11 @@ public class GalleryBoardController {
                     "- 공개/비공개 상태 모두 포함\n\n" +
                     "**페이지네이션:**\n" +
                     "- size: 페이지당 항목 수 (기본 20)\n" +
-                    "- page: 페이지 번호 (0부터 시작)\n" +
-                    "- sort: 정렬 기준 (기본: createdAt,DESC - 최신 작성순)\n\n" +
+                    "- page: 페이지 번호 (0부터 시작)\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신 작성순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: viewCount, publishedAt\n\n" +
                     "**응답 정보:**\n" +
                     "- 게시글 목록 (제목, 이미지, 조회수 등)\n" +
                     "- 북마크 여부 포함\n" +

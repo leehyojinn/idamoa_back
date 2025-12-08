@@ -121,7 +121,14 @@ public class AdCampaignController {
         return ApiResponse.success(adCampaignService.getMyCampaign(userDetails.getUsername()));
     }
 
-    @Operation(summary = "내 캠페인 이력 조회", description = "현재 로그인한 사용자의 모든 광고 캠페인 이력을 조회합니다.")
+    @Operation(summary = "내 캠페인 이력 조회", description = """
+            현재 로그인한 사용자의 모든 광고 캠페인 이력을 조회합니다.
+
+            ## 정렬
+            - 기본값: createdAt DESC (최신순)
+            - 사용법: sort=createdAt,desc 또는 sort=createdAt,asc
+            - 기타 옵션: startDate, endDate, status
+            """)
     @GetMapping("/my/history")
     public ApiResponse<Page<AdCampaignResponse>> getMyCampaignHistory(
             @AuthenticationPrincipal UserDetails userDetails,

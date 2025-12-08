@@ -49,8 +49,11 @@ public class QuickConsultationController {
                     "  - null: 전체 상담\n\n" +
                     "**페이지네이션:**\n" +
                     "- size: 페이지당 항목 수 (기본 20)\n" +
-                    "- page: 페이지 번호 (0부터 시작)\n" +
-                    "- sort: 정렬 기준 (기본: createdAt,DESC - 최신순)\n\n" +
+                    "- page: 페이지 번호 (0부터 시작)\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: status, updatedAt\n\n" +
                     "**응답:**\n" +
                     "- 상담 목록 (제목, 이름, 전화번호 일부, 상태, 작성일)\n" +
                     "- 로그인한 경우 isMyConsultation=true/false 포함\n" +
@@ -95,6 +98,10 @@ public class QuickConsultationController {
                     "**페이지네이션:**\n" +
                     "- size: 페이지당 항목 수 (기본 20)\n" +
                     "- page: 페이지 번호 (0부터 시작)\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: status, updatedAt\n\n" +
                     "**활용:**\n" +
                     "- 마이페이지 - 내 상담 목록\n" +
                     "- 내글만보기 필터")
