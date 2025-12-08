@@ -31,10 +31,11 @@ public class DocumentResponse {
     private String categoryName;
 
     // Document 특화 데이터
-    private List<FileInfo> files;  // 문서 파일 정보
+    private List<FileInfo> files;  // 문서 파일 정보 (가격 포함)
     private FileInfo thumbnail;    // 썸네일 파일 정보
     private Boolean isPaid;
     private Integer price;
+    private Map<String, Integer> filePrices;  // 파일별 가격 맵 (uuid -> price)
 
     // 통계
     private Integer viewCount;
@@ -91,6 +92,9 @@ public class DocumentResponse {
         Boolean isPaid = (Boolean) typeData.getOrDefault("isPaid", false);
         Integer price = ((Number) typeData.getOrDefault("price", 0)).intValue();
 
+        // 파일별 가격 정보 추출 (개별 가격 방식)
+        Map<String, Integer> filePrices = extractFilePrices(typeData, isPaid, price);
+
         return DocumentResponse.builder()
                 .uuid(board.getUuid())
                 .title(board.getTitle())
@@ -102,6 +106,7 @@ public class DocumentResponse {
                 .thumbnail(thumbnail)  // FileInfo
                 .isPaid(isPaid)
                 .price(price)
+                .filePrices(filePrices)
                 .viewCount(board.getViewCount())
                 .likeCount(board.getLikeCount())
                 .commentCount(board.getCommentCount())
@@ -136,5 +141,40 @@ public class DocumentResponse {
                 .hasDownloaded(hasDownloaded)
                 .isDeleted(board.getIsDeleted())
                 .build();
+    }
+
+    /**
+     * typeData에서 파일별 가격 정보 추출
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Integer> extractFilePrices(Map<String, Object> typeData, Boolean isPaid, Integer defaultPrice) {
+        Map<String, Integer> filePrices = new java.util.HashMap<>();
+
+        // 개별 가격 방식 확인
+        Boolean individualPricing = (Boolean) typeData.getOrDefault("individualPricing", false);
+
+        if (Boolean.TRUE.equals(individualPricing)) {
+            // 개별 가격 방식: filePrices 맵에서 추출
+            Object filePricesObj = typeData.get("filePrices");
+            if (filePricesObj instanceof Map) {
+                Map<String, Object> prices = (Map<String, Object>) filePricesObj;
+                for (Map.Entry<String, Object> entry : prices.entrySet()) {
+                    if (entry.getValue() instanceof Number) {
+                        filePrices.put(entry.getKey(), ((Number) entry.getValue()).intValue());
+                    }
+                }
+            }
+        } else if (Boolean.TRUE.equals(isPaid) && defaultPrice != null && defaultPrice > 0) {
+            // 일괄 가격 방식: 모든 파일에 동일 가격 적용
+            Object filesObj = typeData.get("files");
+            if (filesObj instanceof List) {
+                List<String> fileUuids = (List<String>) filesObj;
+                for (String uuid : fileUuids) {
+                    filePrices.put(uuid, defaultPrice);
+                }
+            }
+        }
+
+        return filePrices;
     }
 }

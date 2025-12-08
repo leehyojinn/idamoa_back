@@ -42,31 +42,67 @@ public class DocumentBoardController {
     private final BoardBookmarkService boardBookmarkService;
 
     @Operation(summary = "Document 게시글 생성",
-            description = "새로운 자료실 게시글을 생성합니다.\n\n" +
-                    "**파일 업로드 프로세스:**\n" +
-                    "1. `/api/files/presigned` 호출 → Presigned URL 획득\n" +
-                    "2. S3로 파일 직접 업로드 (PUT 요청)\n" +
-                    "3. `/api/files/complete` 호출 → 파일 UUID 획득\n" +
-                    "4. **이 API 호출** → 획득한 파일 UUID를 fileUuids 배열로 전송\n\n" +
-                    "**필수 정보:**\n" +
-                    "- title: 제목 (최대 200자)\n" +
-                    "- content: 내용 (최대 5000자)\n" +
-                    "- fileUuids: 파일 UUID 배열 (최소 1개 이상)\n\n" +
-                    "**선택 정보:**\n" +
-                    "- categoryId: 카테고리 ID\n" +
-                    "- thumbnailUuid: 썸네일 이미지 UUID (미리보기용)\n" +
-                    "- isPaid: 유료 파일 여부 (기본: false)\n" +
-                    "- price: 가격 (원) - 유료인 경우만 입력\n" +
-                    "- filterOptionIds: 필터 옵션 ID 배열\n" +
-                    "- tags: 태그 배열\n" +
-                    "- isPublished: 즉시 게시 여부 (기본: true)\n" +
-                    "- isPrivate: 비공개 여부 (기본: false)\n\n" +
-                    "**권한:**\n" +
-                    "- 로그인 필수\n\n" +
-                    "**유료 파일:**\n" +
-                    "- isPaid=true 설정 시 결제 후 다운로드 가능\n" +
-                    "- price 필드에 금액 설정 (KRW)\n" +
-                    "- 결제 연동 기능 필요")
+            description = """
+                    새로운 자료실 게시글을 생성합니다.
+
+                    ## 파일 업로드 프로세스
+                    1. `/api/files/presigned` 호출 → Presigned URL 획득
+                    2. S3로 파일 직접 업로드 (PUT 요청)
+                    3. `/api/files/complete` 호출 → 파일 UUID 획득
+                    4. **이 API 호출** → 획득한 파일 UUID를 전송
+
+                    ## 유료 파일 설정 방식
+
+                    ### 방식 A: 개별 가격 설정 (권장) ⭐
+                    파일마다 다른 가격을 설정할 수 있습니다.
+
+                    ```json
+                    {
+                      "title": "병원 인테리어 설계도면 모음",
+                      "content": "치과, 안과, 피부과 인테리어 설계도면입니다.",
+                      "files": [
+                        {"uuid": "파일1-uuid", "isPaid": true, "price": 5000},
+                        {"uuid": "파일2-uuid", "isPaid": true, "price": 3000},
+                        {"uuid": "파일3-uuid", "isPaid": false, "price": 0}
+                      ],
+                      "thumbnailUuid": "썸네일-uuid"
+                    }
+                    ```
+
+                    - files 배열을 사용하면 fileUuids, isPaid, price 필드는 무시됩니다
+                    - 각 파일별로 유료/무료 및 가격을 개별 설정 가능
+                    - isPaid: true이고 price > 0인 파일만 유료로 처리
+
+                    ### 방식 B: 일괄 가격 설정 (레거시)
+                    모든 파일에 동일한 가격을 적용합니다.
+
+                    ```json
+                    {
+                      "title": "병원 인테리어 설계도면",
+                      "content": "50평 규모 치과 인테리어 설계도면입니다.",
+                      "fileUuids": ["파일1-uuid", "파일2-uuid"],
+                      "isPaid": true,
+                      "price": 5000,
+                      "thumbnailUuid": "썸네일-uuid"
+                    }
+                    ```
+
+                    ## 필수 정보
+                    - title: 제목 (최대 200자)
+                    - content: 내용 (최대 5000자)
+                    - files 또는 fileUuids: 파일 정보 (최소 1개 이상)
+
+                    ## 선택 정보
+                    - categoryId: 카테고리 ID
+                    - thumbnailUuid: 썸네일 이미지 UUID
+                    - filterOptionIds: 필터 옵션 ID 배열
+                    - tags: 태그 배열
+                    - isPublished: 즉시 게시 여부 (기본: true)
+                    - isPrivate: 비공개 여부 (기본: false)
+
+                    ## 권한
+                    - 로그인 필수
+                    """)
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -209,23 +245,55 @@ public class DocumentBoardController {
     }
 
     @Operation(summary = "Document 게시글 수정",
-            description = "자료실 게시글을 수정합니다.\n\n" +
-                    "**수정 가능 항목:**\n" +
-                    "- 제목, 내용\n" +
-                    "- 파일 목록 (추가/삭제 가능)\n" +
-                    "- 썸네일 이미지\n" +
-                    "- 카테고리\n" +
-                    "- 유료 파일 설정 (가격 변경 가능)\n" +
-                    "- 필터 옵션\n" +
-                    "- 태그\n" +
-                    "- 공개/비공개 설정\n\n" +
-                    "**권한:**\n" +
-                    "- 작성자 본인만 수정 가능\n" +
-                    "- 다른 사용자가 수정 시도 시 403 Forbidden\n\n" +
-                    "**주의사항:**\n" +
-                    "- 수정 시 updatedAt 자동 갱신\n" +
-                    "- 파일 변경 시 새로운 파일 업로드 후 UUID 전송\n" +
-                    "- 유료 파일 가격 변경 시 기존 구매자에게는 영향 없음")
+            description = """
+                    자료실 게시글을 수정합니다.
+
+                    ## 수정 가능 항목
+                    - 제목, 내용
+                    - 파일 목록 (추가/삭제 가능)
+                    - 썸네일 이미지
+                    - 카테고리
+                    - 유료 파일 설정 (가격 변경 가능)
+                    - 필터 옵션, 태그
+
+                    ## 유료 파일 설정 방식
+
+                    ### 방식 A: 개별 가격 설정 (권장) ⭐
+                    파일마다 다른 가격을 설정할 수 있습니다.
+
+                    ```json
+                    {
+                      "title": "수정된 제목",
+                      "content": "수정된 내용",
+                      "files": [
+                        {"uuid": "파일1-uuid", "isPaid": true, "price": 8000},
+                        {"uuid": "파일2-uuid", "isPaid": true, "price": 5000},
+                        {"uuid": "새파일-uuid", "isPaid": false, "price": 0}
+                      ]
+                    }
+                    ```
+
+                    ### 방식 B: 일괄 가격 설정 (레거시)
+                    모든 파일에 동일한 가격을 적용합니다.
+
+                    ```json
+                    {
+                      "title": "수정된 제목",
+                      "fileUuids": ["파일1-uuid", "파일2-uuid"],
+                      "isPaid": true,
+                      "price": 5000
+                    }
+                    ```
+
+                    ## 권한
+                    - 작성자 본인만 수정 가능
+                    - 다른 사용자가 수정 시도 시 403 Forbidden
+
+                    ## 주의사항
+                    - 수정 시 updatedAt 자동 갱신
+                    - 파일 변경 시 새로운 파일 업로드 후 UUID 전송
+                    - 유료 파일 가격 변경 시 기존 구매자에게는 영향 없음
+                    """)
     @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{uuid}")
     public ApiResponse<DocumentResponse> updateDocument(

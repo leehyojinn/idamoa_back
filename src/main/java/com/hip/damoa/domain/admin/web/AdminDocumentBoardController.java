@@ -92,7 +92,40 @@ public class AdminDocumentBoardController {
      * 자료실 게시글 생성
      */
     @Operation(summary = "[관리자] 자료실 게시글 생성",
-            description = "새로운 자료실 게시글을 생성합니다.")
+            description = """
+                    새로운 자료실 게시글을 생성합니다.
+
+                    ## 유료 파일 설정 방식
+
+                    ### 방식 A: 개별 가격 설정 (권장) ⭐
+                    파일마다 다른 가격을 설정할 수 있습니다.
+
+                    ```json
+                    {
+                      "title": "병원 인테리어 설계도면 모음",
+                      "content": "치과, 안과, 피부과 인테리어 설계도면입니다.",
+                      "files": [
+                        {"uuid": "파일1-uuid", "isPaid": true, "price": 5000},
+                        {"uuid": "파일2-uuid", "isPaid": true, "price": 3000},
+                        {"uuid": "파일3-uuid", "isPaid": false, "price": 0}
+                      ],
+                      "thumbnailUuid": "썸네일-uuid"
+                    }
+                    ```
+
+                    ### 방식 B: 일괄 가격 설정 (레거시)
+                    모든 파일에 동일한 가격을 적용합니다.
+
+                    ```json
+                    {
+                      "title": "병원 인테리어 설계도면",
+                      "content": "50평 규모 치과 인테리어 설계도면입니다.",
+                      "fileUuids": ["파일1-uuid", "파일2-uuid"],
+                      "isPaid": true,
+                      "price": 5000
+                    }
+                    ```
+                    """)
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<DocumentResponse> createDocument(
@@ -108,7 +141,34 @@ public class AdminDocumentBoardController {
      * 자료실 게시글 수정
      */
     @Operation(summary = "[관리자] 자료실 게시글 수정",
-            description = "자료실 게시글을 수정합니다.")
+            description = """
+                    자료실 게시글을 수정합니다.
+
+                    ## 유료 파일 설정 방식
+
+                    ### 방식 A: 개별 가격 설정 (권장) ⭐
+                    ```json
+                    {
+                      "title": "수정된 제목",
+                      "files": [
+                        {"uuid": "파일1-uuid", "isPaid": true, "price": 8000},
+                        {"uuid": "파일2-uuid", "isPaid": false, "price": 0}
+                      ]
+                    }
+                    ```
+
+                    ### 방식 B: 일괄 가격 설정 (레거시)
+                    ```json
+                    {
+                      "title": "수정된 제목",
+                      "fileUuids": ["파일1-uuid", "파일2-uuid"],
+                      "isPaid": true,
+                      "price": 5000
+                    }
+                    ```
+
+                    **주의**: 가격 변경 시 기존 구매자에게는 영향 없음
+                    """)
     @PutMapping("/{documentUuid}")
     public ApiResponse<DocumentResponse> updateDocument(
             @AuthenticationPrincipal UserDetails userDetails,

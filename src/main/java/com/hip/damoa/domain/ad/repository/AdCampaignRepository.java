@@ -138,6 +138,51 @@ public interface AdCampaignRepository extends JpaRepository<AdCampaign, Long> {
     long countByStatusAndIsDeletedFalse(String status);
 
     /**
+     * 전체 캠페인 수 조회
+     */
+    long countByIsDeletedFalse();
+
+    /**
+     * 자동 갱신 설정된 활성 캠페인 수 조회
+     */
+    long countByAutoRenewAndStatusAndIsDeletedFalse(Boolean autoRenew, String status);
+
+    /**
+     * 전체 캠페인 페이징 조회
+     */
+    Page<AdCampaign> findByIsDeletedFalse(Pageable pageable);
+
+    /**
+     * 상태별 캠페인 페이징 조회
+     */
+    Page<AdCampaign> findByStatusAndIsDeletedFalse(String status, Pageable pageable);
+
+    /**
+     * 회사명 검색 (페이징)
+     */
+    @Query("""
+        SELECT ac FROM AdCampaign ac
+        WHERE ac.isDeleted = false
+          AND ac.company.name LIKE %:companyName%
+        """)
+    Page<AdCampaign> findByCompanyNameContainingAndIsDeletedFalse(
+            @Param("companyName") String companyName, Pageable pageable);
+
+    /**
+     * 상태 + 회사명 검색 (페이징)
+     */
+    @Query("""
+        SELECT ac FROM AdCampaign ac
+        WHERE ac.status = :status
+          AND ac.isDeleted = false
+          AND ac.company.name LIKE %:companyName%
+        """)
+    Page<AdCampaign> findByStatusAndCompanyNameContainingAndIsDeletedFalse(
+            @Param("status") String status,
+            @Param("companyName") String companyName,
+            Pageable pageable);
+
+    /**
      * 벌크 상태 업데이트
      */
     @Modifying

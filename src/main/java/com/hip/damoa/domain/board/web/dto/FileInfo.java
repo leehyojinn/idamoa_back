@@ -24,6 +24,10 @@ public class FileInfo {
     private String mimeType;
     private String fileExtension;
 
+    // 가격 정보
+    private Boolean isPaid;
+    private Integer price;
+
     public static FileInfo from(File file) {
         return FileInfo.builder()
                 .uuid(file.getUuid())
@@ -32,6 +36,24 @@ public class FileInfo {
                 .fileSize(file.getFileSize())
                 .mimeType(file.getMimeType())
                 .fileExtension(file.getFileExtension())
+                .isPaid(false)
+                .price(0)
+                .build();
+    }
+
+    /**
+     * 파일과 가격 정보를 포함하여 FileInfo 생성
+     */
+    public static FileInfo from(File file, Boolean isPaid, Integer price) {
+        return FileInfo.builder()
+                .uuid(file.getUuid())
+                .originalFilename(file.getOriginalFilename())
+                .fileUrl(file.getFileUrl())
+                .fileSize(file.getFileSize())
+                .mimeType(file.getMimeType())
+                .fileExtension(file.getFileExtension())
+                .isPaid(isPaid != null ? isPaid : false)
+                .price(price != null ? price : 0)
                 .build();
     }
 }
