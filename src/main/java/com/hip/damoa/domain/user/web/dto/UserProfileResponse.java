@@ -2,6 +2,7 @@ package com.hip.damoa.domain.user.web.dto;
 
 import com.hip.damoa.core.jwt.TokenInfo;
 import com.hip.damoa.domain.user.model.UserProfile;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,29 +17,55 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "사용자 프로필 응답")
 public class UserProfileResponse {
 
+    @Schema(description = "프로필 ID", example = "1")
     private Long id;
+
+    @Schema(description = "이름", example = "홍길동")
     private String name;
+
+    @Schema(description = "닉네임", example = "길동이")
     private String nickname;
+
+    @Schema(description = "전화번호", example = "010-1234-5678")
     private String phone;
+
+    @Schema(description = "자기소개", example = "안녕하세요. 인테리어에 관심이 많습니다.")
     private String bio;
+
+    @Schema(description = "아바타 파일 ID", example = "1")
     private Long avatarFileId;
-    private java.util.UUID avatarFileUuid;  // 파일 UUID (수정 시 사용)
+
+    @Schema(description = "아바타 파일 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
+    private java.util.UUID avatarFileUuid;
+
+    @Schema(description = "아바타 이미지 URL", example = "https://example.com/avatar.jpg")
     private String avatarUrl;
+
+    @Schema(description = "주소", example = "서울시 강남구 테헤란로 123")
     private String address;
+
+    @Schema(description = "우편번호", example = "06123")
     private String postalCode;
+
+    @Schema(description = "프로필 공개 범위 (PUBLIC, PRIVATE)", example = "PUBLIC")
     private String profileVisibility;
 
-    // 소셜 링크
+    @Schema(description = "소셜 링크", example = "{\"instagram\": \"@user123\", \"blog\": \"https://blog.example.com\"}")
     private Map<String, Object> socialLinks;
 
-    // 약관 동의
+    @Schema(description = "서비스 이용약관 동의 여부", example = "true")
     private Boolean termsAgreed;
+
+    @Schema(description = "개인정보 처리방침 동의 여부", example = "true")
     private Boolean privacyAgreed;
+
+    @Schema(description = "마케팅 정보 수신 동의 여부", example = "false")
     private Boolean marketingAgreed;
 
-    // 프로필 생성 후 새로운 JWT 토큰 (profileCompleted=true, currentRole 업데이트)
+    @Schema(description = "JWT 토큰 정보 (프로필 생성 후)")
     private TokenInfo tokenInfo;
 
     /**
