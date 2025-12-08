@@ -1,6 +1,6 @@
 package com.hip.damoa.domain.file.model;
 
-import com.hip.damoa.domain.common.BaseTimeEntity;
+import com.hip.damoa.domain.common.BaseAuditEntity;
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -12,7 +12,8 @@ import java.util.Map;
 /**
  * 파일 가격 정보 엔티티
  *
- * 파일 다운로드 과금 정보를 관리합니다
+ * 파일 다운로드 과금 정보를 관리합니다.
+ * File UUID로 접근하므로 자체 UUID 불필요 (BaseAuditEntity 사용)
  */
 @Entity
 @Table(name = "file_pricing", indexes = {
@@ -22,7 +23,7 @@ import java.util.Map;
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class FilePricing extends BaseTimeEntity {
+public class FilePricing extends BaseAuditEntity {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "file_id", nullable = false, unique = true)

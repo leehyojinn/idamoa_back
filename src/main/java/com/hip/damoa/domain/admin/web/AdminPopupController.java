@@ -153,13 +153,11 @@ public class AdminPopupController {
             description = "팝업 목록을 조회합니다 (관리자 전용, 페이징).\n\n" +
                     "**페이지네이션:**\n" +
                     "- size: 페이지당 항목 수 (기본 20)\n" +
-                    "- page: 페이지 번호 (0부터 시작)\n" +
-                    "- sort: 정렬 기준 (기본: displayOrder,ASC - 순서대로)\n\n" +
-                    "**정렬 옵션:**\n" +
-                    "- displayOrder,ASC: 노출 순서대로 (기본값)\n" +
-                    "- createdAt,DESC: 최신 생성순\n" +
-                    "- viewCount,DESC: 조회수 높은 순\n" +
-                    "- clickCount,DESC: 클릭수 높은 순\n\n" +
+                    "- page: 페이지 번호 (0부터 시작)\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: displayOrder ASC (순서 오름차순)\n" +
+                    "- 사용법: sort=displayOrder,asc 또는 sort=displayOrder,desc\n" +
+                    "- 기타 옵션: createdAt, viewCount, clickCount\n\n" +
                     "**응답:**\n" +
                     "- 삭제되지 않은 팝업만 조회\n" +
                     "- 활성/비활성 모두 포함\n" +

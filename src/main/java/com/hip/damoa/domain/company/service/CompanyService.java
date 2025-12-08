@@ -481,9 +481,14 @@ public class CompanyService {
     }
 
     /**
-     * 업체 검색 (공개용, 필터링 + 광고 우선순위 정렬)
-     * 정렬 순서: 광고 우선순위 → 좋아요 → 리뷰 → 조회수
-     * 필터가 1순위로 적용되고, 키워드는 필터링된 결과 내에서 검색
+     * 업체 검색 (공개용, 필터링 + 동적 정렬)
+     *
+     * 정렬 순서:
+     * - 1순위: sortBy로 선택한 기준 (LATEST, POPULAR, RATING, REVIEW_COUNT, PREMIUM_TIER)
+     * - 2순위: 광고 우선순위 (광고 유무 → priority_score → secondary_score)
+     * - 3순위 이후: 좋아요 → 리뷰 → 조회수
+     *
+     * sortBy가 AD_PRIORITY이거나 미지정시: 광고 우선순위가 1순위로 적용
      */
     @Transactional(readOnly = true)
     public Page<Company> searchCompanies(CompanySearchRequest searchRequest, Pageable pageable) {
@@ -507,41 +512,33 @@ public class CompanyService {
             });
         }
 
-        // 광고 우선순위 정렬을 사용하므로 페이징 정보만 전달 (정렬은 쿼리에서 처리)
-        Pageable pageableOnly = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        // 모든 필터 옵션 ID를 하나의 리스트로 변환
+        List<Long> allFilterOptionIds = new java.util.ArrayList<>();
+        filterOptionsByCategory.values().forEach(allFilterOptionIds::addAll);
 
-        Page<Company> results;
+        // 카테고리 개수 (AND 조건 확인용)
+        Integer categoryCount = filterOptionsByCategory.size();
+        boolean hasFilters = !filterOptionsByCategory.isEmpty();
 
-        // 필터가 없으면 전체 조회 (키워드 검색만 적용)
-        if (filterOptionsByCategory.isEmpty() &&
-            (searchRequest.getKeyword() == null || searchRequest.getKeyword().isEmpty()) &&
-            searchRequest.getMinRating() == null) {
-            log.info("필터/키워드 없이 전체 업체를 광고 우선순위로 조회합니다.");
-
-            // 광고 우선순위 기반 전체 조회
-            results = companyRepository.findAllWithAdPriority(pageableOnly);
-        } else {
-            log.info("필터/키워드를 적용하여 광고 우선순위로 업체를 조회합니다.");
-
-            // 모든 필터 옵션 ID를 하나의 배열로 변환
-            List<Long> allFilterOptionIds = new java.util.ArrayList<>();
-            filterOptionsByCategory.values().forEach(allFilterOptionIds::addAll);
-            Long[] filterOptionIdArray = allFilterOptionIds.toArray(new Long[0]);
-
-            // 카테고리 개수 (AND 조건 확인용)
-            Integer categoryCount = filterOptionsByCategory.size();
-            boolean hasFilters = !filterOptionsByCategory.isEmpty();
-
-            // 광고 우선순위 기반 통합 검색 (필터 + 키워드)
-            results = companyRepository.searchWithAdPriority(
-                searchRequest.getKeyword(),
-                searchRequest.getMinRating(),
-                hasFilters,
-                filterOptionIdArray,
-                categoryCount,
-                pageableOnly
-            );
+        // sortBy 기본값 설정
+        String sortBy = searchRequest.getSortBy();
+        if (sortBy == null || sortBy.isEmpty()) {
+            sortBy = "AD_PRIORITY";
         }
+
+        log.info("정렬 기준: {} (1순위: {}, 2순위: 광고우선순위)", sortBy,
+            "AD_PRIORITY".equalsIgnoreCase(sortBy) ? "광고우선순위" : sortBy);
+
+        // 동적 정렬을 지원하는 커스텀 메서드 호출
+        Page<Company> results = companyRepository.searchWithDynamicSort(
+            searchRequest.getKeyword(),
+            searchRequest.getMinRating(),
+            hasFilters,
+            allFilterOptionIds,
+            categoryCount,
+            sortBy,
+            pageable
+        );
 
         log.info("검색 결과: {} 건", results.getTotalElements());
 

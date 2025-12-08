@@ -265,18 +265,14 @@ public class CompanyController {
                     "**조회 조건:**\n" +
                     "- isActive=true인 업체만 조회\n" +
                     "- 삭제되지 않은 업체만 포함\n\n" +
-                    "**페이지네이션:**\n" +
-                    "- size: 페이지당 항목 수 (기본 20)\n" +
-                    "- page: 페이지 번호 (0부터 시작)\n" +
-                    "- sort: 정렬 기준 (기본: createdAt,DESC - 최신순)\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: rating, reviewCount\n\n" +
                     "**응답:**\n" +
                     "- 업체 목록 (이름, 설명, 대표 이미지, 평점 등)\n" +
                     "- 로그인한 경우 각 업체의 좋아요 여부 포함\n" +
                     "- 페이지 정보 (totalElements, totalPages 등)\n\n" +
-                    "**정렬 옵션:**\n" +
-                    "- createdAt,DESC: 최신순 (기본값)\n" +
-                    "- rating,DESC: 평점 높은 순\n" +
-                    "- reviewCount,DESC: 리뷰 많은 순\n\n" +
                     "**권한:**\n" +
                     "- 누구나 조회 가능 (로그인 불필요)\n\n" +
                     "**활용:**\n" +
@@ -327,15 +323,29 @@ public class CompanyController {
                     "- 다른 카테고리 간: AND 조건\n" +
                     "- 여러 카테고리는 & 구분: 1:1,2&2:10,11\n\n" +
                     "**정렬 기준 (sortBy):**\n" +
-                    "- LATEST: 최신순 (기본값)\n" +
-                    "- RATING: 평점순\n" +
-                    "- REVIEW_COUNT: 리뷰순\n" +
-                    "- POPULAR: 인기순\n" +
-                    "- PREMIUM_TIER: 프리미엄순\n\n" +
+                    "| sortBy | 설명 |\n" +
+                    "|--------|------|\n" +
+                    "| AD_PRIORITY | 광고 우선순위 (기본값) |\n" +
+                    "| LATEST | 최신순 |\n" +
+                    "| LIKE_COUNT | 좋아요순 |\n" +
+                    "| REVIEW_COUNT | 리뷰순 |\n" +
+                    "| VIEW_COUNT | 조회수순 |\n" +
+                    "| RATING | 평점순 |\n" +
+                    "| PREMIUM_TIER | 프리미엄순 |\n\n" +
+                    "**정렬 우선순위:**\n" +
+                    "- **1순위**: sortBy로 선택한 기준\n" +
+                    "- **2순위 이후**: 광고 → 우선순위 → 좋아요 → 리뷰수 → 조회수 → 평점\n\n" +
                     "**예시:**\n" +
+                    "| sortBy | 정렬 순서 |\n" +
+                    "|--------|----------|\n" +
+                    "| AD_PRIORITY | 광고 → 우선순위 → 좋아요 → 리뷰수 → 조회수 → 평점 |\n" +
+                    "| LATEST | 생성일 → 광고 → 우선순위 → 좋아요 → 리뷰수 → 조회수 → 평점 |\n" +
+                    "| LIKE_COUNT | 좋아요 → 광고 → 우선순위 → 리뷰수 → 조회수 → 평점 |\n" +
+                    "| RATING | 평점 → 광고 → 우선순위 → 좋아요 → 리뷰수 → 조회수 |\n\n" +
+                    "**검색 예시:**\n" +
                     "```\n" +
-                    "GET /api/companies/search?keyword=병원&filters=1:1,2&filters=2:10,11\n" +
-                    "// '병원' 키워드로 검색하며 (서울 OR 경기) AND (인테리어 OR 마케팅) 필터 적용\n" +
+                    "GET /api/companies/search?keyword=병원&filters=1:1,2&sortBy=RATING\n" +
+                    "// '병원' 키워드, 필터 적용, 평점순 정렬 (평점 1순위, 광고 2순위)\n" +
                     "```")
     @GetMapping("/search")
     public ApiResponse<Page<CompanyListResponse>> searchCompanies(
@@ -352,8 +362,8 @@ public class CompanyController {
             })
             @RequestParam(required = false) String filters,
 
-            @Parameter(description = "정렬 기준", schema = @Schema(allowableValues = {"LATEST", "POPULAR", "RATING", "REVIEW_COUNT", "PREMIUM_TIER"}))
-            @RequestParam(required = false, defaultValue = "LATEST") String sortBy,
+            @Parameter(description = "정렬 기준", schema = @Schema(allowableValues = {"AD_PRIORITY", "LATEST", "LIKE_COUNT", "REVIEW_COUNT", "VIEW_COUNT", "RATING", "PREMIUM_TIER"}))
+            @RequestParam(required = false, defaultValue = "AD_PRIORITY") String sortBy,
 
             @PageableDefault(size = 20) Pageable pageable,
             @AuthenticationPrincipal UserDetails userDetails) {

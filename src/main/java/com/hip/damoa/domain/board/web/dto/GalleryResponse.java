@@ -3,6 +3,7 @@ package com.hip.damoa.domain.board.web.dto;
 import com.hip.damoa.domain.board.model.Board;
 import com.hip.damoa.domain.board.model.BoardFilterOption;
 import com.hip.damoa.domain.filter.model.FilterOption;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,50 +22,91 @@ import java.util.stream.Collectors;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "갤러리 게시글 응답")
 public class GalleryResponse {
 
+    @Schema(description = "게시글 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID uuid;
+
+    @Schema(description = "제목", example = "모던 카페 인테리어 시공 사례")
     private String title;
+
+    @Schema(description = "내용 (HTML 지원)", example = "<p>고급스러운 카페 인테리어 시공 사례입니다.</p>")
     private String content;
+
+    @Schema(description = "게시판 타입", example = "GALLERY")
     private String boardType;
+
+    @Schema(description = "카테고리 ID", example = "1")
     private Long categoryId;
+
+    @Schema(description = "카테고리명", example = "카페/음식점")
     private String categoryName;
 
     // Gallery 특화 데이터
-    private List<FileInfo> images;  // 이미지 파일 정보
+    @Schema(description = "갤러리 이미지 파일 목록")
+    private List<FileInfo> images;
+
+    @Schema(description = "관련 링크", example = "https://example.com/portfolio")
     private String relatedLink;
+
+    @Schema(description = "저작권 정보")
     private CopyrightInfo copyright;
 
     // 통계
+    @Schema(description = "조회수", example = "1500")
     private Integer viewCount;
+
+    @Schema(description = "좋아요 수", example = "120")
     private Integer likeCount;
+
+    @Schema(description = "댓글 수", example = "25")
     private Integer commentCount;
 
     // 상태
+    @Schema(description = "상단 고정 여부", example = "false")
     private Boolean isPinned;
+
+    @Schema(description = "추천 여부", example = "true")
     private Boolean isFeatured;
+
+    @Schema(description = "게시 여부", example = "true")
     private Boolean isPublished;
+
+    @Schema(description = "게시일시", example = "2025-01-01T09:00:00")
     private LocalDateTime publishedAt;
 
     // 필터
+    @Schema(description = "적용된 필터 옵션 목록")
     private List<FilterOptionSummary> filterOptions;
 
     // 태그
+    @Schema(description = "태그 배열", example = "[\"인테리어\", \"카페\", \"모던\"]")
     private String[] tags;
 
     // 작성자
+    @Schema(description = "작성자 ID", example = "1")
     private Long userId;
+
+    @Schema(description = "작성자 이메일", example = "user@example.com")
     private String userEmail;
+
+    @Schema(description = "작성자 이름", example = "홍길동")
     private String userName;
 
     // 시간
+    @Schema(description = "생성일시", example = "2025-01-01T08:00:00")
     private LocalDateTime createdAt;
+
+    @Schema(description = "수정일시", example = "2025-01-01T10:00:00")
     private LocalDateTime updatedAt;
 
     // 북마크 여부 (로그인 사용자용)
+    @Schema(description = "북마크 여부 (로그인 사용자용)", example = "false")
     private Boolean isBookmarked;
 
     // 삭제 상태 (관리자용)
+    @Schema(description = "삭제 여부 (관리자용)", example = "false")
     private Boolean isDeleted;
 
     /**
@@ -74,9 +116,15 @@ public class GalleryResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    @Schema(description = "저작권 정보")
     public static class CopyrightInfo {
+        @Schema(description = "저작권자", example = "다모아 인테리어")
         private String owner;
+
+        @Schema(description = "라이선스 유형", example = "All Rights Reserved")
         private String license;
+
+        @Schema(description = "출처 표기", example = "선택")
         private String attribution;
     }
 
@@ -87,15 +135,33 @@ public class GalleryResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    @Schema(description = "필터 옵션 요약 정보")
     public static class FilterOptionSummary {
+        @Schema(description = "필터 옵션 ID", example = "1")
         private Long id;
+
+        @Schema(description = "필터 옵션 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
         private UUID uuid;
+
+        @Schema(description = "필터 카테고리 코드", example = "SPACE_TYPE")
         private String categoryCode;
+
+        @Schema(description = "필터 카테고리명", example = "공간 유형")
         private String categoryName;
+
+        @Schema(description = "필터 옵션 코드", example = "CAFE")
         private String code;
+
+        @Schema(description = "필터 옵션명", example = "카페/음식점")
         private String name;
+
+        @Schema(description = "필터 옵션 단축명", example = "카페")
         private String shortName;
+
+        @Schema(description = "색상 코드", example = "#FF5733")
         private String color;
+
+        @Schema(description = "아이콘", example = "cafe-icon")
         private String icon;
     }
 

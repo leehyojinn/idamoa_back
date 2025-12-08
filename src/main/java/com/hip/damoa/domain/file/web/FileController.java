@@ -277,7 +277,10 @@ public class FileController {
     @Operation(summary = "내가 구매한 파일 목록", description = """
             로그인한 사용자가 구매한 파일 목록을 조회합니다.
 
-            **정렬**: 구매일시 내림차순 (최신 구매 순)
+            ## 정렬
+            - 기본값: createdAt DESC (최신 구매순)
+            - 사용법: sort=createdAt,desc 또는 sort=createdAt,asc
+            - 기타 옵션: pricePaid
 
             **응답 정보**:
             - fileUuid, fileName: 파일 정보

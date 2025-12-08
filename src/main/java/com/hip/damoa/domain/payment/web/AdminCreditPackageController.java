@@ -48,8 +48,10 @@ public class AdminCreditPackageController {
             - unitAmount: 단위 금액 (10000, 30000, 50000, 100000)
             - isActive: 활성화 여부
 
-            **정렬**
-            - 기본적으로 displayOrder 순서로 정렬됩니다
+            ## 정렬
+            - 기본값: displayOrder ASC (순서 오름차순)
+            - 사용법: sort=displayOrder,asc 또는 sort=displayOrder,desc
+            - 기타 옵션: unitAmount, createdAt
             """)
     @GetMapping
     public ApiResponse<Page<CreditPackageResponse>> getPackages(

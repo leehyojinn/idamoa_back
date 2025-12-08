@@ -42,8 +42,11 @@ public class PlannerApplicationController {
             description = "플래너 신청 목록을 조회합니다. (비회원 접근 가능)\n\n" +
                     "**민감정보 제외**: 전화번호, 이메일은 응답에 포함되지 않습니다.\n\n" +
                     "**필터링**\n" +
-                    "- status 파라미터로 특정 상태만 필터링 가능\n" +
-                    "- 최신순 정렬 (createdAt DESC)")
+                    "- status 파라미터로 특정 상태만 필터링 가능\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: status, updatedAt")
     @GetMapping("/list")
     public ApiResponse<Page<PlannerApplicationSummaryResponse>> getPlannerApplications(
             @RequestParam(required = false) PlannerApplicationStatus status,
@@ -118,8 +121,11 @@ public class PlannerApplicationController {
                     "- IN_PROGRESS: 진행중 (상담 진행 중)\n" +
                     "- COMPLETED: 완료 (상담 완료)\n" +
                     "- REJECTED: 거절 (신청 거절)\n\n" +
-                    "- status 파라미터로 특정 상태만 필터링 가능\n" +
-                    "- 최신순 정렬 (createdAt DESC)")
+                    "- status 파라미터로 특정 상태만 필터링 가능\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n" +
+                    "- 기타 옵션: status, updatedAt")
     @GetMapping("/my")
     public ApiResponse<Page<PlannerApplicationListResponse>> getMyApplications(
             @AuthenticationPrincipal UserDetails userDetails,

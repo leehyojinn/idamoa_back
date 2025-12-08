@@ -44,8 +44,10 @@ public class AdminRefundController {
             - status: 환불 상태 (PENDING, COMPLETED, REJECTED)
             - keyword: 검색 (사용자 이메일/이름, 환불 사유)
 
-            **정렬**
-            - 기본적으로 생성일 내림차순으로 정렬됩니다
+            ## 정렬
+            - 기본값: createdAt DESC (최신순)
+            - 사용법: sort=createdAt,desc 또는 sort=createdAt,asc
+            - 기타 옵션: amount, status
             """)
     @GetMapping
     public ApiResponse<Page<AdminRefundResponse>> getRefunds(
@@ -71,7 +73,9 @@ public class AdminRefundController {
             description = """
             처리가 필요한 대기 중인 환불 요청 목록을 조회합니다.
 
-            - 신청일 기준 오름차순으로 정렬 (먼저 신청한 건부터)
+            ## 정렬
+            - 기본값: createdAt ASC (오래된 순, 먼저 신청한 건부터)
+            - 사용법: sort=createdAt,asc 또는 sort=createdAt,desc
             """)
     @GetMapping("/pending")
     public ApiResponse<Page<AdminRefundResponse>> getPendingRefunds(
@@ -86,7 +90,9 @@ public class AdminRefundController {
             description = """
             처리 완료된 환불 목록을 조회합니다.
 
-            - 처리일 기준 내림차순으로 정렬 (최근 처리된 건부터)
+            ## 정렬
+            - 기본값: updatedAt DESC (최근 처리된 건부터)
+            - 사용법: sort=updatedAt,desc 또는 sort=updatedAt,asc
             """)
     @GetMapping("/completed")
     public ApiResponse<Page<AdminRefundResponse>> getCompletedRefunds(

@@ -52,7 +52,14 @@ public class CreditController {
         return ApiResponse.success(creditService.getAvailablePackages());
     }
 
-    @Operation(summary = "크레딧 거래 내역 조회", description = "크레딧 충전/사용/환불 내역을 조회합니다.")
+    @Operation(summary = "크레딧 거래 내역 조회", description = """
+            크레딧 충전/사용/환불 내역을 조회합니다.
+
+            ## 정렬
+            - 기본값: createdAt DESC (최신순)
+            - 사용법: sort=createdAt,desc 또는 sort=createdAt,asc
+            - 기타 옵션: amount, transactionType
+            """)
     @GetMapping("/transactions")
     public ApiResponse<Page<CreditTransactionResponse>> getTransactions(
             @AuthenticationPrincipal UserDetails userDetails,

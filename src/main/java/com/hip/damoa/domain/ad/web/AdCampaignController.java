@@ -109,11 +109,34 @@ public class AdCampaignController {
     @Operation(summary = "내 활성 캠페인 조회", description = """
             현재 로그인한 사용자의 활성 광고 캠페인을 조회합니다.
 
-            **반환 정보**:
-            - 캠페인 기본 정보
-            - 남은 기간
-            - 현재 우선순위 점수
-            - 결제 내역
+            ## Response 필드 설명
+            | 필드 | 설명 |
+            |------|------|
+            | uuid | 캠페인 고유 식별자 |
+            | companyUuid | 업체 UUID |
+            | companyName | 업체명 |
+            | name | 캠페인명 |
+            | description | 캠페인 설명 |
+            | adType | 광고 유형 (SEARCH, FEATURED, BANNER) |
+            | status | 캠페인 상태 (PENDING, ACTIVE, PAUSED, COMPLETED, CANCELLED) |
+            | startDate | 시작일 |
+            | endDate | 종료일 |
+            | durationDays | 총 기간 (일) |
+            | remainingDays | 남은 기간 (일) |
+            | totalSpent | 총 지출 금액 (원) |
+            | totalDailyValue | 총 1일 가치 (원/일) |
+            | priorityScore | 우선순위 점수 (= totalDailyValue) |
+            | secondaryScore | 부차 우선순위 점수 (등록 순서) |
+            | autoRenew | 자동 갱신 여부 |
+            | accumulatedPayment | 누적 결제 금액 (다음 갱신 시 적용) |
+            | cycleStartDate | 현재 사이클 시작일 |
+            | renewalNotified | 갱신 알림 발송 여부 |
+            | totalImpressions | 총 노출 수 |
+            | totalClicks | 총 클릭 수 |
+            | totalConversions | 총 전환 수 |
+            | createdAt | 생성일시 |
+            | lastCalculatedAt | 마지막 우선순위 계산일시 |
+            | payments | 결제 내역 목록 |
             """)
     @GetMapping("/my")
     public ApiResponse<AdCampaignResponse> getMyCampaign(
@@ -121,7 +144,34 @@ public class AdCampaignController {
         return ApiResponse.success(adCampaignService.getMyCampaign(userDetails.getUsername()));
     }
 
-    @Operation(summary = "내 캠페인 이력 조회", description = "현재 로그인한 사용자의 모든 광고 캠페인 이력을 조회합니다.")
+    @Operation(summary = "내 캠페인 이력 조회", description = """
+            현재 로그인한 사용자의 모든 광고 캠페인 이력을 조회합니다.
+
+            ## Response 필드 설명 (AdCampaignResponse)
+            | 필드 | 설명 |
+            |------|------|
+            | uuid | 캠페인 고유 식별자 |
+            | companyUuid | 업체 UUID |
+            | companyName | 업체명 |
+            | name | 캠페인명 |
+            | adType | 광고 유형 (SEARCH, FEATURED, BANNER) |
+            | status | 캠페인 상태 (PENDING, ACTIVE, PAUSED, COMPLETED, CANCELLED) |
+            | startDate | 시작일 |
+            | endDate | 종료일 |
+            | durationDays | 총 기간 (일) |
+            | remainingDays | 남은 기간 (일) |
+            | totalSpent | 총 지출 금액 (원) |
+            | priorityScore | 우선순위 점수 |
+            | autoRenew | 자동 갱신 여부 |
+            | accumulatedPayment | 누적 결제 금액 |
+            | createdAt | 생성일시 |
+            | payments | 결제 내역 목록 |
+
+            ## 정렬
+            - 기본값: createdAt DESC (최신순)
+            - 사용법: sort=createdAt,desc 또는 sort=createdAt,asc
+            - 기타 옵션: startDate, endDate, status
+            """)
     @GetMapping("/my/history")
     public ApiResponse<Page<AdCampaignResponse>> getMyCampaignHistory(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -131,25 +181,61 @@ public class AdCampaignController {
                 userDetails.getUsername(), pageable));
     }
 
-    @Operation(summary = "캠페인 상세 조회", description = "특정 광고 캠페인의 상세 정보를 조회합니다.")
+    @Operation(summary = "캠페인 상세 조회", description = """
+            특정 광고 캠페인의 상세 정보를 조회합니다.
+
+            **주의**: 캠페인 소유자만 조회할 수 있습니다.
+
+            ## Response 필드 설명 (AdCampaignResponse)
+            | 필드 | 설명 |
+            |------|------|
+            | uuid | 캠페인 고유 식별자 |
+            | companyUuid | 업체 UUID |
+            | companyName | 업체명 |
+            | name | 캠페인명 |
+            | description | 캠페인 설명 |
+            | adType | 광고 유형 (SEARCH, FEATURED, BANNER) |
+            | status | 캠페인 상태 (PENDING, ACTIVE, PAUSED, COMPLETED, CANCELLED) |
+            | startDate | 시작일 |
+            | endDate | 종료일 |
+            | durationDays | 총 기간 (일) |
+            | remainingDays | 남은 기간 (일) |
+            | totalSpent | 총 지출 금액 (원) |
+            | totalDailyValue | 총 1일 가치 (원/일) |
+            | priorityScore | 우선순위 점수 (= totalDailyValue) |
+            | secondaryScore | 부차 우선순위 점수 (등록 순서) |
+            | autoRenew | 자동 갱신 여부 |
+            | accumulatedPayment | 누적 결제 금액 (다음 갱신 시 적용) |
+            | cycleStartDate | 현재 사이클 시작일 |
+            | renewalNotified | 갱신 알림 발송 여부 |
+            | totalImpressions | 총 노출 수 |
+            | totalClicks | 총 클릭 수 |
+            | totalConversions | 총 전환 수 |
+            | createdAt | 생성일시 |
+            | lastCalculatedAt | 마지막 우선순위 계산일시 |
+            | payments | 결제 내역 목록 |
+
+            ## payments 필드 설명 (AdPaymentResponse)
+            | 필드 | 설명 |
+            |------|------|
+            | uuid | 결제 UUID |
+            | paymentAmount | 결제 금액 (원) |
+            | paymentDate | 결제일 |
+            | applyFromDate | 적용 시작일 |
+            | applyToDate | 적용 종료일 |
+            | applyDays | 적용 일수 |
+            | dailyValue | 1일 가치 (결제금액/적용일수) |
+            | paymentType | 결제 유형 (INITIAL, ADDITIONAL) |
+            | status | 결제 상태 (ACTIVE, CONSUMED, REFUNDED) |
+            | remainingDays | 남은 일수 |
+            | createdAt | 생성일시 |
+            """)
     @GetMapping("/{campaignUuid}")
     public ApiResponse<AdCampaignResponse> getCampaign(
+            @AuthenticationPrincipal UserDetails userDetails,
             @Parameter(description = "캠페인 UUID") @PathVariable UUID campaignUuid) {
-        return ApiResponse.success(adCampaignService.getCampaign(campaignUuid));
-    }
-
-    @Operation(summary = "활성 캠페인 순위 조회", description = """
-            현재 활성 광고 캠페인들의 순위를 조회합니다.
-
-            **정렬 기준**:
-            1. priority_score (30일 환산 일당 가치) 내림차순
-            2. secondary_score (평점, 리뷰수, 선등록 보너스) 내림차순
-            """)
-    @GetMapping("/ranking")
-    public ApiResponse<List<AdCampaignRankingResponse>> getActiveCampaignRanking(
-            @Parameter(description = "조회할 순위 수 (기본값: 10)")
-            @RequestParam(defaultValue = "10") int limit) {
-        return ApiResponse.success(adCampaignService.getActiveCampaignRanking(limit));
+        return ApiResponse.success(adCampaignService.getCampaign(
+                userDetails.getUsername(), campaignUuid));
     }
 
     // ========== 캠페인 취소 API ==========

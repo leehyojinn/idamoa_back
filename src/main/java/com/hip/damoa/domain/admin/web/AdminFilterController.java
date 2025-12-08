@@ -48,7 +48,11 @@ public class AdminFilterController {
             **조회 옵션**
             - entityType: COMPANY(업체), BOARD(게시판) 중 선택하여 해당 타입의 카테고리만 조회
             - keyword: 카테고리 코드, 이름, 설명에서 검색
-            - 정렬: 기본적으로 displayOrder 순서로 정렬됨
+
+            ## 정렬
+            - 기본값: displayOrder ASC (순서 오름차순)
+            - 사용법: sort=displayOrder,asc 또는 sort=displayOrder,desc
+            - 기타 옵션: createdAt, name
             """)
     @GetMapping("/categories")
     public ApiResponse<Page<FilterCategoryResponse>> getFilterCategories(
@@ -190,7 +194,11 @@ public class AdminFilterController {
             - categoryId: 특정 카테고리의 옵션만 조회
             - keyword: 옵션 코드, 이름, 설명에서 검색
             - isActive: 활성/비활성 상태로 필터링
-            - 정렬: 기본적으로 displayOrder 순서로 정렬됨
+
+            ## 정렬
+            - 기본값: displayOrder ASC (순서 오름차순)
+            - 사용법: sort=displayOrder,asc 또는 sort=displayOrder,desc
+            - 기타 옵션: createdAt, name, code
             """)
     @GetMapping("/options")
     public ApiResponse<Page<FilterOptionResponse>> getFilterOptions(

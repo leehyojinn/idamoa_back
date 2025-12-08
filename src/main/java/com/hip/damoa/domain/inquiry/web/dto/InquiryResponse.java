@@ -3,6 +3,7 @@ package com.hip.damoa.domain.inquiry.web.dto;
 import com.hip.damoa.domain.inquiry.model.Inquiry;
 import com.hip.damoa.domain.inquiry.model.InquiryStatus;
 import com.hip.damoa.domain.inquiry.model.InquiryType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,18 +20,40 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "일반 문의 상세 응답")
 public class InquiryResponse {
 
+    @Schema(description = "문의 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID uuid;
+
+    @Schema(description = "문의 유형 (BUG, PAYMENT_ERROR, ACCOUNT_ISSUE, SUGGESTION, OTHER)", example = "SUGGESTION")
     private InquiryType inquiryType;
+
+    @Schema(description = "문의 제목", example = "결제 관련 문의드립니다")
     private String title;
+
+    @Schema(description = "문의 내용", example = "결제가 완료되었는데 크레딧이 충전되지 않았습니다.")
     private String content;
+
+    @Schema(description = "문의 상태 (PENDING, IN_PROGRESS, RESOLVED, CLOSED)", example = "PENDING")
     private InquiryStatus status;
-    private String userEmail;  // 작성자 이메일
-    private InquiryAnswerResponse answer;  // 답변 정보 (있는 경우)
-    private List<InquiryAttachmentResponse> attachments;  // 첨부파일 목록
-    private Boolean isDeleted;  // 삭제 여부 (관리자용)
+
+    @Schema(description = "작성자 이메일", example = "user@example.com")
+    private String userEmail;
+
+    @Schema(description = "답변 정보")
+    private InquiryAnswerResponse answer;
+
+    @Schema(description = "첨부파일 목록")
+    private List<InquiryAttachmentResponse> attachments;
+
+    @Schema(description = "삭제 여부 (관리자용)", example = "false")
+    private Boolean isDeleted;
+
+    @Schema(description = "등록일시", example = "2025-01-01T10:00:00")
     private LocalDateTime createdAt;
+
+    @Schema(description = "수정일시", example = "2025-01-02T14:00:00")
     private LocalDateTime updatedAt;
 
     /**

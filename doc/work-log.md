@@ -26,13 +26,67 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: 광고 캠페인 자동 갱신 시스템 구현 완료
-**마지막 업데이트**: 2025-12-04
+**프로젝트 단계**: 자료실 유료 다운로드 기능 구현 완료
+**마지막 업데이트**: 2025-12-05
 **다음 우선순위**: 전체 테스트 및 운영 배포 준비
 
 ---
 
 ## 📝 작업 로그
+
+### 2025-12-05
+
+#### ✅ 완료 (Completed)
+
+**[DOCUMENT-PRICING-001] 자료실 유료 파일 업로드 기능 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-05
+- **작업 내용**:
+  - 자료실(DocumentBoard) 글 작성 시 가격 설정 기능 추가
+  - **파일별 개별 가격 설정 지원** (권장 방식)
+  - 기존 일괄 가격 방식도 하위 호환 유지
+  - DocumentBoardService에 FilePricing 자동 생성 로직 추가
+  - 게시글 수정 시 가격 정보 업데이트 기능 추가
+
+**구현 상세**:
+- `DocumentFileRequest.java`: 파일별 가격 설정 DTO (신규)
+- `DocumentCreateRequest.java`: files 필드 추가 (개별 가격), fileUuids 필드 유지 (일괄 가격)
+- `DocumentUpdateRequest.java`: 동일한 방식으로 수정
+- `DocumentBoardService.processFilePricingWithMap()`: 파일별 개별 가격 처리
+
+**API 사용 예시 (개별 가격)**:
+```json
+{
+  "files": [
+    {"uuid": "uuid-1", "isPaid": true, "price": 5000},
+    {"uuid": "uuid-2", "isPaid": true, "price": 3000},
+    {"uuid": "uuid-3", "isPaid": false}
+  ]
+}
+```
+
+**기존 기능 확인**:
+- FileController 유료 다운로드 API: 이미 구현됨 ✅
+  - `POST /api/files/{uuid}/download` - 파일 다운로드 (크레딧 차감)
+  - `GET /api/files/{uuid}/purchase-status` - 구매 상태 확인
+  - `GET /api/files/my-purchases` - 구매한 파일 목록
+- AdminFileController 가격 관리 API: 이미 구현됨 ✅
+  - `POST /api/admin/files/{uuid}/pricing` - 파일 가격 설정
+  - `GET /api/admin/files/{uuid}/pricing` - 가격 정보 조회
+  - `GET /api/admin/files/paid` - 유료 파일 목록
+  - `POST /api/admin/files/{uuid}/pricing/free` - 무료 전환
+  - `DELETE /api/admin/files/{uuid}/pricing` - 가격 비활성화
+
+**수정된 파일**:
+- `domain/board/service/DocumentBoardService.java`
+  - FilePricingRepository 의존성 추가
+  - createDocument()에 가격 설정 로직 추가
+  - updateDocument()에 가격 업데이트 로직 추가
+  - processFilePricing() 헬퍼 메서드 추가
+
+**빌드 상태**: ✅ BUILD SUCCESSFUL
+
+---
 
 ### 2025-12-04
 
@@ -249,28 +303,32 @@
 
 #### 🔜 다음 작업 (TODO)
 
-1. **FileController 연동**
-   - 파일 다운로드 API 추가 (`POST /api/files/{uuid}/download`)
-   - 구매 상태 확인 API 추가 (`GET /api/files/{uuid}/purchase-status`)
-   - 구매 파일 목록 API 추가 (`GET /api/files/my-purchases`)
+1. ~~**FileController 연동**~~ ✅ 완료
+   - ~~파일 다운로드 API 추가 (`POST /api/files/{uuid}/download`)~~
+   - ~~구매 상태 확인 API 추가 (`GET /api/files/{uuid}/purchase-status`)~~
+   - ~~구매 파일 목록 API 추가 (`GET /api/files/my-purchases`)~~
 
-2. **AdminController 연동**
-   - 파일 가격 설정 API 추가 (`POST /api/admin/files/{uuid}/pricing`)
-   - 유료 파일 목록 API 추가 (`GET /api/admin/files/paid`)
+2. ~~**AdminController 연동**~~ ✅ 완료
+   - ~~파일 가격 설정 API 추가 (`POST /api/admin/files/{uuid}/pricing`)~~
+   - ~~유료 파일 목록 API 추가 (`GET /api/admin/files/paid`)~~
 
-3. **Company 정렬 수정**
-   - CompanyRepository에 광고 우선순위 기반 정렬 쿼리 추가
-   - CompanyService에서 광고 적용된 업체 목록 조회 로직 수정
+3. ~~**Company 정렬 수정**~~ ✅ 완료
+   - ~~CompanyRepository에 광고 우선순위 기반 정렬 쿼리 추가~~
+   - ~~CompanyService에서 광고 적용된 업체 목록 조회 로직 수정~~
 
-4. **테스트 작성**
+4. ~~**자료실 유료 파일 업로드**~~ ✅ 완료
+   - ~~DocumentBoardService에서 게시글 생성/수정 시 FilePricing 자동 생성~~
+
+5. **테스트 작성** (예정)
    - 크레딧 충전/사용/환불 테스트
    - 광고 우선순위 계산 테스트
    - 유료 다운로드 테스트
 
-5. **프론트엔드 연동**
+6. **프론트엔드 연동** (예정)
    - 크레딧 충전 페이지
    - 광고 캠페인 관리 페이지
    - 파일 구매/다운로드 UI
+   - 자료실 유료 파일 업로드 UI
 
 ---
 

@@ -32,18 +32,43 @@ public class AdminFileController {
     private final AdminFilePricingService filePricingService;
 
     @Operation(summary = "파일 가격 설정", description = """
-            파일의 가격을 설정합니다 (유료/무료).
+            개별 파일의 가격을 설정합니다.
 
-            **설정 옵션**:
-            - isPaid: true(유료) / false(무료)
-            - price: 가격 (유료인 경우 필수, 크레딧 단위)
-            - downloadLimit: 다운로드 제한 횟수 (null이면 무제한)
-            - description: 설명
+            ## 사용 시나리오
+            1. 사용자가 게시글 생성 시 설정한 가격 수정
+            2. 무료 파일을 유료로 변경
+            3. 유료 파일을 무료로 변경 (setFree API 권장)
 
-            **예시**:
-            - 유료 설정: { "isPaid": true, "price": 5000 }
-            - 무료 전환: { "isPaid": false }
-            - 제한 설정: { "isPaid": true, "price": 3000, "downloadLimit": 100 }
+            ## 요청 예시
+
+            ### 유료 설정 (5,000원)
+            ```json
+            {
+              "isPaid": true,
+              "price": 5000
+            }
+            ```
+
+            ### 유료 설정 + 다운로드 제한
+            ```json
+            {
+              "isPaid": true,
+              "price": 3000,
+              "downloadLimit": 100,
+              "description": "한정 100회 다운로드"
+            }
+            ```
+
+            ### 무료 전환
+            ```json
+            {
+              "isPaid": false
+            }
+            ```
+
+            ## 주의사항
+            - 기존 구매자의 다운로드 권한은 유지됩니다
+            - 가격 변경은 새로운 구매에만 적용됩니다
             """)
     @PostMapping("/{fileUuid}/pricing")
     public ApiResponse<FilePricingResponse> setPricing(
@@ -72,7 +97,10 @@ public class AdminFileController {
     @Operation(summary = "유료 파일 목록 조회", description = """
             가격이 설정된 유료 파일 목록을 조회합니다.
 
-            **정렬**: 생성일 내림차순
+            ## 정렬
+            - 기본값: createdAt DESC (최신순)
+            - 사용법: sort=createdAt,desc 또는 sort=createdAt,asc
+            - 기타 옵션: price, updatedAt
 
             **응답**: 파일별 가격 정보 및 통계
             """)

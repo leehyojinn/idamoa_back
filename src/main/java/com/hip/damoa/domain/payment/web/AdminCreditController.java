@@ -44,8 +44,10 @@ public class AdminCreditController {
             **검색 옵션**
             - keyword: 이메일 또는 이름으로 검색
 
-            **정렬**
-            - 기본적으로 가용 크레딧 순으로 정렬됩니다
+            ## 정렬
+            - 기본값: availableCredits DESC (가용 크레딧 높은 순)
+            - 사용법: sort=availableCredits,desc 또는 sort=availableCredits,asc
+            - 기타 옵션: createdAt, totalSpent
             """)
     @GetMapping("/users")
     public ApiResponse<Page<AdminUserCreditResponse>> getUserCredits(
@@ -135,8 +137,10 @@ public class AdminCreditController {
             - type: 거래 유형 (EARN, SPEND, REFUND, ADMIN_GRANT, ADMIN_DEDUCT)
             - keyword: 검색 (사용자 이메일/이름, 사유)
 
-            **정렬**
-            - 기본적으로 생성일 내림차순으로 정렬됩니다
+            ## 정렬
+            - 기본값: createdAt DESC (최신순)
+            - 사용법: sort=createdAt,desc 또는 sort=createdAt,asc
+            - 기타 옵션: amount, transactionType
             """)
     @GetMapping("/transactions")
     public ApiResponse<Page<AdminTransactionResponse>> getTransactions(
@@ -159,7 +163,13 @@ public class AdminCreditController {
     }
 
     @Operation(summary = "특정 사용자 거래 내역 조회",
-            description = "특정 사용자의 크레딧 거래 내역을 조회합니다.")
+            description = """
+            특정 사용자의 크레딧 거래 내역을 조회합니다.
+
+            ## 정렬
+            - 기본값: createdAt DESC (최신순)
+            - 사용법: sort=createdAt,desc 또는 sort=createdAt,asc
+            """)
     @GetMapping("/users/{userUuid}/transactions")
     public ApiResponse<Page<AdminTransactionResponse>> getUserTransactions(
             @Parameter(description = "사용자 UUID") @PathVariable UUID userUuid,

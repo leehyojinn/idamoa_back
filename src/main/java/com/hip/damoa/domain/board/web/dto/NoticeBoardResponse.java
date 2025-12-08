@@ -1,6 +1,7 @@
 package com.hip.damoa.domain.board.web.dto;
 
 import com.hip.damoa.domain.board.model.Board;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,51 +19,94 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "공지사항/이벤트 게시글 응답")
 public class NoticeBoardResponse {
 
+    @Schema(description = "게시글 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID uuid;
+
+    @Schema(description = "제목", example = "2025년 신년 이벤트 안내")
     private String title;
+
+    @Schema(description = "내용 (HTML 지원)", example = "<p>2025년 신년 이벤트에 참여하세요!</p>")
     private String content;
+
+    @Schema(description = "게시판 타입 (NOTICE, EVENT, FAQ)", example = "EVENT")
     private String boardType;
+
+    @Schema(description = "카테고리 ID", example = "1")
     private Long categoryId;
+
+    @Schema(description = "카테고리명", example = "일반공지")
     private String categoryName;
 
     // 썸네일 이미지
+    @Schema(description = "썸네일 이미지 정보")
     private FileInfo thumbnail;
 
     // 첨부파일 목록
+    @Schema(description = "첨부파일 목록")
     private List<FileInfo> attachments;
 
     // 이벤트 날짜 (EVENT 타입일 경우)
+    @Schema(description = "이벤트 시작일시 (EVENT 타입)", example = "2025-01-01T00:00:00")
     private LocalDateTime eventStartDate;
+
+    @Schema(description = "이벤트 종료일시 (EVENT 타입)", example = "2025-01-31T23:59:59")
     private LocalDateTime eventEndDate;
-    private String eventStatus;  // 이벤트 상태 (ACTIVE, ENDED)
-    private Boolean isEventEnded;  // 이벤트 종료 여부
+
+    @Schema(description = "이벤트 상태 (ACTIVE, ENDED)", example = "ACTIVE")
+    private String eventStatus;
+
+    @Schema(description = "이벤트 종료 여부", example = "false")
+    private Boolean isEventEnded;
 
     // 통계
+    @Schema(description = "조회수", example = "1500")
     private Integer viewCount;
+
+    @Schema(description = "좋아요 수", example = "120")
     private Integer likeCount;
+
+    @Schema(description = "댓글 수", example = "25")
     private Integer commentCount;
 
     // 상태
+    @Schema(description = "고정 여부 (상단 고정)", example = "true")
     private Boolean isPinned;
+
+    @Schema(description = "추천 여부", example = "false")
     private Boolean isFeatured;
+
+    @Schema(description = "게시 여부", example = "true")
     private Boolean isPublished;
+
+    @Schema(description = "게시일시", example = "2025-01-01T09:00:00")
     private LocalDateTime publishedAt;
 
     // 태그
+    @Schema(description = "태그 배열", example = "[\"이벤트\", \"할인\", \"신년\"]")
     private String[] tags;
 
     // 작성자
+    @Schema(description = "작성자 ID", example = "1")
     private Long userId;
+
+    @Schema(description = "작성자 이메일", example = "admin@example.com")
     private String userEmail;
+
+    @Schema(description = "작성자 이름", example = "관리자")
     private String userName;
 
     // 시간
+    @Schema(description = "생성일시", example = "2025-01-01T08:00:00")
     private LocalDateTime createdAt;
+
+    @Schema(description = "수정일시", example = "2025-01-01T10:00:00")
     private LocalDateTime updatedAt;
 
     // 삭제 상태 (관리자용)
+    @Schema(description = "삭제 여부 (관리자용)", example = "false")
     private Boolean isDeleted;
 
     /**

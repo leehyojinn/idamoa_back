@@ -15,7 +15,9 @@ import com.hip.damoa.domain.board.web.dto.DocumentResponse;
 import com.hip.damoa.domain.board.web.dto.DocumentUpdateRequest;
 import com.hip.damoa.domain.board.web.dto.FileInfo;
 import com.hip.damoa.domain.file.model.File;
+import com.hip.damoa.domain.file.model.FilePricing;
 import com.hip.damoa.domain.file.repository.FileDownloadRepository;
+import com.hip.damoa.domain.file.repository.FilePricingRepository;
 import com.hip.damoa.domain.file.repository.FileRepository;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.repository.UserRepository;
@@ -28,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -47,6 +50,7 @@ public class DocumentBoardService {
     private final BoardRepository boardRepository;
     private final FileRepository fileRepository;
     private final FileDownloadRepository fileDownloadRepository;
+    private final FilePricingRepository filePricingRepository;
     private final UserRepository userRepository;
     private final com.hip.damoa.domain.user.repository.UserProfileRepository userProfileRepository;
 
@@ -58,7 +62,8 @@ public class DocumentBoardService {
         log.info("Document 게시글 생성 시작: userEmail={}, title={}", userEmail, request.getTitle());
 
         // 파일 검증
-        if (request.getFileUuids() == null || request.getFileUuids().isEmpty()) {
+        List<String> effectiveFileUuids = request.getEffectiveFileUuids();
+        if (effectiveFileUuids == null || effectiveFileUuids.isEmpty()) {
             throw new BusinessException(ErrorCode.DOCUMENT_FILE_REQUIRED);
         }
 
@@ -82,7 +87,13 @@ public class DocumentBoardService {
         }
 
         // 문서 첨부파일 생성
-        processDocumentFiles(board, request.getFileUuids(), request.getThumbnailUuid());
+        processDocumentFiles(board, effectiveFileUuids, request.getThumbnailUuid());
+
+        // 유료 파일 가격 설정 (개별 또는 일괄)
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        Map<String, Integer> filePriceMap = request.getFilePriceMap();
+        processFilePricingWithMap(effectiveFileUuids, filePriceMap, user.getId());
 
         log.info("Document 게시글 생성 완료: uuid={}", board.getUuid());
 
@@ -279,14 +290,30 @@ public class DocumentBoardService {
         }
 
         // 문서 첨부파일 업데이트
-        if (request.getFileUuids() != null) {
+        List<String> effectiveFileUuids = request.getEffectiveFileUuids();
+        if (effectiveFileUuids != null) {
             // 기존 첨부파일 Soft delete
             List<BoardAttachment> existingAttachments = boardAttachmentRepository.findByBoardOrderByDisplayOrder(board);
             existingAttachments.forEach(attachment -> attachment.softDelete());
 
             // 새 첨부파일 추가
-            if (!request.getFileUuids().isEmpty()) {
-                processDocumentFiles(board, request.getFileUuids(), request.getThumbnailUuid());
+            if (!effectiveFileUuids.isEmpty()) {
+                processDocumentFiles(board, effectiveFileUuids, request.getThumbnailUuid());
+            }
+        }
+
+        // 유료 파일 가격 업데이트 (파일 목록이 변경되거나 가격 정보가 변경된 경우)
+        if (effectiveFileUuids != null || request.getIsPaid() != null || request.getPrice() != null || request.hasIndividualPricing()) {
+            User user = userRepository.findByEmail(userEmail)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+            // 현재 파일 UUID 목록 조회
+            @SuppressWarnings("unchecked")
+            List<String> currentFileUuids = effectiveFileUuids != null ? effectiveFileUuids :
+                    (List<String>) board.getTypeData().get("files");
+            if (currentFileUuids != null && !currentFileUuids.isEmpty()) {
+                Map<String, Integer> filePriceMap = request.getFilePriceMap();
+                processFilePricingWithMap(currentFileUuids, filePriceMap, user.getId());
             }
         }
 
@@ -500,7 +527,7 @@ public class DocumentBoardService {
     }
 
     /**
-     * Board의 문서 파일 정보 조회 (DOCUMENT 타입만)
+     * Board의 문서 파일 정보 조회 (DOCUMENT 타입만, 가격 정보 포함)
      */
     private List<FileInfo> getDocumentFileInfos(Board board) {
         List<BoardAttachment> attachments = boardAttachmentRepository.findByBoardAndTypeOrderByDisplayOrder(
@@ -510,7 +537,16 @@ public class DocumentBoardService {
                 .map(attachment -> {
                     File file = fileRepository.findById(attachment.getFileId())
                             .orElse(null);
-                    return file != null ? FileInfo.from(file) : null;
+                    if (file == null) {
+                        return null;
+                    }
+
+                    // FilePricing에서 가격 정보 조회
+                    FilePricing pricing = filePricingRepository.findByFileId(file.getId()).orElse(null);
+                    Boolean isPaid = pricing != null && Boolean.TRUE.equals(pricing.getIsPaid());
+                    Integer price = pricing != null ? pricing.getPrice() : 0;
+
+                    return FileInfo.from(file, isPaid, price);
                 })
                 .filter(fileInfo -> fileInfo != null)
                 .toList();
@@ -546,5 +582,69 @@ public class DocumentBoardService {
         return userProfileRepository.findByUserId(board.getUser().getId())
                 .map(com.hip.damoa.domain.user.model.UserProfile::getName)
                 .orElse(board.getUser().getEmail());
+    }
+
+    /**
+     * 파일 가격 정보 처리 (파일별 개별 가격 지원)
+     *
+     * @param fileUuids 파일 UUID 목록
+     * @param filePriceMap 파일별 가격 맵 (uuid -> price), 맵에 없으면 무료
+     * @param userId 사용자 ID
+     */
+    private void processFilePricingWithMap(List<String> fileUuids, Map<String, Integer> filePriceMap, Long userId) {
+        if (fileUuids == null || fileUuids.isEmpty()) {
+            return;
+        }
+
+        log.info("파일 가격 정보 처리: fileCount={}, paidFileCount={}",
+                fileUuids.size(), filePriceMap != null ? filePriceMap.size() : 0);
+
+        for (String fileUuidStr : fileUuids) {
+            try {
+                UUID fileUuid = UUID.fromString(fileUuidStr);
+                File file = fileRepository.findByUuid(fileUuid).orElse(null);
+
+                if (file == null) {
+                    log.warn("파일을 찾을 수 없음: fileUuid={}", fileUuidStr);
+                    continue;
+                }
+
+                // 이 파일의 가격 조회 (맵에 있으면 유료, 없으면 무료)
+                Integer price = (filePriceMap != null) ? filePriceMap.get(fileUuidStr) : null;
+                boolean shouldBePaid = price != null && price > 0;
+
+                FilePricing pricing = filePricingRepository.findByFileId(file.getId()).orElse(null);
+
+                if (shouldBePaid) {
+                    // 유료 설정
+                    if (pricing == null) {
+                        pricing = FilePricing.builder()
+                                .file(file)
+                                .isPaid(true)
+                                .price(price)
+                                .isActive(true)
+                                .createdBy(userId)
+                                .build();
+                    } else {
+                        pricing.setAsPaid(price);
+                        pricing.setUpdatedBy(userId);
+                    }
+                    filePricingRepository.save(pricing);
+                    log.debug("유료 파일 가격 설정: fileId={}, price={}", file.getId(), price);
+                } else {
+                    // 무료 설정
+                    if (pricing != null) {
+                        pricing.setAsFree();
+                        pricing.setUpdatedBy(userId);
+                        filePricingRepository.save(pricing);
+                        log.debug("파일 무료 전환: fileId={}", file.getId());
+                    }
+                }
+            } catch (IllegalArgumentException e) {
+                log.warn("잘못된 파일 UUID 형식: {}", fileUuidStr);
+            }
+        }
+
+        log.info("파일 가격 정보 처리 완료");
     }
 }

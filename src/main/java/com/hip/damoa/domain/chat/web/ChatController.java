@@ -147,7 +147,13 @@ public class ChatController {
      */
     @Operation(
             summary = "메시지 목록 조회",
-            description = "채팅방의 메시지 목록을 조회합니다 (페이징, 최신순)"
+            description = "채팅방의 메시지 목록을 조회합니다.\n\n" +
+                    "## 정렬\n" +
+                    "- 기본값: createdAt DESC (최신순)\n" +
+                    "- 사용법: sort=createdAt,desc 또는 sort=createdAt,asc\n\n" +
+                    "**페이지네이션:**\n" +
+                    "- size: 페이지당 항목 수 (기본 50)\n" +
+                    "- page: 페이지 번호 (0부터 시작)"
     )
     @GetMapping("/rooms/{chatRoomUuid}/messages")
     public ApiResponse<Page<ChatMessageResponse>> getMessages(
