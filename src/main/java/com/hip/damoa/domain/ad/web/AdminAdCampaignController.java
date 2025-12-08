@@ -99,7 +99,7 @@ public class AdminAdCampaignController {
     @GetMapping("/{campaignUuid}")
     public ApiResponse<AdCampaignResponse> getCampaign(
             @Parameter(description = "캠페인 UUID") @PathVariable UUID campaignUuid) {
-        return ApiResponse.success(campaignService.getCampaign(campaignUuid));
+        return ApiResponse.success(campaignService.getCampaignForAdmin(campaignUuid));
     }
 
     // ========== 캠페인 상태 관리 ==========

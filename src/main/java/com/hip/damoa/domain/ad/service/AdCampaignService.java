@@ -270,7 +270,25 @@ public class AdCampaignService {
     // ========== 조회 API ==========
 
     @Transactional(readOnly = true)
-    public AdCampaignResponse getCampaign(UUID campaignUuid) {
+    public AdCampaignResponse getCampaign(String email, UUID campaignUuid) {
+        User user = findUserByEmail(email);
+        AdCampaign campaign = campaignRepository.findByUuidAndIsDeletedFalse(campaignUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AD_CAMPAIGN_NOT_FOUND));
+
+        // 회사 소유자 확인
+        if (!campaign.getCompany().getOwner().getId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.COMPANY_ACCESS_DENIED);
+        }
+
+        List<AdPayment> payments = paymentRepository.findActiveByCampaignId(campaign.getId(), LocalDate.now());
+        return AdCampaignResponse.from(campaign, payments);
+    }
+
+    /**
+     * 관리자용 캠페인 조회 (소유자 확인 없음)
+     */
+    @Transactional(readOnly = true)
+    public AdCampaignResponse getCampaignForAdmin(UUID campaignUuid) {
         AdCampaign campaign = campaignRepository.findByUuidAndIsDeletedFalse(campaignUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AD_CAMPAIGN_NOT_FOUND));
 

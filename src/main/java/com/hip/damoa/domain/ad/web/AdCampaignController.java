@@ -184,6 +184,8 @@ public class AdCampaignController {
     @Operation(summary = "캠페인 상세 조회", description = """
             특정 광고 캠페인의 상세 정보를 조회합니다.
 
+            **주의**: 캠페인 소유자만 조회할 수 있습니다.
+
             ## Response 필드 설명 (AdCampaignResponse)
             | 필드 | 설명 |
             |------|------|
@@ -230,8 +232,10 @@ public class AdCampaignController {
             """)
     @GetMapping("/{campaignUuid}")
     public ApiResponse<AdCampaignResponse> getCampaign(
+            @AuthenticationPrincipal UserDetails userDetails,
             @Parameter(description = "캠페인 UUID") @PathVariable UUID campaignUuid) {
-        return ApiResponse.success(adCampaignService.getCampaign(campaignUuid));
+        return ApiResponse.success(adCampaignService.getCampaign(
+                userDetails.getUsername(), campaignUuid));
     }
 
     // ========== 캠페인 취소 API ==========
