@@ -64,6 +64,14 @@ public class KakaoPayGateway implements PaymentGateway {
             headers.set("Authorization", "KakaoAK " + adminKey);
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
+            // 동적 URL 사용 (프론트엔드에서 제공된 경우), 없으면 서버 설정 사용
+            String effectiveApprovalUrl = hasValue(request.getSuccessUrl()) ? request.getSuccessUrl() : approvalUrl;
+            String effectiveCancelUrl = hasValue(request.getCancelUrl()) ? request.getCancelUrl() : cancelUrl;
+            String effectiveFailUrl = hasValue(request.getFailUrl()) ? request.getFailUrl() : failUrl;
+
+            log.debug("KakaoPay URLs - approval: {}, cancel: {}, fail: {}",
+                    effectiveApprovalUrl, effectiveCancelUrl, effectiveFailUrl);
+
             String body = "cid=" + cid +
                 "&partner_order_id=" + request.getOrderId() +
                 "&partner_user_id=" + request.getCustomerEmail() +
@@ -71,9 +79,9 @@ public class KakaoPayGateway implements PaymentGateway {
                 "&quantity=1" +
                 "&total_amount=" + request.getAmount().intValue() +
                 "&tax_free_amount=0" +
-                "&approval_url=" + approvalUrl +
-                "&cancel_url=" + cancelUrl +
-                "&fail_url=" + failUrl;
+                "&approval_url=" + effectiveApprovalUrl +
+                "&cancel_url=" + effectiveCancelUrl +
+                "&fail_url=" + effectiveFailUrl;
 
             HttpEntity<String> entity = new HttpEntity<>(body, headers);
             ResponseEntity<Map> response = restTemplate.postForEntity(READY_URL, entity, Map.class);
@@ -236,5 +244,12 @@ public class KakaoPayGateway implements PaymentGateway {
         // KakaoPay does not provide webhook signature verification
         // Verification should be done by checking transaction status via queryPayment()
         return true;
+    }
+
+    /**
+     * 문자열이 null이 아니고 비어있지 않은지 확인
+     */
+    private boolean hasValue(String str) {
+        return str != null && !str.isBlank();
     }
 }

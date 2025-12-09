@@ -169,13 +169,16 @@ public class CreditService {
         // 표시 이름 생성 (예: "3만원권 x 10")
         String displayName = pkg.getDisplayName() + " x " + quantity;
 
-        // PG 결제 준비
+        // PG 결제 준비 (프론트엔드에서 제공한 URL이 있으면 사용)
         PaymentPrepareRequest prepareRequest = PaymentPrepareRequest.builder()
                 .orderId(orderId)
                 .orderName("다모아 크레딧 충전 - " + displayName)
                 .amount(BigDecimal.valueOf(paymentAmount))
                 .customerEmail(email)
                 .customerName(user.getEmail())
+                .successUrl(request.getSuccessUrl())
+                .failUrl(request.getFailUrl())
+                .cancelUrl(request.getCancelUrl() != null ? request.getCancelUrl() : request.getFailUrl()) // 카카오페이용
                 .build();
 
         PaymentPrepareResponse prepareResponse = gateway.preparePayment(prepareRequest);
