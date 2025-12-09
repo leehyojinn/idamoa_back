@@ -42,4 +42,5 @@ public class CreditPurchaseRequest {
     // 결제 콜백 URL (프론트엔드 리다이렉트용)
     private String successUrl;
     private String failUrl;
+    private String cancelUrl;  // 카카오페이 등 결제 취소 시 리다이렉트 URL
 }
