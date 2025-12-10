@@ -15,10 +15,13 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
 
+      # Hibernate - 스키마 검증 비활성화 (배열 타입 호환성 문제 해결)
+      SPRING_JPA_HIBERNATE_DDL_AUTO: "none"
+
       DB_HOST: damoa-postgres-prod
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-hip_damoa}
-      DB_USERNAME: ${DB_USERNAME:-hip_damoa_user}
+      DB_NAME: ${DB_NAME:-i_damoa}
+      DB_USERNAME: ${DB_USERNAME:-i_damoa_user}
       DB_PASSWORD: ${DB_PASSWORD}
 
       REDIS_HOST: damoa-redis-prod

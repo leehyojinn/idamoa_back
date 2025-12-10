@@ -155,7 +155,7 @@ jobs:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
           payload: |
             {
-              "text": "✅ Hip-Damoa Backend Develop 배포 성공!",
+              "text": "✅ i-Damoa Backend Develop 배포 성공!",
               "blocks": [
                 {
                   "type": "section",
@@ -177,7 +177,7 @@ jobs:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
           payload: |
             {
-              "text": "❌ Hip-Damoa Backend Develop 배포 실패!",
+              "text": "❌ i-Damoa Backend Develop 배포 실패!",
               "blocks": [
                 {
                   "type": "section",
