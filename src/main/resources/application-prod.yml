@@ -91,7 +91,7 @@ aws:
   s3:
     bucket: ${AWS_S3_BUCKET:damoa-prod-files}
   cloudfront:
-    domain: ${AWS_CLOUDFRONT_DOMAIN}  # Use CloudFront CDN in production
+    domain: ${AWS_CLOUDFRONT_DOMAIN:}  # Use CloudFront CDN in production (optional)
 
 # Server Configuration
 server:
