@@ -23,6 +23,7 @@ services:
 
       REDIS_HOST: damoa-redis-prod
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
 
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION:-86400000}
@@ -45,6 +46,8 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
       AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+      AWS_CLOUDFRONT_DOMAIN: ${AWS_CLOUDFRONT_DOMAIN:-}
+      FILE_BASE_URL: ${FILE_BASE_URL:-}
 
       KAKAOPAY_ADMIN_KEY: ${KAKAOPAY_ADMIN_KEY:-}
       KAKAOPAY_CID: ${KAKAOPAY_CID:-TC0ONETIME}
@@ -95,7 +98,7 @@ services:
       - damoa-network
       - nginx-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3

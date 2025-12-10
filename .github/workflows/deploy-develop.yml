@@ -137,7 +137,7 @@ jobs:
             # 헬스체크 대기 (최대 60초)
             echo "⏳ 애플리케이션 헬스체크 대기 중..."
             for i in {1..20}; do
-              if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
+              if curl -f http://localhost:8080/api/health > /dev/null 2>&1; then
                 echo "✅ Application is healthy!"
                 break
               fi
