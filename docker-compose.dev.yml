@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/${GITHUB_REPOSITORY:-interior-damoa/hip-damoa-backend}:latest
+    image: ghcr.io/${GITHUB_REPOSITORY:-interior-damoa/i-damoa-backend}:dev
     container_name: damoa-app-dev
     restart: unless-stopped
     environment:
