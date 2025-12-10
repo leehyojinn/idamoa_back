@@ -1,0 +1,38 @@
+# ===========================================
+# Nginx + SSL (Prod용)
+# ===========================================
+# Dev에는 없고 Prod에만 있는 유일한 추가 컴포넌트
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx-core
+    volumes:
+      - ./certbot/letsencrypt:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+      - ./config:/etc/nginx/conf.d:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "1m"
+        max-file: "3"
+    networks:
+      - nginx-network
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot/letsencrypt:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 48h & wait $${!}; done;'"
+    networks:
+      - nginx-network
+
+networks:
+  nginx-network:
+    name: nginx-network

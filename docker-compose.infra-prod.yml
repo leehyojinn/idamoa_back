@@ -1,0 +1,56 @@
+# ===========================================
+# Damoa Production Infrastructure
+# ===========================================
+# Dev infra와 동일, 컨테이너명만 prod
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: damoa-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-hip_damoa}
+      POSTGRES_USER: ${DB_USERNAME:-hip_damoa_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-hip_damoa_user} -d ${DB_NAME:-hip_damoa}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - damoa-network
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: damoa-redis-prod
+    restart: unless-stopped
+    volumes:
+      - redis_data_prod:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - damoa-network
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data_prod:
+    driver: local
+  redis_data_prod:
+    driver: local
+
+networks:
+  damoa-network:
+    driver: bridge

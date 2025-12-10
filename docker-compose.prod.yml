@@ -1,0 +1,116 @@
+# ===========================================
+# Damoa Production App
+# ===========================================
+# Dev와 동일한 구조, 환경변수만 prod용
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+
+services:
+  app:
+    image: ghcr.io/${GITHUB_REPOSITORY:-interior-damoa/hip-damoa-backend}:${IMAGE_TAG:-latest}
+    container_name: damoa-app-prod
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+
+      DB_HOST: damoa-postgres-prod
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-hip_damoa}
+      DB_USERNAME: ${DB_USERNAME:-hip_damoa_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      REDIS_HOST: damoa-redis-prod
+      REDIS_PORT: 6379
+
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION:-86400000}
+      JWT_REFRESH_TOKEN_EXPIRATION: ${JWT_REFRESH_TOKEN_EXPIRATION:-604800000}
+
+      OAUTH_REDIRECT_BASE_URL: ${OAUTH_REDIRECT_BASE_URL:-https://i-damoa.com}
+      OAUTH_FRONTEND_REDIRECT_URL: ${OAUTH_FRONTEND_REDIRECT_URL:-https://i-damoa.com/auth/callback}
+
+      SWAGGER_SERVER_URL: ${SWAGGER_SERVER_URL:-https://api.i-damoa.com}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://i-damoa.com,https://www.i-damoa.com}
+
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
+      NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:-}
+      NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+
+      KAKAOPAY_ADMIN_KEY: ${KAKAOPAY_ADMIN_KEY:-}
+      KAKAOPAY_CID: ${KAKAOPAY_CID:-TC0ONETIME}
+      PAYMENT_APPROVAL_URL: ${PAYMENT_APPROVAL_URL:-}
+      PAYMENT_CANCEL_URL: ${PAYMENT_CANCEL_URL:-}
+      PAYMENT_FAIL_URL: ${PAYMENT_FAIL_URL:-}
+
+      TOSS_CLIENT_KEY: ${TOSS_CLIENT_KEY:-}
+      TOSS_SECRET_KEY: ${TOSS_SECRET_KEY:-}
+      TOSS_WEBHOOK_KEY: ${TOSS_WEBHOOK_KEY:-}
+      TOSS_SUCCESS_URL: ${TOSS_SUCCESS_URL:-}
+      TOSS_FAIL_URL: ${TOSS_FAIL_URL:-}
+
+      INICIS_MID: ${INICIS_MID:-}
+      INICIS_SIGN_KEY: ${INICIS_SIGN_KEY:-}
+
+      EMAIL_NOTIFICATION_ENABLED: ${EMAIL_NOTIFICATION_ENABLED:-true}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+
+      GMAIL_API_ENABLED: ${GMAIL_API_ENABLED:-true}
+      GMAIL_DELEGATED_USER: ${GMAIL_DELEGATED_USER:-}
+      GMAIL_SERVICE_ACCOUNT_KEY: ${GMAIL_SERVICE_ACCOUNT_KEY:-}
+      GMAIL_APP_NAME: ${GMAIL_APP_NAME:-damoa}
+
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+
+      SMS_NOTIFICATION_ENABLED: ${SMS_NOTIFICATION_ENABLED:-true}
+      SMS_PROVIDER: ${SMS_PROVIDER:-ALIGO}
+      SMS_SENDER: ${SMS_SENDER:-}
+      ALIGO_API_KEY: ${ALIGO_API_KEY:-}
+      ALIGO_USER_ID: ${ALIGO_USER_ID:-}
+
+      GOOGLE_ANALYTICS_ENABLED: ${GOOGLE_ANALYTICS_ENABLED:-false}
+      GOOGLE_ANALYTICS_PROPERTY_ID: ${GOOGLE_ANALYTICS_PROPERTY_ID:-}
+      GOOGLE_ANALYTICS_CREDENTIALS_PATH: ${GOOGLE_ANALYTICS_CREDENTIALS_PATH:-/app/secrets/ga-service-account.json}
+
+      JAVA_OPTS: "-Xms1024m -Xmx2048m -XX:+UseG1GC"
+
+    expose:
+      - "8080"
+    volumes:
+      - app-logs:/app/logs
+      - ./secrets:/app/secrets:ro
+    networks:
+      - damoa-network
+      - nginx-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+volumes:
+  app-logs:
+    driver: local
+
+networks:
+  damoa-network:
+    external: true
+  nginx-network:
+    external: true
