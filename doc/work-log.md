@@ -26,13 +26,46 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: 자료실 유료 다운로드 기능 구현 완료
-**마지막 업데이트**: 2025-12-05
-**다음 우선순위**: 전체 테스트 및 운영 배포 준비
+**프로젝트 단계**: 카카오페이 동적 URL 지원 추가
+**마지막 업데이트**: 2025-12-09
+**다음 우선순위**: Next.js 프론트엔드 결제 연동 테스트
 
 ---
 
 ## 📝 작업 로그
+
+### 2025-12-09
+
+#### ✅ 완료 (Completed)
+
+**[PAYMENT-KAKAOPAY-001] 카카오페이 동적 URL 지원 추가** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-09
+- **작업 내용**:
+  - 프론트엔드(Next.js 등)에서 동적으로 결제 콜백 URL을 지정할 수 있도록 개선
+  - 기존: 서버 설정(@Value)에 고정된 URL만 사용
+  - 변경: 요청에 URL이 있으면 사용, 없으면 서버 설정 사용 (하위 호환)
+
+**수정 파일**:
+- `PaymentPrepareRequest.java`: successUrl, failUrl, cancelUrl 필드 추가
+- `CreditPurchaseRequest.java`: cancelUrl 필드 추가
+- `KakaoPayGateway.java`: 동적 URL 처리 로직 추가 (hasValue 헬퍼 메서드)
+- `CreditService.java`: 프론트엔드에서 전달한 URL을 PG 요청에 전달
+
+**사용법 (Next.js 등)**:
+```json
+POST /api/credits/purchase
+{
+  "packageCode": "KRW_30000",
+  "quantity": 1,
+  "paymentMethod": "KAKAOPAY",
+  "successUrl": "https://frontend.com/payment/success",
+  "failUrl": "https://frontend.com/payment/fail",
+  "cancelUrl": "https://frontend.com/payment/cancel"
+}
+```
+
+---
 
 ### 2025-12-05
 
