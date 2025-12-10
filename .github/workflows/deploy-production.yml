@@ -10,8 +10,6 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: interior-damoa/i-damoa-backend
-  EC2_HOST: ${{ secrets.EC2_PROD_HOST }}
-  EC2_USER: ubuntu
 
 jobs:
   build-and-push:
@@ -95,69 +93,50 @@ jobs:
   deploy:
     name: Deploy to Production EC2
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, prod]  # Self-hosted runner with 'prod' label
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create deployment directory structure
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.EC2_PROD_HOST }}
-          username: ${{ env.EC2_USER }}
-          key: ${{ secrets.EC2_PROD_SSH_KEY }}
-          script: |
-            mkdir -p ~/damoa/app
-            mkdir -p ~/damoa/infra
+      - name: Login to GitHub Container Registry
+        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Copy docker-compose.prod.yml to EC2
-        uses: appleboy/scp-action@v0.1.4
-        with:
-          host: ${{ secrets.EC2_PROD_HOST }}
-          username: ${{ env.EC2_USER }}
-          key: ${{ secrets.EC2_PROD_SSH_KEY }}
-          source: "docker-compose.prod.yml"
-          target: "~/damoa/app"
+      - name: Copy docker-compose file
+        run: |
+          mkdir -p ~/damoa/app
+          cp docker-compose.prod.yml ~/damoa/app/docker-compose.yml
 
-      - name: Deploy to Production EC2
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.EC2_PROD_HOST }}
-          username: ${{ env.EC2_USER }}
-          key: ${{ secrets.EC2_PROD_SSH_KEY }}
-          script: |
-            cd ~/damoa/app
+      - name: Pull latest image
+        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod
 
-            # GitHub Container Registry 로그인
-            echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Deploy application
+        run: |
+          cd ~/damoa/app
+          docker compose down || true
+          docker compose up -d
+          docker image prune -f
 
-            # 최신 이미지 Pull (prod 태그)
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod
+      - name: Health check
+        run: |
+          echo "Waiting for application health check..."
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
+              echo "✅ Application is healthy!"
+              exit 0
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 3
+          done
+          echo "❌ Health check failed"
+          exit 1
 
-            # 기존 App 컨테이너 중지 및 제거
-            docker compose -f docker-compose.prod.yml down || true
-
-            # App 컨테이너 시작
-            docker compose -f docker-compose.prod.yml up -d
-
-            # 이전 이미지 정리
-            docker image prune -f
-
-            # 헬스체크 대기 (최대 90초 - Prod는 더 길게)
-            echo "Waiting for application health check..."
-            for i in {1..30}; do
-              if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
-                echo "Application is healthy!"
-                break
-              fi
-              echo "Waiting... ($i/30)"
-              sleep 3
-            done
-
-            # 최종 상태 확인
-            docker compose -f docker-compose.prod.yml ps
-            docker compose -f docker-compose.prod.yml logs --tail=30 app
+      - name: Show deployment status
+        if: always()
+        run: |
+          cd ~/damoa/app
+          docker compose ps
+          docker compose logs --tail=30 app
 
       - name: Send Slack notification (Success)
         if: success()
@@ -166,13 +145,13 @@ jobs:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
           payload: |
             {
-              "text": "🚀 Hip-Damoa Backend PRODUCTION 배포 성공!",
+              "text": "🚀 i-Damoa Backend PRODUCTION 배포 성공!",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*🚀 PRODUCTION 배포 성공*\n*환경:* Production (운영)\n*브랜치:* main\n*버전:* ${{ needs.build-and-push.outputs.version }}\n*이미지:* ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod\n*PR:* #${{ github.event.pull_request.number }} ${{ github.event.pull_request.title }}\n*작성자:* ${{ github.actor }}"
+                    "text": "*🚀 PRODUCTION 배포 성공*\n*환경:* Production (운영)\n*브랜치:* main\n*버전:* ${{ needs.build-and-push.outputs.version }}\n*이미지:* ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prod\n*작성자:* ${{ github.actor }}"
                   }
                 }
               ]
@@ -188,13 +167,13 @@ jobs:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
           payload: |
             {
-              "text": "❌ Hip-Damoa Backend PRODUCTION 배포 실패!",
+              "text": "❌ i-Damoa Backend PRODUCTION 배포 실패!",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*❌ PRODUCTION 배포 실패*\n*환경:* Production (운영)\n*브랜치:* main\n*PR:* #${{ github.event.pull_request.number }}\n*작성자:* ${{ github.actor }}\n*로그:* https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    "text": "*❌ PRODUCTION 배포 실패*\n*환경:* Production (운영)\n*브랜치:* main\n*작성자:* ${{ github.actor }}\n*로그:* https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                   }
                 }
               ]
