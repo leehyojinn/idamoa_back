@@ -40,7 +40,7 @@ User extends BaseEntity implements UserDetails {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 50, nullable = false)
     @Builder.Default
-    private UserStatus status = UserStatus.PENDING;
+    private UserStatus status = UserStatus.ACTIVE;
 
     // 인증 상태
     @Column(name = "email_verified", nullable = false)

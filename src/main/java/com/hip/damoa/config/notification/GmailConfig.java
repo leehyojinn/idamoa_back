@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -41,6 +42,7 @@ public class GmailConfig {
      * Service Account를 사용하여 Domain-wide Delegation 적용
      */
     @Bean
+    @Lazy
     public Gmail gmail() throws IOException, GeneralSecurityException {
         log.info("Gmail API 클라이언트 초기화 시작: delegatedUser={}, appName={}",
                 delegatedUser, applicationName);

@@ -153,3 +153,14 @@ springdoc:
     filter: true
     tags-sorter: alpha
     operations-sorter: alpha
+
+# Logging Configuration
+# 불필요한 에러 로그 레벨 조정
+logging:
+  level:
+    # Tomcat/Servlet 레벨 보안 예외 (인증 실패, 접근 거부)
+    org.apache.catalina.core.ContainerBase: WARN
+    org.springframework.security: WARN
+    # Hibernate SQL (필요시 DEBUG로 변경)
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
