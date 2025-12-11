@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,6 +32,7 @@ public class GoogleAnalyticsConfig {
     private String propertyId;
 
     @Bean
+    @Lazy
     public BetaAnalyticsDataClient analyticsDataClient() throws IOException {
         log.info("Google Analytics Data API 초기화 시작 (HTTP/JSON 모드): credentialsPath={}", credentialsPath);
 

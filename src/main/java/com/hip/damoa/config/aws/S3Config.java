@@ -3,6 +3,7 @@ package com.hip.damoa.config.aws;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -25,6 +26,7 @@ public class S3Config {
     private String region;
 
     @Bean
+    @Lazy
     public S3Client s3Client() {
         AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(accessKey, secretKey);
 
@@ -35,6 +37,7 @@ public class S3Config {
     }
 
     @Bean
+    @Lazy
     public S3Presigner s3Presigner() {
         AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(accessKey, secretKey);
 
