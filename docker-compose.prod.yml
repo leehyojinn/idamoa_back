@@ -90,7 +90,7 @@ services:
       GOOGLE_ANALYTICS_PROPERTY_ID: ${GOOGLE_ANALYTICS_PROPERTY_ID:-}
       GOOGLE_ANALYTICS_CREDENTIALS_PATH: ${GOOGLE_ANALYTICS_CREDENTIALS_PATH:-/app/secrets/ga-service-account.json}
 
-      JAVA_OPTS: "-Xms1024m -Xmx2048m -XX:+UseG1GC"
+      JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC"
 
     expose:
       - "8080"
