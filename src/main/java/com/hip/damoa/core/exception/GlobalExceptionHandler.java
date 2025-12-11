@@ -10,11 +10,32 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import java.util.Set;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    // 봇/스캐너가 자주 요청하는 무시할 경로 패턴
+    private static final Set<String> IGNORED_PATHS = Set.of(
+            "/favicon.ico",
+            "/robots.txt",
+            "/.env",
+            "/wp-admin",
+            "/wp-login.php",
+            "/.git",
+            "/phpinfo.php",
+            "/admin.php"
+    );
+
+    // 무시할 확장자 패턴
+    private static final Set<String> IGNORED_EXTENSIONS = Set.of(
+            ".css", ".js", ".map", ".ico", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".woff", ".woff2", ".ttf"
+    );
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     protected ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
@@ -71,9 +92,62 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NoResourceFoundException.class)
     protected ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(NoResourceFoundException e) {
-        log.warn("리소스를 찾을 수 없음: {} {}", e.getHttpMethod(), e.getResourcePath());
+        String path = e.getResourcePath();
+        // 무시할 경로면 로그 생략
+        if (!shouldIgnorePath(path)) {
+            log.warn("리소스를 찾을 수 없음: {} {}", e.getHttpMethod(), path);
+        }
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error("요청한 리소스를 찾을 수 없습니다."));
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleNoHandlerFoundException(NoHandlerFoundException e) {
+        String path = e.getRequestURL();
+        // 무시할 경로면 로그 생략, 그 외에는 DEBUG 레벨로 로깅
+        if (!shouldIgnorePath(path)) {
+            log.debug("핸들러를 찾을 수 없음: {} {}", e.getHttpMethod(), path);
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("요청한 리소스를 찾을 수 없습니다."));
+    }
+
+    /**
+     * 클라이언트가 연결을 끊은 경우 (Broken pipe)
+     * - 사용자가 페이지 이탈, 네트워크 불안정 등
+     * - 비즈니스 로직 문제가 아니므로 로깅하지 않음
+     */
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleAsyncRequestNotUsableException(
+            AsyncRequestNotUsableException e) {
+        // 클라이언트가 이미 연결을 끊었으므로 응답도 의미 없음
+        // 로그도 남기지 않음 (빈번하게 발생할 수 있음)
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.error("연결이 끊어졌습니다."));
+    }
+
+    /**
+     * 무시할 경로인지 확인 (봇/스캐너 요청, 정적 리소스 등)
+     */
+    private boolean shouldIgnorePath(String path) {
+        if (path == null) {
+            return false;
+        }
+        // 정확히 일치하는 경로
+        if (IGNORED_PATHS.contains(path)) {
+            return true;
+        }
+        // 확장자 기반 필터링
+        String lowerPath = path.toLowerCase();
+        for (String ext : IGNORED_EXTENSIONS) {
+            if (lowerPath.endsWith(ext)) {
+                return true;
+            }
+        }
+        // 특정 디렉토리 패턴
+        return lowerPath.startsWith("/wp-") ||
+               lowerPath.startsWith("/.") ||
+               lowerPath.contains("/php");
     }
 
     @ExceptionHandler(Exception.class)
