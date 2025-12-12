@@ -26,13 +26,53 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: 카카오페이 동적 URL 지원 추가
-**마지막 업데이트**: 2025-12-09
+**프로젝트 단계**: Specialty 필터 옵션 통합 완료
+**마지막 업데이트**: 2025-12-12
 **다음 우선순위**: Next.js 프론트엔드 결제 연동 테스트
 
 ---
 
 ## 📝 작업 로그
+
+### 2025-12-12
+
+#### ✅ 완료 (Completed)
+
+**[FILTER-SPECIALTY-001] Specialty 필터 옵션 통합 마이그레이션** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-12
+- **작업 내용**:
+  - V63 Flyway 마이그레이션으로 specialty 필터 옵션 통합
+  - 분할된 서비스 옵션들을 대표 옵션으로 통합
+  - 모든 인테리어 관련 옵션 → `hospital-interior`로 통합
+  - 새로운 인테리어 전문영역 추가 (아파트, 카페, 미용실)
+
+**마이그레이션 상세**:
+- **서비스 통합**:
+  - `marketing-online`, `marketing-sns`, `marketing-brand`, `seo` 등 → `marketing`
+  - `web-development`, `web-dev`, `mobile-app` → `homepage`
+  - `cleaning-office`, `cleaning-home`, `cleaning-move` → `cleaning`
+  - `ac-install`, `ac-repair`, `ac-maintenance` → `aircon`
+  - `locksmith` → `security`
+- **인테리어 통합**:
+  - `residential`, `commercial`, `dental-interior`, `skin-interior` 등 모든 인테리어 관련 → `hospital-interior` (351개 업체)
+- **신규 추가**:
+  - `apartment-interior` (아파트인테리어)
+  - `cafe-interior` (카페인테리어)
+  - `salon-interior` (미용실인테리어)
+
+**수정 파일**:
+- `src/main/resources/db/migration/V63__Consolidate_specialty_options.sql` (신규)
+
+**주요 결과**:
+- `hospital-interior`: 351개 업체 연결
+- `cleaning`: 53개 업체 연결 (통합됨)
+- `aircon`: 52개 업체 연결 (통합됨)
+- `marketing`: 13개 업체 연결 (통합됨)
+- `homepage`: 11개 업체 연결 (통합됨)
+- 기존 분할 옵션들 모두 `is_active = false` 처리
+
+---
 
 ### 2025-12-09
 
