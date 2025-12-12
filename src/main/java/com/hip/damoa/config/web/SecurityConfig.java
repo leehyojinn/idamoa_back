@@ -175,6 +175,7 @@ public class SecurityConfig {
         // 기본 허용 오리진
         List<String> allowedOrigins = new java.util.ArrayList<>(Arrays.asList(
                 "http://localhost:*",
+                "http://192.168.0.54:*",
                 "http://127.0.0.1:*",
                 "http://192.168.0.217:*",
                 "http://192.168.0.217"

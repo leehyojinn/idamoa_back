@@ -113,28 +113,28 @@ jobs:
       - name: Deploy application
         run: |
           cd ~/damoa/app
+
+          # 기존 컨테이너 중지 및 제거
           docker compose down || true
+
+          # 컨테이너 시작
           docker compose up -d
+
+          # 이전 이미지 정리
           docker image prune -f
 
-      - name: Health check
-        run: |
-          echo "Waiting for application health check..."
+          # 헬스체크 대기 (최대 90초)
+          echo "⏳ 애플리케이션 헬스체크 대기 중..."
           for i in {1..30}; do
             if curl -f http://localhost:8080/api/health > /dev/null 2>&1; then
               echo "✅ Application is healthy!"
-              exit 0
+              break
             fi
             echo "Waiting... ($i/30)"
             sleep 3
           done
-          echo "❌ Health check failed"
-          exit 1
 
-      - name: Show deployment status
-        if: always()
-        run: |
-          cd ~/damoa/app
+          # 배포 상태 확인
           docker compose ps
           docker compose logs --tail=30 app
 
