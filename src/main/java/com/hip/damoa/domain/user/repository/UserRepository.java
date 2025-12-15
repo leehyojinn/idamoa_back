@@ -76,4 +76,67 @@ public interface UserRepository extends JpaRepository<User, Long> {
         @Param("role") String role,
         Pageable pageable
     );
+
+    /**
+     * 관리자용 크레딧 사용자 검색
+     * - 이메일, 이름, 전화번호로 검색
+     */
+    @Query(value = """
+        SELECT DISTINCT u.* FROM users u
+        LEFT JOIN user_profiles up ON up.user_id = u.id
+        WHERE u.is_deleted = false
+        AND (:keyword IS NULL OR :keyword = '' OR
+             LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+             LOWER(up.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+             up.phone LIKE CONCAT('%', :keyword, '%'))
+        """,
+        countQuery = """
+        SELECT COUNT(DISTINCT u.id) FROM users u
+        LEFT JOIN user_profiles up ON up.user_id = u.id
+        WHERE u.is_deleted = false
+        AND (:keyword IS NULL OR :keyword = '' OR
+             LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+             LOWER(up.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+             up.phone LIKE CONCAT('%', :keyword, '%'))
+        """,
+        nativeQuery = true)
+    Page<User> searchByEmailNamePhone(
+        @Param("keyword") String keyword,
+        Pageable pageable
+    );
+
+    /**
+     * 관리자용 크레딧 사용자 검색 (탈퇴 필터 포함)
+     * - 이메일, 이름, 전화번호로 검색
+     * - isDeleted: null(전체), false(활성), true(탈퇴)
+     */
+    @Query(value = """
+        SELECT DISTINCT u.* FROM users u
+        LEFT JOIN user_profiles up ON up.user_id = u.id
+        WHERE (:isDeleted IS NULL OR u.is_deleted = :isDeleted)
+        AND (:keyword IS NULL OR :keyword = '' OR
+             LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+             LOWER(up.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+             up.phone LIKE CONCAT('%', :keyword, '%'))
+        """,
+        countQuery = """
+        SELECT COUNT(DISTINCT u.id) FROM users u
+        LEFT JOIN user_profiles up ON up.user_id = u.id
+        WHERE (:isDeleted IS NULL OR u.is_deleted = :isDeleted)
+        AND (:keyword IS NULL OR :keyword = '' OR
+             LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+             LOWER(up.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+             up.phone LIKE CONCAT('%', :keyword, '%'))
+        """,
+        nativeQuery = true)
+    Page<User> searchForAdminCredit(
+        @Param("keyword") String keyword,
+        @Param("isDeleted") Boolean isDeleted,
+        Pageable pageable
+    );
+
+    /**
+     * UUID로 사용자 조회 (삭제된 사용자 포함 - 관리자용)
+     */
+    Optional<User> findByUuid(UUID uuid);
 }
