@@ -1,6 +1,7 @@
 package com.hip.damoa.domain.payment.web.dto;
 
 import com.hip.damoa.domain.payment.model.Refund;
+import com.hip.damoa.domain.user.model.UserProfile;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -24,6 +25,7 @@ public class AdminRefundResponse {
     private UUID userUuid;
     private String userEmail;
     private String userName;
+    private String userPhone;
     private BigDecimal refundAmount;
     private String refundReason;
     private String status;
@@ -34,13 +36,20 @@ public class AdminRefundResponse {
     private LocalDateTime createdAt;
     private LocalDateTime processedAt;
 
-    public static AdminRefundResponse from(Refund refund) {
+    /**
+     * Refund와 UserProfile로 응답 생성
+     */
+    public static AdminRefundResponse from(Refund refund, UserProfile profile) {
+        String userName = profile != null ? profile.getName() : null;
+        String userPhone = profile != null ? profile.getPhone() : null;
+
         return AdminRefundResponse.builder()
                 .refundUuid(refund.getUuid())
                 .paymentUuid(refund.getPayment().getUuid())
                 .userUuid(refund.getPayment().getUser().getUuid())
                 .userEmail(refund.getPayment().getUser().getEmail())
-                .userName(refund.getPayment().getUser().getEmail())
+                .userName(userName)
+                .userPhone(userPhone)
                 .refundAmount(refund.getRefundAmount())
                 .refundReason(refund.getRefundReason())
                 .status(refund.getStatus())
@@ -51,6 +60,13 @@ public class AdminRefundResponse {
                 .createdAt(refund.getCreatedAt())
                 .processedAt(refund.getProcessedAt())
                 .build();
+    }
+
+    /**
+     * Refund만으로 응답 생성 (하위 호환용)
+     */
+    public static AdminRefundResponse from(Refund refund) {
+        return from(refund, null);
     }
 
     private static String maskAccountNumber(String accountNumber) {
