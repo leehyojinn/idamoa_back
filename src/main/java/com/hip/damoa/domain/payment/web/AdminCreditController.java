@@ -40,28 +40,27 @@ public class AdminCreditController {
     @Operation(summary = "사용자 크레딧 목록 조회",
             description = """
             모든 사용자의 크레딧 정보를 페이징하여 조회합니다.
+            크레딧이 없는 사용자도 0 크레딧으로 표시됩니다.
+            탈퇴/삭제된 사용자도 포함됩니다.
 
-            **검색 옵션**
-            - keyword: 이메일 또는 이름으로 검색
+            **필터 옵션**
+            - keyword: 이메일, 이름, 전화번호로 검색
+            - deletedFilter: 탈퇴 상태 필터 (ALL: 전체, ACTIVE: 탈퇴안함, DELETED: 탈퇴함)
 
             ## 정렬
-            - 기본값: availableCredits DESC (가용 크레딧 높은 순)
-            - 사용법: sort=availableCredits,desc 또는 sort=availableCredits,asc
-            - 기타 옵션: createdAt, totalSpent
+            - 기본값: created_at DESC (최신 가입 순)
+            - 사용법: sort=created_at,desc 또는 sort=created_at,asc
+            - 기타 옵션: email
             """)
     @GetMapping("/users")
     public ApiResponse<Page<AdminUserCreditResponse>> getUserCredits(
-            @Parameter(description = "검색 키워드 (이메일/이름)") @RequestParam(required = false) String keyword,
-            @PageableDefault(size = 20, sort = "availableCredits", direction = Sort.Direction.DESC) Pageable pageable) {
+            @Parameter(description = "검색 키워드 (이메일/이름/전화번호)") @RequestParam(required = false) String keyword,
+            @Parameter(description = "탈퇴 상태 필터 (ALL: 전체, ACTIVE: 탈퇴안함, DELETED: 탈퇴함)") @RequestParam(defaultValue = "ALL") String deletedFilter,
+            @PageableDefault(size = 20, sort = "created_at", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        log.info("사용자 크레딧 목록 조회: keyword={}", keyword);
+        log.info("사용자 크레딧 목록 조회: keyword={}, deletedFilter={}", keyword, deletedFilter);
 
-        Page<AdminUserCreditResponse> credits;
-        if (keyword != null && !keyword.isBlank()) {
-            credits = adminCreditService.searchUserCredits(keyword, pageable);
-        } else {
-            credits = adminCreditService.getAllUserCredits(pageable);
-        }
+        Page<AdminUserCreditResponse> credits = adminCreditService.getAllUserCredits(keyword, deletedFilter, pageable);
 
         return ApiResponse.success(credits);
     }

@@ -10,6 +10,8 @@ import com.hip.damoa.domain.payment.web.dto.AdminCreditAdjustRequest;
 import com.hip.damoa.domain.payment.web.dto.AdminTransactionResponse;
 import com.hip.damoa.domain.payment.web.dto.AdminUserCreditResponse;
 import com.hip.damoa.domain.user.model.User;
+import com.hip.damoa.domain.user.model.UserProfile;
+import com.hip.damoa.domain.user.repository.UserProfileRepository;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +34,7 @@ public class AdminCreditService {
     private final CreditRepository creditRepository;
     private final CreditTransactionRepository transactionRepository;
     private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
 
     // 트랜잭션 타입 상수
     private static final String TX_ADMIN_GRANT = "ADMIN_GRANT";
@@ -42,50 +45,51 @@ public class AdminCreditService {
 
     /**
      * 모든 사용자의 크레딧 목록 조회 (페이징)
+     * 크레딧이 없는 사용자도 포함 (0 크레딧으로 표시)
+     * 탈퇴/삭제된 사용자도 필터에 따라 포함
+     *
+     * @param keyword 검색 키워드 (이메일/이름/전화번호)
+     * @param deletedFilter 탈퇴 상태 필터 (ALL: 전체, ACTIVE: 탈퇴안함, DELETED: 탈퇴함)
      */
     @Transactional(readOnly = true)
-    public Page<AdminUserCreditResponse> getAllUserCredits(Pageable pageable) {
-        log.info("모든 사용자 크레딧 조회");
-        return creditRepository.findAllWithUser(pageable)
-                .map(AdminUserCreditResponse::from);
-    }
+    public Page<AdminUserCreditResponse> getAllUserCredits(String keyword, String deletedFilter, Pageable pageable) {
+        log.info("관리자 사용자 크레딧 조회: keyword={}, deletedFilter={}", keyword, deletedFilter);
 
-    /**
-     * 키워드로 사용자 크레딧 검색 (이메일/이름)
-     */
-    @Transactional(readOnly = true)
-    public Page<AdminUserCreditResponse> searchUserCredits(String keyword, Pageable pageable) {
-        log.info("사용자 크레딧 검색: keyword={}", keyword);
-        return creditRepository.searchByKeyword(keyword, pageable)
-                .map(AdminUserCreditResponse::from);
+        // deletedFilter 값에 따라 isDeleted 조건 결정
+        Boolean isDeleted = null; // null = 전체
+        if ("ACTIVE".equalsIgnoreCase(deletedFilter)) {
+            isDeleted = false;
+        } else if ("DELETED".equalsIgnoreCase(deletedFilter)) {
+            isDeleted = true;
+        }
+
+        // 사용자 검색 (키워드 + 탈퇴 필터)
+        Page<User> users = userRepository.searchForAdminCredit(keyword, isDeleted, pageable);
+
+        // 각 사용자의 크레딧과 프로필 조회하여 응답 생성
+        return users.map(user -> {
+            Credit credit = creditRepository.findByUser(user).orElse(null);
+            UserProfile profile = userProfileRepository.findByUser(user).orElse(null);
+            return AdminUserCreditResponse.fromUser(user, profile, credit);
+        });
     }
 
     /**
      * 특정 사용자의 크레딧 조회 (UUID)
+     * 탈퇴한 사용자도 조회 가능 (관리자용)
      */
     @Transactional(readOnly = true)
     public AdminUserCreditResponse getUserCreditByUuid(UUID userUuid) {
         log.info("사용자 크레딧 조회: userUuid={}", userUuid);
 
-        User user = userRepository.findByUuidAndIsDeletedFalse(userUuid)
+        // 탈퇴한 사용자도 조회 가능
+        User user = userRepository.findByUuid(userUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        Credit credit = creditRepository.findByUser(user)
-                .orElse(null);
+        Credit credit = creditRepository.findByUser(user).orElse(null);
+        UserProfile profile = userProfileRepository.findByUser(user).orElse(null);
 
-        if (credit == null) {
-            // 크레딧이 없는 경우 기본값 반환
-            return AdminUserCreditResponse.builder()
-                    .userUuid(user.getUuid())
-                    .userEmail(user.getEmail())
-                    .userName(user.getEmail())
-                    .availableCredits(BigDecimal.ZERO)
-                    .totalEarned(BigDecimal.ZERO)
-                    .totalSpent(BigDecimal.ZERO)
-                    .build();
-        }
-
-        return AdminUserCreditResponse.from(credit);
+        return AdminUserCreditResponse.fromUser(user, profile, credit);
     }
 
     // ========== 수동 크레딧 지급/차감 ==========
