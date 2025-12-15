@@ -186,7 +186,7 @@ public class AdminCreditService {
     public Page<AdminTransactionResponse> getAllTransactions(Pageable pageable) {
         log.info("모든 거래 내역 조회");
         return transactionRepository.findAllByOrderByCreatedAtDesc(pageable)
-                .map(AdminTransactionResponse::from);
+                .map(this::toTransactionResponse);
     }
 
     /**
@@ -196,7 +196,7 @@ public class AdminCreditService {
     public Page<AdminTransactionResponse> getTransactionsByType(String transactionType, Pageable pageable) {
         log.info("거래 유형별 조회: type={}", transactionType);
         return transactionRepository.findByTransactionTypeOrderByCreatedAtDesc(transactionType, pageable)
-                .map(AdminTransactionResponse::from);
+                .map(this::toTransactionResponse);
     }
 
     /**
@@ -206,7 +206,7 @@ public class AdminCreditService {
     public Page<AdminTransactionResponse> searchTransactions(String keyword, Pageable pageable) {
         log.info("거래 내역 검색: keyword={}", keyword);
         return transactionRepository.searchByKeyword(keyword, pageable)
-                .map(AdminTransactionResponse::from);
+                .map(this::toTransactionResponse);
     }
 
     /**
@@ -219,7 +219,26 @@ public class AdminCreditService {
         User user = userRepository.findByUuidAndIsDeletedFalse(userUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        UserProfile profile = userProfileRepository.findByUser(user).orElse(null);
+
         return transactionRepository.findByUserOrderByCreatedAtDesc(user, pageable)
-                .map(AdminTransactionResponse::from);
+                .map(tx -> AdminTransactionResponse.from(tx, profile));
+    }
+
+    /**
+     * CreditTransaction을 AdminTransactionResponse로 변환 (UserProfile 포함)
+     */
+    private AdminTransactionResponse toTransactionResponse(CreditTransaction transaction) {
+        UserProfile profile = null;
+        try {
+            User user = transaction.getUser();
+            if (user != null) {
+                profile = userProfileRepository.findByUser(user).orElse(null);
+            }
+        } catch (Exception e) {
+            // User가 삭제된 경우 무시
+            log.warn("User not found for transaction: {}", transaction.getId());
+        }
+        return AdminTransactionResponse.from(transaction, profile);
     }
 }
