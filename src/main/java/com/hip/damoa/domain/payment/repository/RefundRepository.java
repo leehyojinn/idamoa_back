@@ -87,11 +87,30 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
     Page<Refund> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     /**
-     * 키워드 검색 (사용자 이메일/이름, 환불 사유)
+     * 키워드 검색 (사용자 이메일/이름/전화번호, 환불 사유)
      */
-    @Query("SELECT r FROM Refund r JOIN r.payment p JOIN p.user u " +
-           "WHERE u.email LIKE %:keyword% OR r.refundReason LIKE %:keyword% " +
-           "ORDER BY r.createdAt DESC")
+    @Query(value = """
+        SELECT DISTINCT r.* FROM refunds r
+        JOIN payments p ON p.id = r.payment_id
+        JOIN users u ON u.id = p.user_id
+        LEFT JOIN user_profiles up ON up.user_id = u.id
+        WHERE LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           OR LOWER(up.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           OR up.phone LIKE CONCAT('%', :keyword, '%')
+           OR LOWER(r.refund_reason) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        ORDER BY r.created_at DESC
+        """,
+        countQuery = """
+        SELECT COUNT(DISTINCT r.id) FROM refunds r
+        JOIN payments p ON p.id = r.payment_id
+        JOIN users u ON u.id = p.user_id
+        LEFT JOIN user_profiles up ON up.user_id = u.id
+        WHERE LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           OR LOWER(up.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           OR up.phone LIKE CONCAT('%', :keyword, '%')
+           OR LOWER(r.refund_reason) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        """,
+        nativeQuery = true)
     Page<Refund> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
     /**

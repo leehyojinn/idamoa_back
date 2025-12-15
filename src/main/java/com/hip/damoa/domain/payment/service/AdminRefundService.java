@@ -13,6 +13,8 @@ import com.hip.damoa.domain.payment.repository.RefundRepository;
 import com.hip.damoa.domain.payment.web.dto.AdminRefundRejectRequest;
 import com.hip.damoa.domain.payment.web.dto.AdminRefundResponse;
 import com.hip.damoa.domain.user.model.User;
+import com.hip.damoa.domain.user.model.UserProfile;
+import com.hip.damoa.domain.user.repository.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -35,6 +37,7 @@ public class AdminRefundService {
     private final PaymentRepository paymentRepository;
     private final CreditRepository creditRepository;
     private final CreditTransactionRepository transactionRepository;
+    private final UserProfileRepository userProfileRepository;
 
     // 트랜잭션 타입 상수
     private static final String TX_REFUND_RESTORE = "REFUND_RESTORE";
@@ -49,7 +52,7 @@ public class AdminRefundService {
     public Page<AdminRefundResponse> getAllRefunds(Pageable pageable) {
         log.info("모든 환불 내역 조회");
         return refundRepository.findAllByOrderByCreatedAtDesc(pageable)
-                .map(AdminRefundResponse::from);
+                .map(this::toResponse);
     }
 
     /**
@@ -59,7 +62,7 @@ public class AdminRefundService {
     public Page<AdminRefundResponse> getRefundsByStatus(String status, Pageable pageable) {
         log.info("상태별 환불 조회: status={}", status);
         return refundRepository.findByStatus(status, pageable)
-                .map(AdminRefundResponse::from);
+                .map(this::toResponse);
     }
 
     /**
@@ -69,7 +72,7 @@ public class AdminRefundService {
     public Page<AdminRefundResponse> getPendingRefunds(Pageable pageable) {
         log.info("대기 중인 환불 목록 조회");
         return refundRepository.findPendingRefunds(pageable)
-                .map(AdminRefundResponse::from);
+                .map(this::toResponse);
     }
 
     /**
@@ -79,7 +82,7 @@ public class AdminRefundService {
     public Page<AdminRefundResponse> getCompletedRefunds(Pageable pageable) {
         log.info("처리 완료된 환불 목록 조회");
         return refundRepository.findCompletedRefunds(pageable)
-                .map(AdminRefundResponse::from);
+                .map(this::toResponse);
     }
 
     /**
@@ -89,7 +92,7 @@ public class AdminRefundService {
     public Page<AdminRefundResponse> searchRefunds(String keyword, Pageable pageable) {
         log.info("환불 검색: keyword={}", keyword);
         return refundRepository.searchByKeyword(keyword, pageable)
-                .map(AdminRefundResponse::from);
+                .map(this::toResponse);
     }
 
     /**
@@ -100,7 +103,16 @@ public class AdminRefundService {
         log.info("환불 상세 조회: uuid={}", refundUuid);
         Refund refund = refundRepository.findByUuid(refundUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.REFUND_NOT_FOUND));
-        return AdminRefundResponse.from(refund);
+        return toResponse(refund);
+    }
+
+    /**
+     * Refund를 AdminRefundResponse로 변환 (UserProfile 포함)
+     */
+    private AdminRefundResponse toResponse(Refund refund) {
+        User user = refund.getPayment().getUser();
+        UserProfile profile = userProfileRepository.findByUser(user).orElse(null);
+        return AdminRefundResponse.from(refund, profile);
     }
 
     // ========== 환불 처리 ==========
@@ -131,7 +143,7 @@ public class AdminRefundService {
 
         log.info("환불 승인 완료: refundId={}, amount={}", refund.getId(), refund.getRefundAmount());
 
-        return AdminRefundResponse.from(refund);
+        return toResponse(refund);
     }
 
     /**
@@ -186,7 +198,7 @@ public class AdminRefundService {
 
         log.info("환불 거부 완료: refundId={}, restoredAmount={}", refund.getId(), totalAmount);
 
-        return AdminRefundResponse.from(refund);
+        return toResponse(refund);
     }
 
     // ========== 통계 ==========
