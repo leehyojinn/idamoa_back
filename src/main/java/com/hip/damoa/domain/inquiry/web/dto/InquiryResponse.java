@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.UUID;
 /**
  * 일반 문의 상세 응답 DTO
  */
+@Slf4j
 @Getter
 @Builder
 @NoArgsConstructor
@@ -57,6 +59,18 @@ public class InquiryResponse {
     private LocalDateTime updatedAt;
 
     /**
+     * 사용자 이메일 안전하게 조회 (삭제된 사용자 처리)
+     */
+    private static String getUserEmail(Inquiry inquiry) {
+        try {
+            return inquiry.getUser() != null ? inquiry.getUser().getEmail() : null;
+        } catch (Exception e) {
+            log.warn("User not found for inquiry: {}", inquiry.getId());
+            return "[삭제된 사용자]";
+        }
+    }
+
+    /**
      * Entity → DTO 변환
      */
     public static InquiryResponse from(Inquiry inquiry) {
@@ -66,7 +80,7 @@ public class InquiryResponse {
                 .title(inquiry.getTitle())
                 .content(inquiry.getContent())
                 .status(inquiry.getStatus())
-                .userEmail(inquiry.getUser().getEmail())
+                .userEmail(getUserEmail(inquiry))
                 .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())
                 .updatedAt(inquiry.getUpdatedAt())
@@ -83,7 +97,7 @@ public class InquiryResponse {
                 .title(inquiry.getTitle())
                 .content(inquiry.getContent())
                 .status(inquiry.getStatus())
-                .userEmail(inquiry.getUser().getEmail())
+                .userEmail(getUserEmail(inquiry))
                 .attachments(attachments)
                 .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())
@@ -101,7 +115,7 @@ public class InquiryResponse {
                 .title(inquiry.getTitle())
                 .content(inquiry.getContent())
                 .status(inquiry.getStatus())
-                .userEmail(inquiry.getUser().getEmail())
+                .userEmail(getUserEmail(inquiry))
                 .answer(answer)
                 .attachments(attachments)
                 .isDeleted(inquiry.getIsDeleted())

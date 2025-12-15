@@ -6,12 +6,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Getter
 @Builder
 @NoArgsConstructor
@@ -79,8 +81,20 @@ public class CompanyReviewResponse {
     @Schema(description = "수정일시", example = "2025-01-01T12:00:00")
     private LocalDateTime updatedAt;
 
+    /**
+     * 사용자 이메일 안전하게 조회 (삭제된 사용자 처리)
+     */
+    private static String getUserEmailSafe(CompanyReview review) {
+        try {
+            return review.getUser() != null ? review.getUser().getEmail() : null;
+        } catch (Exception e) {
+            log.warn("User not found for review: {}", review.getId());
+            return "[삭제된 사용자]";
+        }
+    }
+
     public static CompanyReviewResponse from(CompanyReview review) {
-        return from(review, null, review.getUser() != null ? review.getUser().getEmail() : null,
+        return from(review, null, getUserEmailSafe(review),
                 review.getCompany().getId(), review.getCompany().getName());
     }
 
@@ -90,17 +104,36 @@ public class CompanyReviewResponse {
 
     /**
      * Lazy Loading 문제 방지를 위해 Company 정보를 파라미터로 받는 메서드
+     * 삭제된 User의 경우 안전하게 처리
      */
     public static CompanyReviewResponse from(CompanyReview review, List<ReviewImageDto> images, String userName,
                                               Long companyId, String companyName) {
+        Long userId = null;
+        String userEmail = null;
+        String resolvedUserName = userName;
+
+        try {
+            if (review.getUser() != null) {
+                userId = review.getUser().getId();
+                userEmail = review.getUser().getEmail();
+                if (resolvedUserName == null) {
+                    resolvedUserName = userEmail;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("User not found for review: {}", review.getId());
+            userEmail = "[삭제된 사용자]";
+            resolvedUserName = "[삭제된 사용자]";
+        }
+
         return CompanyReviewResponse.builder()
                 .id(review.getId())
                 .uuid(review.getUuid())
                 .companyId(companyId)
                 .companyName(companyName)
-                .userId(review.getUser().getId())
-                .userEmail(review.getUser().getEmail())
-                .userName(userName != null ? userName : review.getUser().getEmail())
+                .userId(userId)
+                .userEmail(userEmail)
+                .userName(resolvedUserName)
                 .rating(review.getRating())
                 .title(review.getTitle())
                 .content(review.getContent())

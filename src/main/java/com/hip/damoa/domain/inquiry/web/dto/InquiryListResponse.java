@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -15,6 +16,7 @@ import java.util.UUID;
 /**
  * 일반 문의 목록 응답 DTO (간략 정보)
  */
+@Slf4j
 @Getter
 @Builder
 @NoArgsConstructor
@@ -47,6 +49,18 @@ public class InquiryListResponse {
     private LocalDateTime createdAt;
 
     /**
+     * 사용자 이메일 안전하게 조회 (삭제된 사용자 처리)
+     */
+    private static String getUserEmail(Inquiry inquiry) {
+        try {
+            return inquiry.getUser() != null ? inquiry.getUser().getEmail() : null;
+        } catch (Exception e) {
+            log.warn("User not found for inquiry: {}", inquiry.getId());
+            return "[삭제된 사용자]";
+        }
+    }
+
+    /**
      * Entity → DTO 변환
      */
     public static InquiryListResponse from(Inquiry inquiry) {
@@ -55,7 +69,7 @@ public class InquiryListResponse {
                 .inquiryType(inquiry.getInquiryType())
                 .title(inquiry.getTitle())
                 .status(inquiry.getStatus())
-                .userEmail(inquiry.getUser().getEmail())
+                .userEmail(getUserEmail(inquiry))
                 .hasAnswer(false)  // 기본값, Service에서 설정 필요
                 .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())
@@ -71,7 +85,7 @@ public class InquiryListResponse {
                 .inquiryType(inquiry.getInquiryType())
                 .title(inquiry.getTitle())
                 .status(inquiry.getStatus())
-                .userEmail(inquiry.getUser().getEmail())
+                .userEmail(getUserEmail(inquiry))
                 .hasAnswer(hasAnswer)
                 .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())

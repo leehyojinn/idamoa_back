@@ -1,11 +1,13 @@
 package com.hip.damoa.domain.payment.web.dto;
 
 import com.hip.damoa.domain.payment.model.Refund;
+import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.model.UserProfile;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,6 +16,7 @@ import java.util.UUID;
 /**
  * 관리자용 환불 정보 응답 DTO
  */
+@Slf4j
 @Getter
 @Builder
 @NoArgsConstructor
@@ -38,16 +41,30 @@ public class AdminRefundResponse {
 
     /**
      * Refund와 UserProfile로 응답 생성
+     * 삭제된 User의 경우 안전하게 처리
      */
     public static AdminRefundResponse from(Refund refund, UserProfile profile) {
+        UUID userUuid = null;
+        String userEmail = null;
         String userName = profile != null ? profile.getName() : null;
         String userPhone = profile != null ? profile.getPhone() : null;
+
+        try {
+            User user = refund.getPayment().getUser();
+            if (user != null) {
+                userUuid = user.getUuid();
+                userEmail = user.getEmail();
+            }
+        } catch (Exception e) {
+            log.warn("User not found for refund: {}", refund.getId());
+            userEmail = "[삭제된 사용자]";
+        }
 
         return AdminRefundResponse.builder()
                 .refundUuid(refund.getUuid())
                 .paymentUuid(refund.getPayment().getUuid())
-                .userUuid(refund.getPayment().getUser().getUuid())
-                .userEmail(refund.getPayment().getUser().getEmail())
+                .userUuid(userUuid)
+                .userEmail(userEmail)
                 .userName(userName)
                 .userPhone(userPhone)
                 .refundAmount(refund.getRefundAmount())

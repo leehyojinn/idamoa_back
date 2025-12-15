@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.UUID;
 /**
  * Notice/Event 게시글 Response DTO
  */
+@Slf4j
 @Getter
 @Builder
 @NoArgsConstructor
@@ -110,10 +112,34 @@ public class NoticeBoardResponse {
     private Boolean isDeleted;
 
     /**
+     * 사용자 이메일 안전하게 조회 (삭제된 사용자 처리)
+     */
+    private static String getUserEmailSafe(Board board) {
+        try {
+            return board.getUser() != null ? board.getUser().getEmail() : null;
+        } catch (Exception e) {
+            log.warn("User not found for board: {}", board.getId());
+            return "[삭제된 사용자]";
+        }
+    }
+
+    /**
+     * 사용자 ID 안전하게 조회 (삭제된 사용자 처리)
+     */
+    private static Long getUserIdSafe(Board board) {
+        try {
+            return board.getUser() != null ? board.getUser().getId() : null;
+        } catch (Exception e) {
+            log.warn("User not found for board: {}", board.getId());
+            return null;
+        }
+    }
+
+    /**
      * Entity to DTO (기본 - 썸네일, 첨부파일 없음)
      */
     public static NoticeBoardResponse from(Board board) {
-        return from(board, null, null, board.getUser() != null ? board.getUser().getEmail() : null);
+        return from(board, null, null, getUserEmailSafe(board));
     }
 
     /**
@@ -125,6 +151,7 @@ public class NoticeBoardResponse {
 
     /**
      * Entity to DTO (썸네일, 첨부파일 포함)
+     * 삭제된 User의 경우 안전하게 처리
      */
     public static NoticeBoardResponse from(Board board, FileInfo thumbnail, List<FileInfo> attachments, String userName) {
         // typeData에서 이벤트 날짜 추출
@@ -143,6 +170,11 @@ public class NoticeBoardResponse {
                 isEventEnded = eventEndDate.isBefore(LocalDateTime.now());
             }
         }
+
+        // User 정보 안전하게 조회
+        Long userId = getUserIdSafe(board);
+        String userEmail = getUserEmailSafe(board);
+        String resolvedUserName = userName != null ? userName : userEmail;
 
         return NoticeBoardResponse.builder()
                 .uuid(board.getUuid())
@@ -165,9 +197,9 @@ public class NoticeBoardResponse {
                 .isPublished(board.getIsPublished())
                 .publishedAt(board.getPublishedAt())
                 .tags(board.getTags())
-                .userId(board.getUser() != null ? board.getUser().getId() : null)
-                .userEmail(board.getUser() != null ? board.getUser().getEmail() : null)
-                .userName(userName != null ? userName : (board.getUser() != null ? board.getUser().getEmail() : null))
+                .userId(userId)
+                .userEmail(userEmail)
+                .userName(resolvedUserName)
                 .createdAt(board.getCreatedAt())
                 .updatedAt(board.getUpdatedAt())
                 .isDeleted(board.getIsDeleted())
