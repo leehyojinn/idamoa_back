@@ -91,7 +91,7 @@ docker compose -f docker-compose.infra.yml ps
 cd ~/damoa/app
 cat > .env <<'EOF'
 # GitHub Container Registry
-GITHUB_REPOSITORY=interior-damoa/hip-damoa-backend
+GITHUB_REPOSITORY=interior-damoa/i-damoa-backend
 
 # Spring Profile
 SPRING_PROFILES_ACTIVE=dev

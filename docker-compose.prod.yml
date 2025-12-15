@@ -9,7 +9,7 @@
 
 services:
   app:
-    image: ghcr.io/${GITHUB_REPOSITORY:-interior-damoa/i-damoa-backend}:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY:-interior-damoa/i-damoa-backend}:${IMAGE_TAG:-prod}
     container_name: damoa-app-prod
     restart: unless-stopped
     environment:
