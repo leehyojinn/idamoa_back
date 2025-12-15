@@ -112,7 +112,7 @@ Get-Content C:\workspace\awskey\.ssh\hip-damoa-develop-key.pem | Set-Clipboard
 
 1. **워크플로우 실행 후 자동 생성**됨 (첫 배포 시)
 2. 이미지 경로: `ghcr.io/[organization]/[repository]:tag`
-   - 예: `ghcr.io/interior-damoa/hip-damoa-backend:latest`
+   - 예: `ghcr.io/interior-damoa/i-damoa-backend:latest`
 
 ### Private Package 접근 설정 (선택사항)
 
@@ -228,7 +228,7 @@ vim .env
 **`.env` 파일 내용**:
 ```bash
 # GitHub Container Registry
-GITHUB_REPOSITORY=interior-damoa/hip-damoa-backend
+GITHUB_REPOSITORY=interior-damoa/i-damoa-backend
 
 # Spring Profile
 SPRING_PROFILES_ACTIVE=dev
@@ -278,7 +278,7 @@ chmod 600 .env
 
 **⚠️ 중요**: `GITHUB_REPOSITORY`는 반드시 정확한 경로로 설정하세요!
 - 형식: `organization/repository` 또는 `username/repository`
-- 예: `interior-damoa/hip-damoa-backend`
+- 예: `interior-damoa/i-damoa-backend`
 
 ---
 
@@ -375,16 +375,16 @@ curl http://localhost:8080/actuator/health
 
 ```bash
 # 1. latest (항상 최신)
-ghcr.io/interior-damoa/hip-damoa-backend:latest
+ghcr.io/interior-damoa/i-damoa-backend:latest
 
 # 2. 버전 태그 (build.gradle의 version)
-ghcr.io/interior-damoa/hip-damoa-backend:1.0.0
+ghcr.io/interior-damoa/i-damoa-backend:1.0.0
 
 # 3. 타임스탬프 태그 (개발 환경)
-ghcr.io/interior-damoa/hip-damoa-backend:dev.20251110.025800
+ghcr.io/interior-damoa/i-damoa-backend:dev.20251110.025800
 
 # 4. Git Commit SHA (롤백용)
-ghcr.io/interior-damoa/hip-damoa-backend:a1b2c3d
+ghcr.io/interior-damoa/i-damoa-backend:a1b2c3d
 ```
 
 ### 특정 버전으로 롤백
@@ -396,7 +396,7 @@ cd ~/damoa/app
 vim docker-compose.app.yml
 
 # app 서비스의 image 수정
-# image: ghcr.io/interior-damoa/hip-damoa-backend:a1b2c3d
+# image: ghcr.io/interior-damoa/i-damoa-backend:a1b2c3d
 
 # App 재시작
 docker compose -f docker-compose.app.yml down
@@ -408,11 +408,11 @@ docker compose -f docker-compose.app.yml up -d
 cd ~/damoa/app
 
 # 특정 버전 pull
-docker pull ghcr.io/interior-damoa/hip-damoa-backend:dev.20251110.025800
+docker pull ghcr.io/interior-damoa/i-damoa-backend:dev.20251110.025800
 
 # 태그 변경
-docker tag ghcr.io/interior-damoa/hip-damoa-backend:dev.20251110.025800 \
-            ghcr.io/interior-damoa/hip-damoa-backend:latest
+docker tag ghcr.io/interior-damoa/i-damoa-backend:dev.20251110.025800 \
+            ghcr.io/interior-damoa/i-damoa-backend:latest
 
 # App 재시작
 docker compose -f docker-compose.app.yml down
@@ -445,10 +445,10 @@ docker compose -f docker-compose.app.yml logs --since 30m app
 ### GHCR 이미지 확인
 ```
 # GitHub Repository → Packages
-https://github.com/orgs/interior-damoa/packages?repo_name=hip-damoa-backend
+https://github.com/orgs/interior-damoa/packages?repo_name=i-damoa-backend
 
 # 또는
-https://github.com/interior-damoa/hip-damoa-backend/pkgs/container/hip-damoa-backend
+https://github.com/interior-damoa/i-damoa-backend/pkgs/container/i-damoa-backend
 ```
 
 ---
@@ -530,7 +530,7 @@ cat .env
 
 # GITHUB_REPOSITORY 값 확인 (반드시!)
 grep GITHUB_REPOSITORY .env
-# → interior-damoa/hip-damoa-backend 여야 함
+# → interior-damoa/i-damoa-backend 여야 함
 ```
 
 ### 7. 헬스체크 실패
@@ -602,8 +602,8 @@ git push origin develop
 ```
 
 **배포 확인**:
-- GitHub Actions: https://github.com/interior-damoa/hip-damoa-backend/actions
-- GHCR 이미지: https://github.com/interior-damoa/hip-damoa-backend/pkgs/container/hip-damoa-backend
+- GitHub Actions: https://github.com/interior-damoa/i-damoa-backend/actions
+- GHCR 이미지: https://github.com/interior-damoa/i-damoa-backend/pkgs/container/i-damoa-backend
 - EC2 API: http://[YOUR-EC2-IP]:8080/actuator/health
 
 ---
