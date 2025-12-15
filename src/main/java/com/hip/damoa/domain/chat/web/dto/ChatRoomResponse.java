@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -13,6 +14,7 @@ import java.util.UUID;
 /**
  * 채팅방 응답 DTO
  */
+@Slf4j
 @Getter
 @Builder
 @NoArgsConstructor
@@ -64,15 +66,34 @@ public class ChatRoomResponse {
 
     /**
      * Entity → DTO 변환
+     * 삭제된 User의 경우 안전하게 처리
      */
     public static ChatRoomResponse from(ChatRoom chatRoom, String userName) {
+        Long userId = null;
+        String userEmail = null;
+        String resolvedUserName = userName;
+
+        try {
+            if (chatRoom.getUser() != null) {
+                userId = chatRoom.getUser().getId();
+                userEmail = chatRoom.getUser().getEmail();
+                if (resolvedUserName == null) {
+                    resolvedUserName = userEmail;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("User not found for chatRoom: {}", chatRoom.getId());
+            userEmail = "[삭제된 사용자]";
+            resolvedUserName = "[삭제된 사용자]";
+        }
+
         return ChatRoomResponse.builder()
                 .uuid(chatRoom.getUuid())
                 .estimateRequestUuid(chatRoom.getEstimateRequest().getUuid())
                 .estimateRequestTitle(chatRoom.getEstimateRequest().getTitle())
-                .userId(chatRoom.getUser().getId())
-                .userEmail(chatRoom.getUser().getEmail())
-                .userName(userName != null ? userName : chatRoom.getUser().getEmail())
+                .userId(userId)
+                .userEmail(userEmail)
+                .userName(resolvedUserName)
                 .companyId(chatRoom.getCompany().getId())
                 .companyUuid(chatRoom.getCompany().getUuid())
                 .companyName(chatRoom.getCompany().getName())

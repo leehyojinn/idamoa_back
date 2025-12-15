@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 /**
  * 플래너 신청서 상세 응답 DTO
  */
+@Slf4j
 @Getter
 @Builder
 @NoArgsConstructor
@@ -73,6 +75,7 @@ public class PlannerApplicationResponse {
 
     /**
      * Entity + 첨부파일 정보 → DTO 변환
+     * 삭제된 User의 경우 안전하게 처리
      */
     public static PlannerApplicationResponse from(PlannerApplication entity, List<AttachmentDto> attachments) {
         List<String> requestTypes = entity.getRequestTypes() != null
@@ -83,9 +86,29 @@ public class PlannerApplicationResponse {
                 .map(PreferredDateDto::from)
                 .collect(Collectors.toList());
 
+        Long userId = null;
+        try {
+            if (entity.getUser() != null) {
+                userId = entity.getUser().getId();
+            }
+        } catch (Exception e) {
+            log.warn("User not found for plannerApplication: {}", entity.getId());
+        }
+
+        Long assignedAdminId = null;
+        String assignedAdminName = null;
+        try {
+            if (entity.getAssignedAdmin() != null) {
+                assignedAdminId = entity.getAssignedAdmin().getId();
+                assignedAdminName = entity.getAssignedAdmin().getEmail();
+            }
+        } catch (Exception e) {
+            log.warn("AssignedAdmin not found for plannerApplication: {}", entity.getId());
+        }
+
         return PlannerApplicationResponse.builder()
                 .uuid(entity.getUuid())
-                .userId(entity.getUser().getId())
+                .userId(userId)
                 .title(entity.getTitle())
                 .content(entity.getContent())
                 .consultationMethod(entity.getConsultationMethod())
@@ -102,8 +125,8 @@ public class PlannerApplicationResponse {
                 .status(entity.getStatus())
                 .adminResponse(entity.getAdminResponse())
                 .adminMemo(entity.getAdminMemo())
-                .assignedAdminId(entity.getAssignedAdmin() != null ? entity.getAssignedAdmin().getId() : null)
-                .assignedAdminName(entity.getAssignedAdmin() != null ? entity.getAssignedAdmin().getEmail() : null)
+                .assignedAdminId(assignedAdminId)
+                .assignedAdminName(assignedAdminName)
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .isDeleted(entity.getIsDeleted())

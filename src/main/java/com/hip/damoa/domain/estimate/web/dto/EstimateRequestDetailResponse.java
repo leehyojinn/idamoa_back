@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,6 +19,7 @@ import java.util.UUID;
 /**
  * 견적 요청 상세 응답 DTO (제안 목록 포함)
  */
+@Slf4j
 @Getter
 @Setter
 @Builder
@@ -143,14 +145,33 @@ public class EstimateRequestDetailResponse {
 
     /**
      * EstimateRequest → DetailResponse 변환
+     * 삭제된 User의 경우 안전하게 처리
      */
     public static EstimateRequestDetailResponse from(EstimateRequest request, String userName, List<EstimateImageDto> images) {
+        Long userId = null;
+        String userEmail = null;
+        String resolvedUserName = userName;
+
+        try {
+            if (request.getUser() != null) {
+                userId = request.getUser().getId();
+                userEmail = request.getUser().getEmail();
+                if (resolvedUserName == null) {
+                    resolvedUserName = userEmail;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("User not found for estimateRequest: {}", request.getId());
+            userEmail = "[삭제된 사용자]";
+            resolvedUserName = "[삭제된 사용자]";
+        }
+
         return EstimateRequestDetailResponse.builder()
                 .id(request.getId())
                 .uuid(request.getUuid())
-                .userId(request.getUser().getId())
-                .userEmail(request.getUser().getEmail())
-                .userName(userName != null ? userName : request.getUser().getEmail())
+                .userId(userId)
+                .userEmail(userEmail)
+                .userName(resolvedUserName)
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .requirements(request.getRequirements())

@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.stream.Collectors;
 /**
  * Document 게시글 Response DTO
  */
+@Slf4j
 @Schema(description = "자료실 게시글 응답")
 @Getter
 @Builder
@@ -140,14 +142,39 @@ public class DocumentResponse {
     private Boolean isDeleted;
 
     /**
+     * 사용자 이메일 안전하게 조회 (삭제된 사용자 처리)
+     */
+    private static String getUserEmailSafe(Board board) {
+        try {
+            return board.getUser() != null ? board.getUser().getEmail() : null;
+        } catch (Exception e) {
+            log.warn("User not found for board: {}", board.getId());
+            return "[삭제된 사용자]";
+        }
+    }
+
+    /**
+     * 사용자 ID 안전하게 조회 (삭제된 사용자 처리)
+     */
+    private static Long getUserIdSafe(Board board) {
+        try {
+            return board.getUser() != null ? board.getUser().getId() : null;
+        } catch (Exception e) {
+            log.warn("User not found for board: {}", board.getId());
+            return null;
+        }
+    }
+
+    /**
      * Entity to DTO
      */
     public static DocumentResponse from(Board board) {
-        return from(board, List.of(), List.of(), null, false, false, 0L, board.getUser() != null ? board.getUser().getEmail() : null);
+        return from(board, List.of(), List.of(), null, false, false, 0L, getUserEmailSafe(board));
     }
 
     /**
      * Entity to DTO (전체 정보 포함)
+     * 삭제된 User의 경우 안전하게 처리
      */
     public static DocumentResponse from(Board board, List<BoardFilterOption> filterOptions,
                                         List<FileInfo> files, FileInfo thumbnail,
@@ -160,6 +187,11 @@ public class DocumentResponse {
 
         // 파일별 가격 정보 추출 (개별 가격 방식)
         Map<String, Integer> filePrices = extractFilePrices(typeData, isPaid, price);
+
+        // User 정보 안전하게 조회
+        Long userId = getUserIdSafe(board);
+        String userEmail = getUserEmailSafe(board);
+        String resolvedUserName = userName != null ? userName : userEmail;
 
         return DocumentResponse.builder()
                 .uuid(board.getUuid())
@@ -198,9 +230,9 @@ public class DocumentResponse {
                         })
                         .collect(Collectors.toList()))
                 .tags(board.getTags())
-                .userId(board.getUser() != null ? board.getUser().getId() : null)
-                .userEmail(board.getUser() != null ? board.getUser().getEmail() : null)
-                .userName(userName != null ? userName : (board.getUser() != null ? board.getUser().getEmail() : null))
+                .userId(userId)
+                .userEmail(userEmail)
+                .userName(resolvedUserName)
                 .createdAt(board.getCreatedAt())
                 .updatedAt(board.getUpdatedAt())
                 .isBookmarked(isBookmarked)
