@@ -4,6 +4,7 @@ import com.hip.damoa.core.exception.BusinessException;
 import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.board.service.BoardBookmarkService;
+import com.hip.damoa.domain.board.service.BoardLikeService;
 import com.hip.damoa.domain.board.service.GalleryBoardService;
 import com.hip.damoa.domain.board.web.dto.GalleryCreateRequest;
 import com.hip.damoa.domain.board.web.dto.GalleryResponse;
@@ -40,6 +41,7 @@ public class GalleryBoardController {
 
     private final GalleryBoardService galleryBoardService;
     private final BoardBookmarkService boardBookmarkService;
+    private final BoardLikeService boardLikeService;
 
     @Operation(summary = "Gallery 게시글 생성",
             description = "새로운 사진 게시글을 생성합니다.\n\n" +
@@ -89,10 +91,12 @@ public class GalleryBoardController {
                     "**응답 포함 정보:**\n" +
                     "- 제목, 내용, 이미지 URL 목록\n" +
                     "- 작성자 정보 (이름, 프로필 이미지)\n" +
-                    "- 조회수, 좋아요 수, 북마크 수\n" +
+                    "- 조회수(viewCount), 좋아요 수(likeCount)\n" +
                     "- 저작권 정보 (있는 경우)\n" +
                     "- 필터 옵션 정보\n" +
                     "- 태그 목록\n" +
+                    "- **회사 정보 (company)**: 작성자의 회사명, 전화번호\n" +
+                    "- **리뷰 목록 (reviews)**: 회사에 대한 승인된 리뷰 내용 (상세 조회 시에만 제공)\n" +
                     "- 로그인한 경우: 북마크 여부 포함\n\n" +
                     "**조회수 증가:**\n" +
                     "- 게시글 조회 시 조회수 자동 증가\n" +
@@ -129,9 +133,11 @@ public class GalleryBoardController {
                     "- page: 페이지 번호 (0부터 시작)\n" +
                     "- sort: 정렬 기준 (기본: publishedAt,DESC - 최신순)\n\n" +
                     "**응답:**\n" +
-                    "- 게시글 목록 (제목, 썸네일 이미지, 작성자, 조회수 등)\n" +
+                    "- 게시글 목록 (제목, 썸네일 이미지, 작성자, 조회수(viewCount), 좋아요 수(likeCount) 등)\n" +
+                    "- **회사 정보 (company)**: 작성자의 회사명, 전화번호\n" +
                     "- 로그인한 경우 각 게시글의 북마크 여부 포함\n" +
-                    "- 페이지 정보 (totalElements, totalPages 등)\n\n" +
+                    "- 페이지 정보 (totalElements, totalPages 등)\n" +
+                    "- ※ 리뷰 목록은 상세 조회 시에만 제공됩니다\n\n" +
                     "## 정렬\n" +
                     "- 기본값: publishedAt DESC (최신순)\n" +
                     "- 사용법: sort=publishedAt,desc 또는 sort=publishedAt,asc\n" +
@@ -349,5 +355,61 @@ public class GalleryBoardController {
         boolean isBookmarked = boardBookmarkService.isBookmarked(uuid, userDetails.getUsername());
 
         return ApiResponse.success(isBookmarked);
+    }
+
+    @Operation(summary = "Gallery 좋아요 토글",
+            description = "사진 게시글 좋아요를 추가하거나 제거합니다.\n\n" +
+                    "**동작:**\n" +
+                    "- 좋아요가 없는 경우: 좋아요 추가 → true 반환\n" +
+                    "- 좋아요가 있는 경우: 좋아요 제거 → false 반환\n\n" +
+                    "**권한:**\n" +
+                    "- 로그인 필수\n\n" +
+                    "**응답:**\n" +
+                    "- true: 좋아요 추가됨\n" +
+                    "- false: 좋아요 제거됨\n\n" +
+                    "**참고:**\n" +
+                    "- 좋아요 수는 게시글의 likeCount 필드에 자동 반영됨")
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping("/{uuid}/like")
+    public ApiResponse<Boolean> toggleLike(
+            @PathVariable UUID uuid,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
+        log.info("Gallery 좋아요 토글 요청: uuid={}, userEmail={}", uuid, userDetails.getUsername());
+
+        boolean isLiked = boardLikeService.toggleLike(uuid, userDetails.getUsername());
+
+        return ApiResponse.success(isLiked);
+    }
+
+    @Operation(summary = "Gallery 좋아요 여부 확인",
+            description = "사용자가 해당 게시글에 좋아요했는지 확인합니다.\n\n" +
+                    "**권한:**\n" +
+                    "- 로그인 필수\n\n" +
+                    "**응답:**\n" +
+                    "- true: 좋아요 되어 있음\n" +
+                    "- false: 좋아요 안 되어 있음\n\n" +
+                    "**활용:**\n" +
+                    "- 게시글 상세 페이지에서 좋아요 버튼 상태 표시\n" +
+                    "- UI에서 좋아요 아이콘 활성화 여부 결정")
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/{uuid}/like")
+    public ApiResponse<Boolean> checkLike(
+            @PathVariable UUID uuid,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
+        log.info("Gallery 좋아요 확인 요청: uuid={}, userEmail={}", uuid, userDetails.getUsername());
+
+        boolean isLiked = boardLikeService.isLiked(uuid, userDetails.getUsername());
+
+        return ApiResponse.success(isLiked);
     }
 }
