@@ -35,8 +35,10 @@ public class EstimateRequestResponse {
     private String title;
     private String description;
     private Map<String, Object> requirements;
-    private String[] tags;
-    private String[] requiredSkills;
+    @Builder.Default
+    private String[] tags = new String[0];
+    @Builder.Default
+    private String[] requiredSkills = new String[0];
     private BigDecimal budgetMin;
     private BigDecimal budgetMax;
     private LocalDate desiredStartDate;
@@ -45,7 +47,8 @@ public class EstimateRequestResponse {
     private String address;
     private BigDecimal latitude;
     private BigDecimal longitude;
-    private List<EstimateImageDto> images;
+    @Builder.Default
+    private List<EstimateImageDto> images = List.of();
     private String status;
     private String visibility;
     private Integer proposalCount;
@@ -62,7 +65,8 @@ public class EstimateRequestResponse {
     private String contactName; // 신청자 이름
     private String contactPhone; // 연락처
     private LocalDateTime submissionDeadline; // 제안 마감일
-    private List<AttachmentResponse> attachments; // 첨부파일 목록 (V30: 조인 테이블)
+    @Builder.Default
+    private List<AttachmentResponse> attachments = List.of(); // 첨부파일 목록 (V30: 조인 테이블)
 
     // Backward compatibility: old signature without images parameter
     public static EstimateRequestResponse from(EstimateRequest request, String userName) {

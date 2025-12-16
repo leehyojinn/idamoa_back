@@ -39,7 +39,8 @@ public class PlannerApplicationDetailResponse {
     private ConsultationMethod consultationMethod;
 
     @Schema(description = "요청 내용")
-    private List<String> requestTypes;
+    @Builder.Default
+    private List<String> requestTypes = List.of();
 
     @Schema(description = "신청자 이름")
     private String applicantName;
@@ -57,10 +58,12 @@ public class PlannerApplicationDetailResponse {
     private String businessType;
 
     @Schema(description = "첨부파일 목록")
-    private List<AttachmentDto> attachments;
+    @Builder.Default
+    private List<AttachmentDto> attachments = List.of();
 
     @Schema(description = "희망 상담 일정")
-    private List<PreferredDateDto> preferredDates;
+    @Builder.Default
+    private List<PreferredDateDto> preferredDates = List.of();
 
     @Schema(description = "상태")
     private PlannerApplicationStatus status;

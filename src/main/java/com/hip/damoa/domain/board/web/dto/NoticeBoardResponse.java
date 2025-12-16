@@ -48,7 +48,8 @@ public class NoticeBoardResponse {
 
     // 첨부파일 목록
     @Schema(description = "첨부파일 목록")
-    private List<FileInfo> attachments;
+    @Builder.Default
+    private List<FileInfo> attachments = List.of();
 
     // 이벤트 날짜 (EVENT 타입일 경우)
     @Schema(description = "이벤트 시작일시 (EVENT 타입)", example = "2025-01-01T00:00:00")
@@ -88,7 +89,8 @@ public class NoticeBoardResponse {
 
     // 태그
     @Schema(description = "태그 배열", example = "[\"이벤트\", \"할인\", \"신년\"]")
-    private String[] tags;
+    @Builder.Default
+    private String[] tags = new String[0];
 
     // 작성자
     @Schema(description = "작성자 ID", example = "1")

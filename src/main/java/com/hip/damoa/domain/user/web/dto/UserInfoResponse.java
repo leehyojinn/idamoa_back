@@ -27,7 +27,8 @@ public class UserInfoResponse {
     private String email;
 
     @Schema(description = "역할 목록", example = "[\"USER\", \"COMPANY\"]")
-    private List<String> roles;
+    @Builder.Default
+    private List<String> roles = List.of();
 
     @Schema(description = "사용자 상태 (ACTIVE, INACTIVE, SUSPENDED)", example = "ACTIVE")
     private String status;

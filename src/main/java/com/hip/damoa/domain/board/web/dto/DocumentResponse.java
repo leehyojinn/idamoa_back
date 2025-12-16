@@ -53,7 +53,8 @@ public class DocumentResponse {
             - isPaid: 유료 파일 여부
             - price: 파일 가격 (원)
             """)
-    private List<FileInfo> files;
+    @Builder.Default
+    private List<FileInfo> files = List.of();
 
     @Schema(description = "썸네일 파일 정보")
     private FileInfo thumbnail;
@@ -106,11 +107,13 @@ public class DocumentResponse {
 
     // 필터
     @Schema(description = "필터 옵션 목록")
-    private List<GalleryResponse.FilterOptionSummary> filterOptions;
+    @Builder.Default
+    private List<GalleryResponse.FilterOptionSummary> filterOptions = List.of();
 
     // 태그
     @Schema(description = "태그 배열", example = "[\"인테리어\", \"설계도면\", \"병원\"]")
-    private String[] tags;
+    @Builder.Default
+    private String[] tags = new String[0];
 
     // 작성자
     @Schema(description = "작성자 ID", example = "1")

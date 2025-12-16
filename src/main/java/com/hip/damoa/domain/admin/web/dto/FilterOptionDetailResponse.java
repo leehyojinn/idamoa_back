@@ -41,7 +41,8 @@ public class FilterOptionDetailResponse {
     private Integer usageCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private List<FilterOptionResponse> children; // 자식 옵션 목록
+    @Builder.Default
+    private List<FilterOptionResponse> children = List.of(); // 자식 옵션 목록
 
     public static FilterOptionDetailResponse from(FilterOption option) {
         FilterOptionDetailResponseBuilder builder = FilterOptionDetailResponse.builder()

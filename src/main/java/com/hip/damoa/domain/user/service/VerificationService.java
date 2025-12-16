@@ -83,13 +83,11 @@ public class VerificationService {
         log.info("이메일 인증 코드 생성: token={}, email={} (TTL: {}분)", signupToken, email, EMAIL_OTP_TTL.toMinutes());
 
         // 7. 실제 이메일 발송 (실패 시 예외 던짐)
-        log.warn("Email DEV 활성화 상태 - 개발 모드: code={}", code);
-
         sendVerificationEmail(signupToken, email, code);
 
         // 개발 모드에서는 코드 반환 (운영 환경에서는 제거 권장)
         if (!emailEnabled) {
-            log.warn("Email 비활성화 상태 - 개발 모드: code={}", code);
+            log.info("Email 비활성화 상태 - 개발 모드: code={}", code);
         }
 
         return code;

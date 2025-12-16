@@ -76,10 +76,12 @@ public class CompanyListResponse {
     private String premiumTier;
 
     @Schema(description = "업체 이미지 목록")
-    private List<CompanyImageDto> images;
+    @Builder.Default
+    private List<CompanyImageDto> images = List.of();
 
     @Schema(description = "필터 그룹 목록 (카테고리별)")
-    private List<CompanyFilterGroupDto> filterGroups;
+    @Builder.Default
+    private List<CompanyFilterGroupDto> filterGroups = List.of();
 
     @Schema(description = "현재 사용자의 좋아요 여부", example = "true")
     private Boolean isLiked;

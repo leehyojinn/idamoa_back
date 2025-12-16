@@ -98,7 +98,8 @@ public class AdCampaignResponse {
     private LocalDateTime lastCalculatedAt;
 
     @Schema(description = "결제 내역 목록")
-    private List<AdPaymentResponse> payments;
+    @Builder.Default
+    private List<AdPaymentResponse> payments = List.of();
 
     public static AdCampaignResponse from(AdCampaign campaign, List<AdPayment> payments) {
         return AdCampaignResponse.builder()
