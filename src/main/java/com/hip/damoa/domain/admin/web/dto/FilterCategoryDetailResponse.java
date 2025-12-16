@@ -33,7 +33,8 @@ public class FilterCategoryDetailResponse {
     private Map<String, Object> metadata;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private List<FilterOptionResponse> options; // 하위 옵션 목록
+    @Builder.Default
+    private List<FilterOptionResponse> options = List.of(); // 하위 옵션 목록
 
     public static FilterCategoryDetailResponse from(FilterCategory category, List<FilterOptionResponse> options) {
         return FilterCategoryDetailResponse.builder()

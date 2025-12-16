@@ -32,7 +32,8 @@ public class PlannerApplicationResponse {
     private String title;
     private String content;
     private ConsultationMethod consultationMethod;
-    private List<String> requestTypes;
+    @Builder.Default
+    private List<String> requestTypes = List.of();
 
     // 신청자 정보
     private String applicantName;
@@ -46,10 +47,12 @@ public class PlannerApplicationResponse {
     private String businessType;
 
     // 첨부파일
-    private List<AttachmentDto> attachments;
+    @Builder.Default
+    private List<AttachmentDto> attachments = List.of();
 
     // 희망 일정
-    private List<PreferredDateDto> preferredDates;
+    @Builder.Default
+    private List<PreferredDateDto> preferredDates = List.of();
 
     // 상태 관리
     private PlannerApplicationStatus status;

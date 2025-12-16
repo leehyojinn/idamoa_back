@@ -35,8 +35,10 @@ public class AdminEstimateRequestResponse {
     private String description;
     private String category;
     private Map<String, Object> requirements;
-    private String[] tags;
-    private String[] requiredSkills;
+    @Builder.Default
+    private String[] tags = new String[0];
+    @Builder.Default
+    private String[] requiredSkills = new String[0];
     private BigDecimal budgetMin;
     private BigDecimal budgetMax;
     private LocalDate desiredStartDate;
@@ -45,7 +47,8 @@ public class AdminEstimateRequestResponse {
     private String address;
     private BigDecimal latitude;
     private BigDecimal longitude;
-    private List<EstimateImageDto> images;
+    @Builder.Default
+    private List<EstimateImageDto> images = List.of();
     private String status;
     private Boolean isPublic;
     private Integer proposalCount;
@@ -62,7 +65,8 @@ public class AdminEstimateRequestResponse {
     private String contactName;
     private String contactPhone;
     private LocalDateTime submissionDeadline;
-    private List<AttachmentResponse> attachments; // 첨부파일 (V30: 조인 테이블)
+    @Builder.Default
+    private List<AttachmentResponse> attachments = List.of(); // 첨부파일 (V30: 조인 테이블)
 
     // Soft delete 관련
     private Boolean isDeleted;

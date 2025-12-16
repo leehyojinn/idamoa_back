@@ -160,6 +160,9 @@ public class GalleryResponse {
 
         @Schema(description = "전화번호", example = "02-1234-5678")
         private String phone;
+
+        @Schema(description = "리뷰 평균 평점 (1.0~5.0)", example = "4.5")
+        private Double averageRating;
     }
 
     /**
@@ -325,6 +328,25 @@ public class GalleryResponse {
         String userEmail = getUserEmailSafe(board);
         String resolvedUserName = userName != null ? userName : userEmail;
 
+        // 배열 필드 null-safe 처리
+        List<FilterOptionSummary> filterOptionSummaries = (filterOptions != null ? filterOptions : List.<BoardFilterOption>of())
+                .stream()
+                .map(bfo -> {
+                    FilterOption fo = bfo.getFilterOption();
+                    return FilterOptionSummary.builder()
+                            .id(fo.getId())
+                            .uuid(fo.getUuid())
+                            .categoryCode(fo.getCategory().getCode())
+                            .categoryName(fo.getCategory().getName())
+                            .code(fo.getCode())
+                            .name(fo.getName())
+                            .shortName(fo.getShortName())
+                            .color(fo.getColor())
+                            .icon(fo.getIcon())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
         return GalleryResponse.builder()
                 .uuid(board.getUuid())
                 .title(board.getTitle())
@@ -332,7 +354,7 @@ public class GalleryResponse {
                 .boardType(board.getBoardType())
                 .categoryId(board.getCategory() != null ? board.getCategory().getId() : null)
                 .categoryName(board.getCategory() != null ? board.getCategory().getName() : null)
-                .images(images)  // FileInfo 리스트
+                .images(images != null ? images : List.of())
                 .relatedLink(relatedLink)
                 .copyright(copyright)
                 .viewCount(board.getViewCount())
@@ -342,23 +364,8 @@ public class GalleryResponse {
                 .isFeatured(board.getIsFeatured())
                 .isPublished(board.getIsPublished())
                 .publishedAt(board.getPublishedAt())
-                .filterOptions(filterOptions.stream()
-                        .map(bfo -> {
-                            FilterOption fo = bfo.getFilterOption();
-                            return FilterOptionSummary.builder()
-                                    .id(fo.getId())
-                                    .uuid(fo.getUuid())
-                                    .categoryCode(fo.getCategory().getCode())
-                                    .categoryName(fo.getCategory().getName())
-                                    .code(fo.getCode())
-                                    .name(fo.getName())
-                                    .shortName(fo.getShortName())
-                                    .color(fo.getColor())
-                                    .icon(fo.getIcon())
-                                    .build();
-                        })
-                        .collect(Collectors.toList()))
-                .tags(board.getTags())
+                .filterOptions(filterOptionSummaries)
+                .tags(board.getTags() != null ? board.getTags() : new String[0])
                 .userId(userId)
                 .userEmail(userEmail)
                 .userName(resolvedUserName)
@@ -368,7 +375,7 @@ public class GalleryResponse {
                 .isLiked(isLiked)
                 .isDeleted(board.getIsDeleted())
                 .company(company)
-                .reviews(reviews)
+                .reviews(reviews != null ? reviews : List.of())
                 .build();
     }
 }

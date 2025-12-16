@@ -22,7 +22,8 @@ public class AdminUserListResponse {
     private UUID uuid;
     private String email;
     private String name;
-    private String[] roles;
+    @Builder.Default
+    private String[] roles = new String[0];
     private String status;
     private Boolean emailVerified;
     private Boolean phoneVerified;

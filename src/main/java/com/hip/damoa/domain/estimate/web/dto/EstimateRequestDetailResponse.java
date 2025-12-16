@@ -55,10 +55,12 @@ public class EstimateRequestDetailResponse {
     private Map<String, Object> requirements;
 
     @Schema(description = "태그")
-    private String[] tags;
+    @Builder.Default
+    private String[] tags = new String[0];
 
     @Schema(description = "필요 기술")
-    private String[] requiredSkills;
+    @Builder.Default
+    private String[] requiredSkills = new String[0];
 
     @Schema(description = "최소 예산")
     private BigDecimal budgetMin;
@@ -85,7 +87,8 @@ public class EstimateRequestDetailResponse {
     private BigDecimal longitude;
 
     @Schema(description = "이미지 목록")
-    private List<EstimateImageDto> images;
+    @Builder.Default
+    private List<EstimateImageDto> images = List.of();
 
     @Schema(description = "상태")
     private String status;
@@ -129,7 +132,8 @@ public class EstimateRequestDetailResponse {
     private LocalDateTime submissionDeadline;
 
     @Schema(description = "첨부파일 목록")
-    private List<AttachmentResponse> attachments;
+    @Builder.Default
+    private List<AttachmentResponse> attachments = List.of();
 
     // ===== 제안 정보 (중첩) =====
 

@@ -59,7 +59,8 @@ public class ProposalResponse {
 
     // 첨부파일 (V30: 조인 테이블)
     @Schema(description = "첨부파일 목록")
-    private List<AttachmentResponse> attachments;
+    @Builder.Default
+    private List<AttachmentResponse> attachments = List.of();
 
     // 추가 정보
     @Schema(description = "가격 상세 내역 (JSON)", example = "{\"자재비\": 10000000, \"인건비\": 15000000}")

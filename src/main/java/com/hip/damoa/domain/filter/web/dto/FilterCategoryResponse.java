@@ -31,7 +31,8 @@ public class FilterCategoryResponse {
     private String icon;
     private Boolean isActive;
     private Map<String, Object> metadata;  // BOARD_TYPE: "GALLERY" 등 확장 데이터
-    private List<FilterOptionResponse> options;
+    @Builder.Default
+    private List<FilterOptionResponse> options = List.of();
 
     public static FilterCategoryResponse from(FilterCategory category, List<FilterOptionResponse> options) {
         return FilterCategoryResponse.builder()

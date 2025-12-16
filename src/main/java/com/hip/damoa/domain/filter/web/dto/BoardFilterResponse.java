@@ -25,7 +25,8 @@ public class BoardFilterResponse {
     private String filterType;     // 필터 타입 (SINGLE_SELECT, MULTI_SELECT)
     private String description;    // 필터 설명
     private Boolean isRequired;    // 필수 여부
-    private List<BoardFilterOption> options;  // 필터 옵션 목록
+    @Builder.Default
+    private List<BoardFilterOption> options = List.of();  // 필터 옵션 목록
 
     /**
      * 필터 옵션 내부 클래스

@@ -34,7 +34,8 @@ public class PlannerApplicationSummaryResponse {
     private ConsultationMethod consultationMethod;
 
     @Schema(description = "요청 내용")
-    private List<String> requestTypes;
+    @Builder.Default
+    private List<String> requestTypes = List.of();
 
     @Schema(description = "신청자 이름")
     private String applicantName;

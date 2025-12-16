@@ -424,11 +424,15 @@ public class GalleryBoardService {
 
         try {
             return companyRepository.findByOwnerId(board.getUser().getId())
-                    .map(company -> GalleryResponse.CompanySummary.builder()
-                            .companyUuid(company.getUuid())
-                            .companyName(company.getName())
-                            .phone(company.getPrimaryPhone())
-                            .build())
+                    .map(company -> {
+                        Double avgRating = companyReviewRepository.getAverageRatingByCompany(company);
+                        return GalleryResponse.CompanySummary.builder()
+                                .companyUuid(company.getUuid())
+                                .companyName(company.getName())
+                                .phone(company.getPrimaryPhone())
+                                .averageRating(avgRating)
+                                .build();
+                    })
                     .orElse(null);
         } catch (Exception e) {
             log.warn("Failed to get company for board: boardId={}", board.getId());

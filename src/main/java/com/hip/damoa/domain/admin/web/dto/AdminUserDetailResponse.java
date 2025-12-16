@@ -23,7 +23,8 @@ public class AdminUserDetailResponse {
     private String email;
     private String name;
     private String phoneNumber;
-    private String[] roles;
+    @Builder.Default
+    private String[] roles = new String[0];
     private String status;
 
     // 인증 정보

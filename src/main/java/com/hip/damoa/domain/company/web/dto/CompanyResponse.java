@@ -58,7 +58,8 @@ public class CompanyResponse {
     private String businessHoursNote;
 
     @Schema(description = "태그 배열", example = "[\"인테리어\", \"리모델링\", \"사무실\"]")
-    private String[] tags;
+    @Builder.Default
+    private String[] tags = new String[0];
 
     @Schema(description = "대표 전화번호", example = "02-1234-5678")
     private String primaryPhone;
@@ -139,10 +140,12 @@ public class CompanyResponse {
     private LocalDateTime updatedAt;
 
     @Schema(description = "업체 이미지 목록")
-    private List<CompanyImageDto> images;
+    @Builder.Default
+    private List<CompanyImageDto> images = List.of();
 
     @Schema(description = "필터 그룹 목록 (카테고리별)")
-    private List<CompanyFilterGroupDto> filterGroups;
+    @Builder.Default
+    private List<CompanyFilterGroupDto> filterGroups = List.of();
 
     @Schema(description = "삭제 여부 (관리자용)", example = "false")
     private Boolean isDeleted;

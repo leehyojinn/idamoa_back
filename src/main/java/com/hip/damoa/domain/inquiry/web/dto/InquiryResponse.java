@@ -47,7 +47,8 @@ public class InquiryResponse {
     private InquiryAnswerResponse answer;
 
     @Schema(description = "첨부파일 목록")
-    private List<InquiryAttachmentResponse> attachments;
+    @Builder.Default
+    private List<InquiryAttachmentResponse> attachments = List.of();
 
     @Schema(description = "삭제 여부 (관리자용)", example = "false")
     private Boolean isDeleted;
