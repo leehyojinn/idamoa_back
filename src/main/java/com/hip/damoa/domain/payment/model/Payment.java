@@ -5,6 +5,8 @@ import com.hip.damoa.domain.user.model.User;
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.Type;
 
 import java.math.BigDecimal;
@@ -28,6 +30,7 @@ public class Payment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @NotFound(action = NotFoundAction.IGNORE)  // 삭제된 User의 경우 null 반환
     private User user;
 
     @Column(name = "payment_amount", precision = 12, scale = 2, nullable = false)

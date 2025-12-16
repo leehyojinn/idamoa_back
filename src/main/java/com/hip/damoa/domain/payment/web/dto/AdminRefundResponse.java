@@ -57,7 +57,7 @@ public class AdminRefundResponse {
             }
         } catch (Exception e) {
             log.warn("User not found for refund: {}", refund.getId());
-            userEmail = "[삭제된 사용자]";
+            userEmail = "알 수 없음";
         }
 
         return AdminRefundResponse.builder()

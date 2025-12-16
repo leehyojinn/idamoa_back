@@ -6,6 +6,8 @@ import com.hip.damoa.domain.estimate.model.EstimateRequest;
 import com.hip.damoa.domain.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import java.time.LocalDateTime;
 
@@ -42,6 +44,7 @@ public class ChatRoom extends BaseEntity {
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @NotFound(action = NotFoundAction.IGNORE)  // 삭제된 User의 경우 null 반환
     private User user;
 
     /**

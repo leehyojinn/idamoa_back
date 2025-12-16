@@ -58,7 +58,7 @@ public class AdminTransactionResponse {
         } catch (Exception e) {
             // User가 삭제된 경우
             log.warn("User not found for transaction: {}", transaction.getId());
-            userEmail = "[삭제된 사용자]";
+            userEmail = "알 수 없음";
         }
 
         return AdminTransactionResponse.builder()

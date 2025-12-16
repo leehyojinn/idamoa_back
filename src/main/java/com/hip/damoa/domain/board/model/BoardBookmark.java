@@ -3,6 +3,8 @@ package com.hip.damoa.domain.board.model;
 import com.hip.damoa.domain.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import java.time.LocalDateTime;
 
@@ -31,6 +33,7 @@ public class BoardBookmark {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @NotFound(action = NotFoundAction.IGNORE)  // 삭제된 User의 경우 null 반환
     private User user;
 
     @Column(name = "created_at", nullable = false)

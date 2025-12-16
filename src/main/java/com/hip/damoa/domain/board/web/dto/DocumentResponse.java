@@ -149,7 +149,7 @@ public class DocumentResponse {
             return board.getUser() != null ? board.getUser().getEmail() : null;
         } catch (Exception e) {
             log.warn("User not found for board: {}", board.getId());
-            return "[삭제된 사용자]";
+            return "알 수 없음";
         }
     }
 

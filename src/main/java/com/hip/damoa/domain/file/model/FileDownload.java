@@ -4,6 +4,8 @@ import com.hip.damoa.domain.payment.model.Payment;
 import com.hip.damoa.domain.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import java.time.LocalDateTime;
 
@@ -34,6 +36,7 @@ public class FileDownload {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
+    @NotFound(action = NotFoundAction.IGNORE)  // 삭제된 User의 경우 null 반환
     private User user;
 
     @Column(name = "ip_address", length = 45)
