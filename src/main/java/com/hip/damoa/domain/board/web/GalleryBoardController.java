@@ -386,30 +386,4 @@ public class GalleryBoardController {
         return ApiResponse.success(isLiked);
     }
 
-    @Operation(summary = "Gallery 좋아요 여부 확인",
-            description = "사용자가 해당 게시글에 좋아요했는지 확인합니다.\n\n" +
-                    "**권한:**\n" +
-                    "- 로그인 필수\n\n" +
-                    "**응답:**\n" +
-                    "- true: 좋아요 되어 있음\n" +
-                    "- false: 좋아요 안 되어 있음\n\n" +
-                    "**활용:**\n" +
-                    "- 게시글 상세 페이지에서 좋아요 버튼 상태 표시\n" +
-                    "- UI에서 좋아요 아이콘 활성화 여부 결정")
-    @SecurityRequirement(name = "bearerAuth")
-    @GetMapping("/{uuid}/like")
-    public ApiResponse<Boolean> checkLike(
-            @PathVariable UUID uuid,
-            @AuthenticationPrincipal UserDetails userDetails) {
-
-        if (userDetails == null) {
-            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
-        }
-
-        log.info("Gallery 좋아요 확인 요청: uuid={}, userEmail={}", uuid, userDetails.getUsername());
-
-        boolean isLiked = boardLikeService.isLiked(uuid, userDetails.getUsername());
-
-        return ApiResponse.success(isLiked);
-    }
 }
