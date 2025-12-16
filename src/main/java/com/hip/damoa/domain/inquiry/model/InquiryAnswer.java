@@ -4,6 +4,8 @@ import com.hip.damoa.domain.common.BaseEntity;
 import com.hip.damoa.domain.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 /**
  * 일반 문의 답변 엔티티
@@ -22,6 +24,7 @@ public class InquiryAnswer extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "admin_id", nullable = false)
+    @NotFound(action = NotFoundAction.IGNORE)  // 삭제된 Admin의 경우 null 반환
     private User admin;  // 답변 작성 관리자
 
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")

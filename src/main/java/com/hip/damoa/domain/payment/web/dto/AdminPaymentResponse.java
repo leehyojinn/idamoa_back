@@ -60,7 +60,7 @@ public class AdminPaymentResponse {
             }
         } catch (Exception e) {
             log.warn("User not found for payment: {}", payment.getId());
-            userEmail = "[삭제된 사용자]";
+            userEmail = "알 수 없음";
         }
 
         return AdminPaymentResponse.builder()

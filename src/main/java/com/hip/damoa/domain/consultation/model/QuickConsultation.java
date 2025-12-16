@@ -5,6 +5,8 @@ import com.hip.damoa.domain.company.model.Company;
 import com.hip.damoa.domain.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import java.time.LocalDateTime;
 
@@ -25,6 +27,7 @@ public class QuickConsultation extends BaseEntity {
     // 사용자 정보 (비회원인 경우 null)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
+    @NotFound(action = NotFoundAction.IGNORE)  // 삭제된 User의 경우 null 반환
     private User user;
 
     // 신청자 정보 (비회원도 필수)
@@ -99,6 +102,7 @@ public class QuickConsultation extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_by")
+    @NotFound(action = NotFoundAction.IGNORE)  // 삭제된 User의 경우 null 반환
     private User assignedBy;
 
     @Enumerated(EnumType.STRING)
@@ -114,6 +118,7 @@ public class QuickConsultation extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "responded_by")
+    @NotFound(action = NotFoundAction.IGNORE)  // 삭제된 User의 경우 null 반환
     private User respondedBy;
 
     @Column(name = "completed_at")
@@ -137,6 +142,7 @@ public class QuickConsultation extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "deleted_by")
+    @NotFound(action = NotFoundAction.IGNORE)  // 삭제된 User의 경우 null 반환
     private User deletedBy;
 
     // ===== 비즈니스 메서드 =====

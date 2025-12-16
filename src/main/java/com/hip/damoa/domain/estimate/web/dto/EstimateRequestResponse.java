@@ -88,8 +88,8 @@ public class EstimateRequestResponse {
             }
         } catch (Exception e) {
             log.warn("User not found for estimateRequest: {}", request.getId());
-            userEmail = "[삭제된 사용자]";
-            resolvedUserName = "[삭제된 사용자]";
+            userEmail = "알 수 없음";
+            resolvedUserName = "알 수 없음";
         }
 
         return EstimateRequestResponse.builder()

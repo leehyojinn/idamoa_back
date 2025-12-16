@@ -89,7 +89,7 @@ public class CompanyReviewResponse {
             return review.getUser() != null ? review.getUser().getEmail() : null;
         } catch (Exception e) {
             log.warn("User not found for review: {}", review.getId());
-            return "[삭제된 사용자]";
+            return "알 수 없음";
         }
     }
 
@@ -122,8 +122,8 @@ public class CompanyReviewResponse {
             }
         } catch (Exception e) {
             log.warn("User not found for review: {}", review.getId());
-            userEmail = "[삭제된 사용자]";
-            resolvedUserName = "[삭제된 사용자]";
+            userEmail = "알 수 없음";
+            resolvedUserName = "알 수 없음";
         }
 
         return CompanyReviewResponse.builder()

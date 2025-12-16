@@ -4,6 +4,8 @@ import com.hip.damoa.domain.common.BaseEntity;
 import com.hip.damoa.domain.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 /**
  * 일반 문의 엔티티 (버그, 결제 오류, 계정 문제 등)
@@ -18,6 +20,7 @@ public class Inquiry extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @NotFound(action = NotFoundAction.IGNORE)  // 삭제된 User의 경우 null 반환
     private User user;  // 문의 작성자 (필수)
 
     @Column(name = "title", nullable = false, length = 200)

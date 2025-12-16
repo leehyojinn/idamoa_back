@@ -5,6 +5,8 @@ import com.hip.damoa.domain.user.model.User;
 import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.Type;
 
 import java.util.ArrayList;
@@ -27,6 +29,7 @@ public class PlannerApplication extends BaseEntity {
     // 사용자 정보 (USER만 신청 가능)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @NotFound(action = NotFoundAction.IGNORE)  // 삭제된 User의 경우 null 반환
     private User user;
 
     // 신청 정보
@@ -91,10 +94,12 @@ public class PlannerApplication extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_admin_id")
+    @NotFound(action = NotFoundAction.IGNORE)  // 삭제된 Admin의 경우 null 반환
     private User assignedAdmin;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "deleted_by")
+    @NotFound(action = NotFoundAction.IGNORE)  // 삭제된 User의 경우 null 반환
     private User deletedBy;
 
     // ===== 비즈니스 메서드 =====

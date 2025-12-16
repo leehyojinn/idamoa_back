@@ -488,7 +488,7 @@ public class NoticeBoardService {
     /**
      * Board의 User로부터 userName 조회
      * UserProfile이 있으면 name 반환, 없으면 email 반환
-     * 삭제된 User의 경우 "[삭제된 사용자]" 반환
+     * 삭제된 User의 경우 "알 수 없음" 반환
      */
     private String getUserName(Board board) {
         if (board.getUser() == null) {
@@ -501,7 +501,7 @@ public class NoticeBoardService {
                     .orElse(board.getUser().getEmail());
         } catch (Exception e) {
             log.warn("User not found for board: boardId={}", board.getId());
-            return "[삭제된 사용자]";
+            return "알 수 없음";
         }
     }
 }
