@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -107,9 +108,21 @@ public class GalleryResponse {
     @Schema(description = "북마크 여부 (로그인 사용자용)", example = "false")
     private Boolean isBookmarked;
 
+    // 좋아요 여부 (로그인 사용자용)
+    @Schema(description = "좋아요 여부 (로그인 사용자용)", example = "false")
+    private Boolean isLiked;
+
     // 삭제 상태 (관리자용)
     @Schema(description = "삭제 여부 (관리자용)", example = "false")
     private Boolean isDeleted;
+
+    // 회사 정보
+    @Schema(description = "작성자 회사 정보")
+    private CompanySummary company;
+
+    // 리뷰 목록 (상세 조회용)
+    @Schema(description = "회사 리뷰 목록 (상세 조회 시에만 제공)")
+    private List<ReviewSummary> reviews;
 
     /**
      * 저작권 정보
@@ -128,6 +141,59 @@ public class GalleryResponse {
 
         @Schema(description = "출처 표기", example = "선택")
         private String attribution;
+    }
+
+    /**
+     * 회사 정보 요약 (검색/목록용)
+     */
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "회사 정보 요약")
+    public static class CompanySummary {
+        @Schema(description = "회사 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
+        private UUID companyUuid;
+
+        @Schema(description = "회사명", example = "다모아 인테리어")
+        private String companyName;
+
+        @Schema(description = "전화번호", example = "02-1234-5678")
+        private String phone;
+    }
+
+    /**
+     * 리뷰 정보 요약 (상세 조회용)
+     */
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "리뷰 정보 요약")
+    public static class ReviewSummary {
+        @Schema(description = "리뷰 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
+        private UUID reviewUuid;
+
+        @Schema(description = "작성자 이름", example = "홍길동")
+        private String userName;
+
+        @Schema(description = "평점 (1.0~5.0)", example = "4.5")
+        private BigDecimal rating;
+
+        @Schema(description = "리뷰 내용", example = "정말 만족스러운 시공이었습니다.")
+        private String content;
+
+        @Schema(description = "작성일시", example = "2025-01-01T08:00:00")
+        private LocalDateTime createdAt;
+
+        @Schema(description = "업체 답변", example = "감사합니다. 좋은 평가를 주셔서 감사합니다.")
+        private String reply;
+
+        @Schema(description = "업체 답변 작성일시", example = "2025-01-02T10:00:00")
+        private LocalDateTime repliedAt;
+
+        @Schema(description = "리뷰 이미지 목록")
+        private List<FileInfo> images;
     }
 
     /**
@@ -195,15 +261,25 @@ public class GalleryResponse {
      * Entity to DTO (필터 옵션 없이)
      */
     public static GalleryResponse from(Board board) {
-        return from(board, List.of(), List.of(), false, getUserEmailSafe(board));
+        return from(board, List.of(), List.of(), false, false, getUserEmailSafe(board), null, null);
     }
 
     /**
-     * Entity to DTO (전체 정보 포함)
+     * Entity to DTO (기본 정보 - 하위 호환용)
      * 삭제된 User의 경우 안전하게 처리
      */
     public static GalleryResponse from(Board board, List<BoardFilterOption> filterOptions,
                                        List<FileInfo> images, boolean isBookmarked, String userName) {
+        return from(board, filterOptions, images, isBookmarked, false, userName, null, null);
+    }
+
+    /**
+     * Entity to DTO (전체 정보 포함 - Company + Reviews + isLiked)
+     * 삭제된 User의 경우 안전하게 처리
+     */
+    public static GalleryResponse from(Board board, List<BoardFilterOption> filterOptions,
+                                       List<FileInfo> images, boolean isBookmarked, boolean isLiked,
+                                       String userName, CompanySummary company, List<ReviewSummary> reviews) {
         Map<String, Object> typeData = board.getTypeData();
 
         // typeData에서 링크 정보 추출 (relatedLink 또는 link 필드 확인)
@@ -289,7 +365,10 @@ public class GalleryResponse {
                 .createdAt(board.getCreatedAt())
                 .updatedAt(board.getUpdatedAt())
                 .isBookmarked(isBookmarked)
+                .isLiked(isLiked)
                 .isDeleted(board.getIsDeleted())
+                .company(company)
+                .reviews(reviews)
                 .build();
     }
 }

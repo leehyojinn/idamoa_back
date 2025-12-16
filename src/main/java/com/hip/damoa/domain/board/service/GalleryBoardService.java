@@ -14,6 +14,12 @@ import com.hip.damoa.domain.board.web.dto.FileInfo;
 import com.hip.damoa.domain.board.web.dto.GalleryCreateRequest;
 import com.hip.damoa.domain.board.web.dto.GalleryResponse;
 import com.hip.damoa.domain.board.web.dto.GalleryUpdateRequest;
+import com.hip.damoa.domain.company.model.Company;
+import com.hip.damoa.domain.company.model.CompanyReview;
+import com.hip.damoa.domain.company.model.CompanyReviewImage;
+import com.hip.damoa.domain.company.repository.CompanyRepository;
+import com.hip.damoa.domain.company.repository.CompanyReviewRepository;
+import com.hip.damoa.domain.board.repository.BoardLikeRepository;
 import com.hip.damoa.domain.file.model.File;
 import com.hip.damoa.domain.file.repository.FileRepository;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +50,10 @@ public class GalleryBoardService {
     private final BoardAttachmentRepository boardAttachmentRepository;
     private final FileRepository fileRepository;
     private final com.hip.damoa.domain.user.repository.UserProfileRepository userProfileRepository;
+    private final CompanyRepository companyRepository;
+    private final CompanyReviewRepository companyReviewRepository;
+    private final BoardLikeRepository boardLikeRepository;
+    private final com.hip.damoa.domain.user.repository.UserRepository userRepository;
 
     /**
      * Gallery 게시글 생성
@@ -85,7 +95,8 @@ public class GalleryBoardService {
         List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
         List<FileInfo> images = getFileInfos(board);
         String userName = getUserName(board);
-        return GalleryResponse.from(board, filterOptions, images, false, userName);
+        GalleryResponse.CompanySummary company = getCompanySummary(board);
+        return GalleryResponse.from(board, filterOptions, images, false, false, userName, company, null);
     }
 
     /**
@@ -118,7 +129,10 @@ public class GalleryBoardService {
         }
 
         String userName = getUserName(board);
-        return GalleryResponse.from(board, filterOptions, images, isBookmarked, userName);
+        GalleryResponse.CompanySummary company = getCompanySummary(board);
+        List<GalleryResponse.ReviewSummary> reviews = getReviews(board);
+        boolean liked = isLiked(board, userEmail);
+        return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, reviews);
     }
 
     /**
@@ -168,7 +182,9 @@ public class GalleryBoardService {
             List<FileInfo> images = getFileInfos(board);
             boolean isBookmarked = checkBookmark && boardBookmarkService.isBookmarked(board.getUuid(), userEmail);
             String userName = getUserName(board);
-            return GalleryResponse.from(board, filterOptions, images, isBookmarked, userName);
+            GalleryResponse.CompanySummary company = getCompanySummary(board);
+            boolean liked = isLiked(board, userEmail);
+            return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, null);
         });
     }
 
@@ -216,7 +232,8 @@ public class GalleryBoardService {
         List<FileInfo> images = getFileInfos(board);
         boolean isBookmarked = boardBookmarkService.isBookmarked(uuid, userEmail);
         String userName = getUserName(board);
-        return GalleryResponse.from(board, filterOptions, images, isBookmarked, userName);
+        GalleryResponse.CompanySummary company = getCompanySummary(board);
+        return GalleryResponse.from(board, filterOptions, images, isBookmarked, false, userName, company, null);
     }
 
     /**
@@ -241,7 +258,8 @@ public class GalleryBoardService {
                     List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
                     List<FileInfo> images = getFileInfos(board);
                     String userName = getUserName(board);
-                    return GalleryResponse.from(board, filterOptions, images, false, userName);
+                    GalleryResponse.CompanySummary company = getCompanySummary(board);
+                    return GalleryResponse.from(board, filterOptions, images, false, false, userName, company, null);
                 })
                 .toList();
     }
@@ -258,7 +276,8 @@ public class GalleryBoardService {
                     List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
                     List<FileInfo> images = getFileInfos(board);
                     String userName = getUserName(board);
-                    return GalleryResponse.from(board, filterOptions, images, false, userName);
+                    GalleryResponse.CompanySummary company = getCompanySummary(board);
+                    return GalleryResponse.from(board, filterOptions, images, false, false, userName, company, null);
                 })
                 .toList();
     }
@@ -287,7 +306,9 @@ public class GalleryBoardService {
             List<FileInfo> images = getFileInfos(board);
             boolean isBookmarked = boardBookmarkService.isBookmarked(board.getUuid(), userEmail);
             String userName = getUserName(board);
-            return GalleryResponse.from(board, filterOptions, images, isBookmarked, userName);
+            GalleryResponse.CompanySummary company = getCompanySummary(board);
+            boolean liked = isLiked(board, userEmail);
+            return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, null);
         });
     }
 
@@ -372,6 +393,103 @@ public class GalleryBoardService {
         } catch (Exception e) {
             log.warn("User not found for board: boardId={}", board.getId());
             return "알 수 없음";
+        }
+    }
+
+    /**
+     * 사용자의 게시글 좋아요 여부 확인
+     */
+    private boolean isLiked(Board board, String userEmail) {
+        if (userEmail == null || board == null) {
+            return false;
+        }
+        try {
+            return userRepository.findByEmail(userEmail)
+                    .map(user -> boardLikeRepository.existsByBoardIdAndUserId(board.getId(), user.getId()))
+                    .orElse(false);
+        } catch (Exception e) {
+            log.warn("Failed to check like status: boardId={}, userEmail={}", board.getId(), userEmail);
+            return false;
+        }
+    }
+
+    /**
+     * Board의 User로부터 Company 정보 조회
+     * User가 소유한 Company가 있으면 CompanySummary 반환, 없으면 null 반환
+     */
+    private GalleryResponse.CompanySummary getCompanySummary(Board board) {
+        if (board.getUser() == null) {
+            return null;
+        }
+
+        try {
+            return companyRepository.findByOwnerId(board.getUser().getId())
+                    .map(company -> GalleryResponse.CompanySummary.builder()
+                            .companyUuid(company.getUuid())
+                            .companyName(company.getName())
+                            .phone(company.getPrimaryPhone())
+                            .build())
+                    .orElse(null);
+        } catch (Exception e) {
+            log.warn("Failed to get company for board: boardId={}", board.getId());
+            return null;
+        }
+    }
+
+    /**
+     * Company의 리뷰 목록 조회 (상세 조회용)
+     * 승인된 리뷰만 조회
+     */
+    private List<GalleryResponse.ReviewSummary> getReviews(Board board) {
+        if (board.getUser() == null) {
+            return List.of();
+        }
+
+        try {
+            Company company = companyRepository.findByOwnerId(board.getUser().getId())
+                    .orElse(null);
+            if (company == null) {
+                return List.of();
+            }
+
+            List<CompanyReview> reviews = companyReviewRepository.findByCompanyAndStatus(company, "PUBLISHED");
+            return reviews.stream()
+                    .map(review -> {
+                        String reviewUserName = "익명";
+                        try {
+                            if (review.getUser() != null) {
+                                reviewUserName = userProfileRepository.findByUserId(review.getUser().getId())
+                                        .map(com.hip.damoa.domain.user.model.UserProfile::getName)
+                                        .orElse("익명");
+                            }
+                        } catch (Exception e) {
+                            // 삭제된 사용자
+                        }
+
+                        // 리뷰 이미지 조회
+                        List<FileInfo> reviewImages = review.getReviewImages().stream()
+                                .filter(img -> !img.getIsDeleted())
+                                .sorted((a, b) -> a.getDisplayOrder().compareTo(b.getDisplayOrder()))
+                                .map(img -> fileRepository.findById(img.getFileId()).orElse(null))
+                                .filter(file -> file != null)
+                                .map(FileInfo::from)
+                                .toList();
+
+                        return GalleryResponse.ReviewSummary.builder()
+                                .reviewUuid(review.getUuid())
+                                .userName(reviewUserName)
+                                .rating(review.getRating())
+                                .content(review.getContent())
+                                .createdAt(review.getCreatedAt())
+                                .reply(review.getReply())
+                                .repliedAt(review.getRepliedAt())
+                                .images(reviewImages)
+                                .build();
+                    })
+                    .toList();
+        } catch (Exception e) {
+            log.warn("Failed to get reviews for board: boardId={}", board.getId());
+            return List.of();
         }
     }
 }
