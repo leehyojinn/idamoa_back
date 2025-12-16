@@ -163,6 +163,9 @@ public class GalleryResponse {
 
         @Schema(description = "리뷰 평균 평점 (1.0~5.0)", example = "4.5")
         private Double averageRating;
+
+        @Schema(description = "리뷰 총 개수", example = "15")
+        private Integer reviewCount;
     }
 
     /**

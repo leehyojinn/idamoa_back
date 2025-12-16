@@ -426,11 +426,13 @@ public class GalleryBoardService {
             return companyRepository.findByOwnerId(board.getUser().getId())
                     .map(company -> {
                         Double avgRating = companyReviewRepository.getAverageRatingByCompany(company);
+                        long reviewCount = companyReviewRepository.countByCompanyAndIsDeletedFalse(company);
                         return GalleryResponse.CompanySummary.builder()
                                 .companyUuid(company.getUuid())
                                 .companyName(company.getName())
                                 .phone(company.getPrimaryPhone())
                                 .averageRating(avgRating)
+                                .reviewCount((int) reviewCount)
                                 .build();
                     })
                     .orElse(null);
