@@ -53,7 +53,7 @@ public class FilterService {
                     } else {
                         // 일반 카테고리: 평면 구조로 반환
                         List<FilterOption> options = filterOptionRepository
-                                .findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(category);
+                                .findByCategoryAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(category);
                         optionResponses = options.stream()
                                 .map(FilterOptionResponse::from)
                                 .collect(Collectors.toList());
@@ -64,6 +64,49 @@ public class FilterService {
                 .collect(Collectors.toList());
 
         log.info("활성 필터 카테고리 조회 완료: {}개", response.size());
+        return response;
+    }
+
+    /**
+     * entityType으로 필터 카테고리 조회
+     * entityType이 null이면 전체 조회, 있으면 해당 타입만 조회
+     */
+    @Transactional(readOnly = true)
+    public List<FilterCategoryResponse> getActiveCategories(String entityType) {
+        log.info("필터 카테고리 조회: entityType={}", entityType);
+
+        // entityType이 없으면 전체 조회
+        if (entityType == null || entityType.isBlank()) {
+            return getAllActiveCategories();
+        }
+
+        // entityType으로 직접 조회
+        List<FilterCategory> categories = filterCategoryRepository
+                .findByEntityTypeAndIsActiveTrueAndIsDeletedFalse(entityType.toUpperCase());
+
+        List<FilterCategoryResponse> response = categories.stream()
+                .map(category -> {
+                    List<FilterOptionResponse> optionResponses;
+
+                    if (Boolean.TRUE.equals(category.getSupportsHierarchy())) {
+                        List<FilterOption> rootOptions = filterOptionRepository
+                                .findByCategoryAndParentIsNullAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(category);
+                        optionResponses = rootOptions.stream()
+                                .map(this::buildTreeNode)
+                                .collect(Collectors.toList());
+                    } else {
+                        List<FilterOption> options = filterOptionRepository
+                                .findByCategoryAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(category);
+                        optionResponses = options.stream()
+                                .map(FilterOptionResponse::from)
+                                .collect(Collectors.toList());
+                    }
+
+                    return FilterCategoryResponse.from(category, optionResponses);
+                })
+                .collect(Collectors.toList());
+
+        log.info("필터 카테고리 조회 완료: entityType={}, {}개", entityType, response.size());
         return response;
     }
 
@@ -86,7 +129,7 @@ public class FilterService {
         }
 
         List<FilterOption> options = filterOptionRepository
-                .findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(category);
+                .findByCategoryAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(category);
 
         List<FilterOptionResponse> optionResponses = options.stream()
                 .map(FilterOptionResponse::from)
@@ -115,7 +158,7 @@ public class FilterService {
         }
 
         List<FilterOption> options = filterOptionRepository
-                .findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(category);
+                .findByCategoryAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(category);
 
         List<FilterOptionResponse> response = options.stream()
                 .map(FilterOptionResponse::from)
@@ -137,7 +180,7 @@ public class FilterService {
         List<FilterCategoryResponse> response = categories.stream()
                 .map(category -> {
                     List<FilterOption> options = filterOptionRepository
-                            .findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(category);
+                            .findByCategoryAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(category);
 
                     List<FilterOptionResponse> optionResponses = options.stream()
                             .map(FilterOptionResponse::from)
@@ -163,7 +206,7 @@ public class FilterService {
         List<FilterCategoryResponse> response = categories.stream()
                 .map(category -> {
                     List<FilterOption> options = filterOptionRepository
-                            .findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(category);
+                            .findByCategoryAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(category);
 
                     List<FilterOptionResponse> optionResponses = options.stream()
                             .map(FilterOptionResponse::from)
@@ -192,7 +235,7 @@ public class FilterService {
                 .map(category -> {
                     try {
                         List<FilterOption> options = filterOptionRepository
-                                .findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(category);
+                                .findByCategoryAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(category);
 
                         List<FilterOptionResponse> optionResponses = options.stream()
                                 .map(FilterOptionResponse::from)
@@ -227,7 +270,7 @@ public class FilterService {
                 .map(category -> {
                     try {
                         List<FilterOption> options = filterOptionRepository
-                                .findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(category);
+                                .findByCategoryAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(category);
 
                         List<FilterOptionResponse> optionResponses = options.stream()
                                 .map(FilterOptionResponse::from)
