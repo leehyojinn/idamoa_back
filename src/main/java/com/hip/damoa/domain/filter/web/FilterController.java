@@ -24,13 +24,19 @@ public class FilterController {
     private final FilterService filterService;
 
     @Operation(
-            summary = "모든 활성 필터 카테고리 조회",
-            description = "모든 활성화된 필터 카테고리와 옵션을 조회합니다. " +
-                    "업체 등록 시 사용 가능한 모든 필터를 확인할 수 있습니다."
+            summary = "활성 필터 카테고리 조회",
+            description = "활성화된 필터 카테고리와 옵션을 조회합니다.\n\n" +
+                    "**entityType 파라미터:**\n" +
+                    "- 생략: 모든 활성 필터 조회\n" +
+                    "- COMPANY: 업체용 필터\n" +
+                    "- GALLERY: 갤러리용 필터\n" +
+                    "- DOCUMENT: 자료실용 필터"
     )
     @GetMapping
-    public ApiResponse<List<FilterCategoryResponse>> getAllActiveCategories() {
-        List<FilterCategoryResponse> categories = filterService.getAllActiveCategories();
+    public ApiResponse<List<FilterCategoryResponse>> getActiveCategories(
+            @Parameter(description = "엔티티 타입 (예: COMPANY, BOARD, GALLERY, DOCUMENT)")
+            @RequestParam(required = false) String entityType) {
+        List<FilterCategoryResponse> categories = filterService.getActiveCategories(entityType);
         return ApiResponse.success(categories);
     }
 

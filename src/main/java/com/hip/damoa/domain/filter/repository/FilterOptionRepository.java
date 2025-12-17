@@ -14,8 +14,11 @@ public interface FilterOptionRepository extends JpaRepository<FilterOption, Long
     List<FilterOption> findByCategoryAndParentIsNullAndIsActiveTrueAndIsDeletedFalse(FilterCategory category);
     List<FilterOption> findByIdIn(List<Long> ids);
 
-    // FilterService용 추가 메서드 (정렬 포함)
-    List<FilterOption> findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(FilterCategory category);
+    // Public API용 (soft delete 제외)
+    List<FilterOption> findByCategoryAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(FilterCategory category);
+
+    // Admin API용 (전체 조회, soft delete 포함)
+    List<FilterOption> findByCategoryOrderByDisplayOrderAsc(FilterCategory category);
 
     // 계층 트리 조회용 메서드
     List<FilterOption> findByParentAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(FilterOption parent);

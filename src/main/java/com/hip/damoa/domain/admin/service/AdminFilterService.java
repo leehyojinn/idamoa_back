@@ -87,8 +87,9 @@ public class AdminFilterService {
         FilterCategory category = filterCategoryRepository.findById(categoryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FILTER_CATEGORY_NOT_FOUND));
 
+        // Admin: 전체 조회 (삭제된 것도 포함)
         List<FilterOption> options = filterOptionRepository
-                .findByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(category);
+                .findByCategoryOrderByDisplayOrderAsc(category);
 
         List<FilterOptionResponse> optionResponses = options.stream()
                 .map(option -> FilterOptionResponse.from(option, option.getChildren().size()))

@@ -30,6 +30,7 @@ public class FilterOptionResponse {
     private String color;
     private Integer usageCount;
     private Boolean isActive;
+    private Boolean isDeleted;  // Admin용: 삭제 여부
 
     // 계층 구조 정보
     private Integer depth;
@@ -56,6 +57,7 @@ public class FilterOptionResponse {
                 .color(option.getColor())
                 .usageCount(option.getUsageCount())
                 .isActive(option.getIsActive())
+                .isDeleted(option.getIsDeleted())
                 .depth(option.getDepth())
                 .parentId(option.getParent() != null ? option.getParent().getId() : null)
                 .path(option.getPath())
