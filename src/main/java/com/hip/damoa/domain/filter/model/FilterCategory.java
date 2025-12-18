@@ -3,6 +3,7 @@ package com.hip.damoa.domain.filter.model;
 import com.hip.damoa.domain.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -67,6 +68,7 @@ public class FilterCategory extends BaseEntity {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
     private List<FilterOption> options;
 

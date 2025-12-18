@@ -61,6 +61,9 @@ dependencies {
 
     // Hypersistence Utils for JSONB and Array types
     implementation("io.hypersistence:hypersistence-utils-hibernate-63:3.7.3")
+
+    // Rate Limiting (Bucket4j)
+    implementation("com.bucket4j:bucket4j-core:8.7.0")
 }
 
 tasks.withType<Test> {

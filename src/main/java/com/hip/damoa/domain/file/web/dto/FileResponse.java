@@ -20,9 +20,6 @@ import java.util.UUID;
 @Schema(description = "파일 응답")
 public class FileResponse {
 
-    @Schema(description = "파일 ID", example = "123")
-    private Long id;
-
     @Schema(description = "파일 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID uuid;
 
@@ -50,7 +47,6 @@ public class FileResponse {
 
     public static FileResponse from(File file) {
         return FileResponse.builder()
-                .id(file.getId())
                 .uuid(file.getUuid())
                 .originalFilename(file.getOriginalFilename())
                 .storedFilename(file.getStoredFilename())

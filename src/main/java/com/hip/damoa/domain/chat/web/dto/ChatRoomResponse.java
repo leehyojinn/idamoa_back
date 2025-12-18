@@ -31,17 +31,14 @@ public class ChatRoomResponse {
     @Schema(description = "견적 요청 제목", example = "50평 치과 인테리어 견적")
     private String estimateRequestTitle;
 
-    @Schema(description = "사용자 ID", example = "1")
-    private Long userId;
+    @Schema(description = "사용자 UUID", example = "550e8400-e29b-41d4-a716-446655440003")
+    private UUID userUuid;
 
     @Schema(description = "사용자 이메일", example = "user@example.com")
     private String userEmail;
 
     @Schema(description = "사용자 이름", example = "홍길동")
     private String userName;
-
-    @Schema(description = "업체 ID", example = "10")
-    private Long companyId;
 
     @Schema(description = "업체 UUID", example = "550e8400-e29b-41d4-a716-446655440002")
     private UUID companyUuid;
@@ -69,13 +66,13 @@ public class ChatRoomResponse {
      * 삭제된 User의 경우 안전하게 처리
      */
     public static ChatRoomResponse from(ChatRoom chatRoom, String userName) {
-        Long userId = null;
+        UUID userUuid = null;
         String userEmail = null;
         String resolvedUserName = userName;
 
         try {
             if (chatRoom.getUser() != null) {
-                userId = chatRoom.getUser().getId();
+                userUuid = chatRoom.getUser().getUuid();
                 userEmail = chatRoom.getUser().getEmail();
                 if (resolvedUserName == null) {
                     resolvedUserName = userEmail;
@@ -91,10 +88,9 @@ public class ChatRoomResponse {
                 .uuid(chatRoom.getUuid())
                 .estimateRequestUuid(chatRoom.getEstimateRequest().getUuid())
                 .estimateRequestTitle(chatRoom.getEstimateRequest().getTitle())
-                .userId(userId)
+                .userUuid(userUuid)
                 .userEmail(userEmail)
                 .userName(resolvedUserName)
-                .companyId(chatRoom.getCompany().getId())
                 .companyUuid(chatRoom.getCompany().getUuid())
                 .companyName(chatRoom.getCompany().getName())
                 .lastMessage(chatRoom.getLastMessage())

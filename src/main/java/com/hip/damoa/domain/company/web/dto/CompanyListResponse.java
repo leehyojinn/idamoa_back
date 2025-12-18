@@ -24,10 +24,7 @@ import java.util.UUID;
 @Schema(description = "업체 목록 응답")
 public class CompanyListResponse {
 
-    @Schema(description = "업체 내부 ID", example = "1")
-    private Long id;
-
-    @Schema(description = "업체 UUID (외부 노출용)", example = "550e8400-e29b-41d4-a716-446655440000")
+    @Schema(description = "업체 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID uuid;
 
     @Schema(description = "업체명", example = "다모아 인테리어")
@@ -97,7 +94,6 @@ public class CompanyListResponse {
      */
     public static CompanyListResponse from(Company company) {
         return CompanyListResponse.builder()
-                .id(company.getId())
                 .uuid(company.getUuid())
                 .name(company.getName())
                 .slug(company.getSlug())
@@ -124,7 +120,6 @@ public class CompanyListResponse {
      */
     public static CompanyListResponse from(Company company, List<CompanyImageDto> images) {
         return CompanyListResponse.builder()
-                .id(company.getId())
                 .uuid(company.getUuid())
                 .name(company.getName())
                 .slug(company.getSlug())

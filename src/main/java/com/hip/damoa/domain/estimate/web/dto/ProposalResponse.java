@@ -27,9 +27,6 @@ import java.util.UUID;
 @Schema(description = "견적 제안 응답")
 public class ProposalResponse {
 
-    @Schema(description = "제안 내부 ID", example = "1")
-    private Long id;
-
     @Schema(description = "제안 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID uuid;
 
@@ -70,9 +67,6 @@ public class ProposalResponse {
     private Map<String, Object> timeline;
 
     // 업체 정보
-    @Schema(description = "업체 ID", example = "1")
-    private Long companyId;
-
     @Schema(description = "업체 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID companyUuid;
 
@@ -80,9 +74,6 @@ public class ProposalResponse {
     private String companyName;
 
     // 견적 요청 정보
-    @Schema(description = "견적 요청 ID", example = "1")
-    private Long requestId;
-
     @Schema(description = "견적 요청 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID requestUuid;
 
@@ -102,7 +93,6 @@ public class ProposalResponse {
 
     public static ProposalResponse from(EstimateProposal proposal) {
         return ProposalResponse.builder()
-                .id(proposal.getId())
                 .uuid(proposal.getUuid())
                 .title(proposal.getTitle())
                 .description(proposal.getDescription())
@@ -114,10 +104,8 @@ public class ProposalResponse {
                 // attachments는 Service에서 별도로 설정
                 .pricingDetails(proposal.getPricingDetails())
                 .timeline(proposal.getTimeline())
-                .companyId(proposal.getCompany().getId())
                 .companyUuid(proposal.getCompany().getUuid())
                 .companyName(proposal.getCompany().getName())
-                .requestId(proposal.getRequest().getId())
                 .requestUuid(proposal.getRequest().getUuid())
                 .requestTitle(proposal.getRequest().getTitle())
                 .createdAt(proposal.getCreatedAt())

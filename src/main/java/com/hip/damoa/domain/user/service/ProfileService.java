@@ -219,7 +219,7 @@ public class ProfileService {
 
         // CompanyProfileResponse로 변환 (UserProfile 데이터를 Company 형식으로)
         return CompanyProfileResponse.builder()
-                .id(companyProfile.getId())
+                .uuid(companyProfile.getUuid())
                 .name(companyProfile.getName())
                 .description(companyProfile.getBio())
                 .primaryPhone(companyProfile.getPhone())
@@ -290,7 +290,7 @@ public class ProfileService {
 
         // UserProfile → CompanyProfileResponse 변환
         return CompanyProfileResponse.builder()
-                .id(companyProfile.getId())
+                .uuid(companyProfile.getUuid())
                 .name(companyProfile.getName())
                 .description(companyProfile.getBio())
                 .primaryPhone(companyProfile.getPhone())
@@ -388,7 +388,7 @@ public class ProfileService {
 
         // CompanyProfileResponse로 변환
         return CompanyProfileResponse.builder()
-                .id(companyProfile.getId())
+                .uuid(companyProfile.getUuid())
                 .name(companyProfile.getName())
                 .description(companyProfile.getBio())
                 .primaryPhone(request.getPrimaryPhone())

@@ -30,14 +30,11 @@ public class EstimateRequestDetailResponse {
 
     // ===== 견적 요청 기본 정보 =====
 
-    @Schema(description = "견적 요청 ID")
-    private Long id;
-
     @Schema(description = "견적 요청 UUID")
     private UUID uuid;
 
-    @Schema(description = "작성자 ID")
-    private Long userId;
+    @Schema(description = "작성자 UUID")
+    private UUID userUuid;
 
     @Schema(description = "작성자 이메일")
     private String userEmail;
@@ -152,13 +149,13 @@ public class EstimateRequestDetailResponse {
      * 삭제된 User의 경우 안전하게 처리
      */
     public static EstimateRequestDetailResponse from(EstimateRequest request, String userName, List<EstimateImageDto> images) {
-        Long userId = null;
+        UUID userUuid = null;
         String userEmail = null;
         String resolvedUserName = userName;
 
         try {
             if (request.getUser() != null) {
-                userId = request.getUser().getId();
+                userUuid = request.getUser().getUuid();
                 userEmail = request.getUser().getEmail();
                 if (resolvedUserName == null) {
                     resolvedUserName = userEmail;
@@ -171,9 +168,8 @@ public class EstimateRequestDetailResponse {
         }
 
         return EstimateRequestDetailResponse.builder()
-                .id(request.getId())
                 .uuid(request.getUuid())
-                .userId(userId)
+                .userUuid(userUuid)
                 .userEmail(userEmail)
                 .userName(resolvedUserName)
                 .title(request.getTitle())

@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CompanyProfileResponse {
 
-    private Long id;
+    private java.util.UUID uuid;
     private String name;
     private String description;
     private String primaryPhone;
@@ -33,7 +33,7 @@ public class CompanyProfileResponse {
      */
     public static CompanyProfileResponse from(Company company) {
         return CompanyProfileResponse.builder()
-                .id(company.getId())
+                .uuid(company.getUuid())
                 .name(company.getName())
                 .description(company.getDescription())
                 .primaryPhone(company.getPrimaryPhone())

@@ -24,7 +24,6 @@ public class ProfileResponse {
     private String profileType;  // "USER" or "COMPANY"
 
     // 공통 필드
-    private Long id;
     private String name;
     private String phone;  // ✅ DB 컬럼명 통일 (primaryPhone 아님!)
     private String email;
@@ -33,7 +32,6 @@ public class ProfileResponse {
 
     // USER 전용 필드 (COMPANY일 때 null)
     private String nickname;
-    private Long avatarFileId;
     private java.util.UUID avatarFileUuid;  // 파일 UUID (수정 시 사용)
     private String avatarUrl;
     private String profileVisibility;  // PUBLIC, PRIVATE, FRIENDS_ONLY
@@ -74,14 +72,12 @@ public class ProfileResponse {
     public static ProfileResponse from(UserProfile profile, User user, Long avatarFileId, java.util.UUID avatarFileUuid, String avatarUrl, TokenInfo tokenInfo) {
         return ProfileResponse.builder()
                 .profileType(profile.getProfileType())
-                .id(profile.getId())
                 .name(profile.getName())
                 .phone(profile.getPhone())
                 .email(user.getEmail())
                 .address(profile.getAddress())
                 .postalCode(profile.getPostalCode())
                 .nickname(profile.getNickname())
-                .avatarFileId(avatarFileId)
                 .avatarFileUuid(avatarFileUuid)
                 .avatarUrl(avatarUrl != null ? avatarUrl : profile.getAvatarUrl())
                 .profileVisibility(profile.getProfileVisibility())

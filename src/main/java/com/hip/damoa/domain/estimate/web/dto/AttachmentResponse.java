@@ -21,9 +21,6 @@ import java.util.UUID;
 @Schema(description = "첨부파일 응답")
 public class AttachmentResponse {
 
-    @Schema(description = "첨부파일 ID", example = "1")
-    private Long id;
-
     @Schema(description = "파일 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID fileUuid;
 
@@ -58,7 +55,6 @@ public class AttachmentResponse {
     public static AttachmentResponse from(EstimateRequestAttachment attachment, UUID fileUuid, String fileUrl,
                                           String originalFilename, String mimeType, Long fileSize) {
         return AttachmentResponse.builder()
-            .id(attachment.getId())
             .fileUuid(fileUuid)
             .fileUrl(fileUrl)
             .fileType(attachment.getFileType())
@@ -77,7 +73,6 @@ public class AttachmentResponse {
     public static AttachmentResponse from(EstimateProposalAttachment attachment, UUID fileUuid, String fileUrl,
                                           String originalFilename, String mimeType, Long fileSize) {
         return AttachmentResponse.builder()
-            .id(attachment.getId())
             .fileUuid(fileUuid)
             .fileUrl(fileUrl)
             .fileType(attachment.getFileType())

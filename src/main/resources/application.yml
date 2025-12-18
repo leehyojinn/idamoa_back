@@ -22,6 +22,8 @@ spring:
         globally_quoted_identifiers: false
         temp:
           use_jdbc_metadata_defaults: false
+        # N+1 문제 해결을 위한 배치 사이즈 설정
+        default_batch_fetch_size: 100
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -35,9 +37,9 @@ spring:
     encoding: UTF-8
 
 jwt:
-  secret: V29vTGVlS2ltSmVvbmdNaW5Hb29kSGVsbG9Xb3JsZEhpSGVsbG9Xb3JsZEhpSGVsbG9Xb3JsZEhpSGVsbG9Xb3JsZEhp
-  access-token-validity: 3600000  # 1 hour (1 * 60 * 60 * 1000 ms)
-  refresh-token-validity: 1209600000  # 14 days (14 * 24 * 60 * 60 * 1000 ms)
+  secret: ${JWT_SECRET}  # 반드시 환경변수로 설정 필요 (최소 256비트, Base64 인코딩)
+  access-token-validity: ${JWT_ACCESS_TOKEN_VALIDITY:3600000}  # 1 hour (1 * 60 * 60 * 1000 ms)
+  refresh-token-validity: ${JWT_REFRESH_TOKEN_VALIDITY:1209600000}  # 14 days (14 * 24 * 60 * 60 * 1000 ms)
 
 oauth:
   redirect-base-url: ${OAUTH_REDIRECT_BASE_URL:http://localhost:8080}

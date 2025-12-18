@@ -2,6 +2,7 @@ package com.hip.damoa.config.web;
 
 import com.hip.damoa.core.jwt.JwtAuthenticationFilter;
 import com.hip.damoa.core.jwt.JwtTokenProvider;
+import com.hip.damoa.infra.redis.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -32,6 +33,8 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final RedisService redisService;
+    private final RateLimitConfig rateLimitConfig;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -62,6 +65,15 @@ public class SecurityConfig {
                                 response.getWriter().write("{\"success\":false,\"message\":\"접근 권한이 없습니다.\"}");
                             }
                         }))
+                // 보안 헤더 설정 (HSTS는 프로덕션 Nginx에서만 설정)
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.deny())  // Clickjacking 방어
+                        .contentTypeOptions(contentType -> {})  // X-Content-Type-Options: nosniff
+                        .referrerPolicy(referrer -> referrer
+                                .policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .permissionsPolicy(permissions -> permissions
+                                .policy("geolocation=(), microphone=(), camera=()"))  // 불필요한 브라우저 기능 제한
+                )
                 .authorizeHttpRequests(authorize -> authorize
                         // Public endpoints
                         .requestMatchers(
@@ -148,7 +160,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").authenticated()  // Admin endpoints
                         .requestMatchers("/api/files/**").authenticated()  // File upload endpoints
                         .anyRequest().authenticated())
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
+                .addFilterBefore(new RateLimitFilter(rateLimitConfig), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, redisService),
                         UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -317,7 +317,7 @@ public class CompanyReviewService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_PROFILE_NOT_FOUND));
 
-        return CompanyReviewResponse.from(review, imageDtos, userName, company.getId(), company.getName());
+        return CompanyReviewResponse.from(review, imageDtos, userName, company.getUuid(), company.getName());
     }
 
     /**

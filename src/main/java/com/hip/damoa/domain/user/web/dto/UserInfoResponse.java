@@ -20,9 +20,6 @@ import java.util.List;
 @Schema(description = "현재 로그인한 사용자 정보 응답")
 public class UserInfoResponse {
 
-    @Schema(description = "사용자 ID", example = "1")
-    private Long id;
-
     @Schema(description = "사용자 이메일", example = "user@example.com")
     private String email;
 
@@ -52,7 +49,6 @@ public class UserInfoResponse {
         List<String> roleList = Arrays.asList(user.getRoles());
 
         return UserInfoResponse.builder()
-                .id(user.getId())
                 .email(user.getEmail())
                 .roles(roleList)
                 .status(user.getStatus().name())  // Enum을 String으로 변환
