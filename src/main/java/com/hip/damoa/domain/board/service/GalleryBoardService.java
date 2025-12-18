@@ -7,6 +7,7 @@ import com.hip.damoa.domain.board.model.BoardAttachment;
 import com.hip.damoa.domain.board.model.BoardFilterOption;
 import com.hip.damoa.domain.board.model.BoardType;
 import com.hip.damoa.domain.board.repository.BoardAttachmentRepository;
+import com.hip.damoa.domain.board.repository.BoardBookmarkRepository;
 import com.hip.damoa.domain.board.repository.BoardFilterOptionRepository;
 import com.hip.damoa.domain.board.repository.BoardRepository;
 import com.hip.damoa.domain.board.repository.BoardSpecifications;
@@ -22,6 +23,8 @@ import com.hip.damoa.domain.company.repository.CompanyReviewRepository;
 import com.hip.damoa.domain.board.repository.BoardLikeRepository;
 import com.hip.damoa.domain.file.model.File;
 import com.hip.damoa.domain.file.repository.FileRepository;
+import com.hip.damoa.domain.user.model.User;
+import com.hip.damoa.domain.user.model.UserProfile;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -30,8 +33,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Gallery 게시판 Service
@@ -45,6 +48,7 @@ public class GalleryBoardService {
 
     private final BoardService boardService;
     private final BoardBookmarkService boardBookmarkService;
+    private final BoardBookmarkRepository boardBookmarkRepository;
     private final BoardRepository boardRepository;
     private final BoardFilterOptionRepository boardFilterOptionRepository;
     private final BoardAttachmentRepository boardAttachmentRepository;
@@ -136,7 +140,7 @@ public class GalleryBoardService {
     }
 
     /**
-     * Gallery 게시글 검색 (통합)
+     * Gallery 게시글 검색 (통합) - N+1 최적화 버전
      *
      * @param keyword 검색 키워드 (nullable)
      * @param tags 태그 필터 (nullable)
@@ -161,7 +165,7 @@ public class GalleryBoardService {
             throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
         }
 
-        // Specification 구성 (CompanyService와 동일한 패턴)
+        // Specification 구성
         Specification<Board> spec = BoardSpecifications.searchBoards(
                 BoardType.GALLERY.name(),
                 keyword,
@@ -173,19 +177,92 @@ public class GalleryBoardService {
                 companyUuid
         );
 
-        // Specification을 사용한 조회
+        // 1. Board 목록 조회
         Page<Board> boards = boardRepository.findAll(spec, pageable);
+        List<Board> boardList = boards.getContent();
 
-        // 북마크 여부 확인을 위한 userEmail 존재 여부
-        boolean checkBookmark = userEmail != null;
+        if (boardList.isEmpty()) {
+            return boards.map(b -> null);
+        }
+
+        // 2. 필요한 ID 목록 추출
+        List<Long> boardIds = boardList.stream().map(Board::getId).toList();
+        List<Long> userIds = boardList.stream()
+                .map(b -> b.getUser() != null ? b.getUser().getId() : null)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        // 3. FilterOption 일괄 조회 (IN 절 - 1번 쿼리)
+        Map<Long, List<BoardFilterOption>> filterOptionsMap = boardFilterOptionRepository.findByBoardIdIn(boardIds)
+                .stream()
+                .collect(Collectors.groupingBy(bfo -> bfo.getBoard().getId()));
+
+        // 4. Attachment 일괄 조회 (IN 절 - 1번 쿼리)
+        Map<Long, List<BoardAttachment>> attachmentsMap = boardAttachmentRepository.findByBoardIdIn(boardIds)
+                .stream()
+                .collect(Collectors.groupingBy(ba -> ba.getBoard().getId()));
+
+        // 5. File 일괄 조회 (IN 절 - 1번 쿼리)
+        List<Long> fileIds = attachmentsMap.values().stream()
+                .flatMap(List::stream)
+                .map(BoardAttachment::getFileId)
+                .distinct()
+                .toList();
+        Map<Long, File> filesMap = fileIds.isEmpty() ? Map.of() :
+                fileRepository.findByIdIn(fileIds).stream()
+                        .collect(Collectors.toMap(File::getId, f -> f));
+
+        // 6. UserProfile 일괄 조회 (IN 절 - 1번 쿼리)
+        Map<Long, UserProfile> profilesMap = userIds.isEmpty() ? Map.of() :
+                userProfileRepository.findByUserIdIn(userIds).stream()
+                        .collect(Collectors.toMap(up -> up.getUser().getId(), up -> up, (a, b) -> a));
+
+        // 7. Company 일괄 조회 (IN 절 - 1번 쿼리)
+        List<Company> companies = userIds.isEmpty() ? List.of() : companyRepository.findByOwnerIdIn(userIds);
+        Map<Long, Company> companyMap = companies.stream()
+                .collect(Collectors.toMap(c -> c.getOwner().getId(), c -> c, (a, b) -> a));
+
+        // 8. Rating/ReviewCount 일괄 조회 (IN 절 - 2번 쿼리)
+        List<Long> companyIds = companies.stream().map(Company::getId).toList();
+        Map<Long, Double> ratingsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getAverageRatingsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(
+                                row -> (Long) row[0],
+                                row -> (Double) row[1]
+                        ));
+        Map<Long, Long> reviewCountsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getReviewCountsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(
+                                row -> (Long) row[0],
+                                row -> (Long) row[1]
+                        ));
+
+        // 9. Bookmark/Like 일괄 조회 (IN 절 - 2번 쿼리, 로그인한 경우만)
+        Set<Long> bookmarkedBoardIds = Set.of();
+        Set<Long> likedBoardIds = Set.of();
+        if (userEmail != null) {
+            User user = userRepository.findByEmail(userEmail).orElse(null);
+            if (user != null) {
+                bookmarkedBoardIds = new HashSet<>(
+                        boardBookmarkRepository.findBookmarkedBoardIds(boardIds, user.getId()));
+                likedBoardIds = new HashSet<>(
+                        boardLikeRepository.findLikedBoardIds(boardIds, user.getId()));
+            }
+        }
+
+        // 10. 최종 매핑 (추가 쿼리 없음 - 메모리에서 처리)
+        final Set<Long> finalBookmarked = bookmarkedBoardIds;
+        final Set<Long> finalLiked = likedBoardIds;
 
         return boards.map(board -> {
-            List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
-            List<FileInfo> images = getFileInfos(board);
-            boolean isBookmarked = checkBookmark && boardBookmarkService.isBookmarked(board.getUuid(), userEmail);
-            String userName = getUserName(board);
-            GalleryResponse.CompanySummary company = getCompanySummary(board);
-            boolean liked = isLiked(board, userEmail);
+            List<BoardFilterOption> filterOptions = filterOptionsMap.getOrDefault(board.getId(), List.of());
+            List<FileInfo> images = getFileInfosFromMap(board, attachmentsMap, filesMap);
+            boolean isBookmarked = finalBookmarked.contains(board.getId());
+            boolean liked = finalLiked.contains(board.getId());
+            String userName = getUserNameFromMap(board, profilesMap);
+            GalleryResponse.CompanySummary company = getCompanySummaryFromMap(board, companyMap, ratingsMap, reviewCountsMap);
+
             return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, null);
         });
     }
@@ -248,102 +325,238 @@ public class GalleryBoardService {
     }
 
     /**
-     * Featured Gallery 목록
+     * Featured Gallery 목록 - N+1 최적화 버전
      */
     @Transactional(readOnly = true)
     public List<GalleryResponse> getFeaturedGalleries() {
         List<Board> boards = boardService.getFeaturedBoards();
-
-        return boards.stream()
+        List<Board> galleryBoards = boards.stream()
                 .filter(board -> BoardType.GALLERY.name().equals(board.getBoardType()))
+                .toList();
+
+        if (galleryBoards.isEmpty()) {
+            return List.of();
+        }
+
+        // Bulk 조회
+        List<Long> boardIds = galleryBoards.stream().map(Board::getId).toList();
+        List<Long> userIds = galleryBoards.stream()
+                .map(b -> b.getUser() != null ? b.getUser().getId() : null)
+                .filter(Objects::nonNull).distinct().toList();
+
+        Map<Long, List<BoardFilterOption>> filterOptionsMap = boardFilterOptionRepository.findByBoardIdIn(boardIds)
+                .stream().collect(Collectors.groupingBy(bfo -> bfo.getBoard().getId()));
+        Map<Long, List<BoardAttachment>> attachmentsMap = boardAttachmentRepository.findByBoardIdIn(boardIds)
+                .stream().collect(Collectors.groupingBy(ba -> ba.getBoard().getId()));
+        List<Long> fileIds = attachmentsMap.values().stream().flatMap(List::stream)
+                .map(BoardAttachment::getFileId).distinct().toList();
+        Map<Long, File> filesMap = fileIds.isEmpty() ? Map.of() :
+                fileRepository.findByIdIn(fileIds).stream().collect(Collectors.toMap(File::getId, f -> f));
+        Map<Long, UserProfile> profilesMap = userIds.isEmpty() ? Map.of() :
+                userProfileRepository.findByUserIdIn(userIds).stream()
+                        .collect(Collectors.toMap(up -> up.getUser().getId(), up -> up, (a, b) -> a));
+        List<Company> companies = userIds.isEmpty() ? List.of() : companyRepository.findByOwnerIdIn(userIds);
+        Map<Long, Company> companyMap = companies.stream()
+                .collect(Collectors.toMap(c -> c.getOwner().getId(), c -> c, (a, b) -> a));
+        List<Long> companyIds = companies.stream().map(Company::getId).toList();
+        Map<Long, Double> ratingsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getAverageRatingsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Double) row[1]));
+        Map<Long, Long> reviewCountsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getReviewCountsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        return galleryBoards.stream()
                 .map(board -> {
-                    List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
-                    List<FileInfo> images = getFileInfos(board);
-                    String userName = getUserName(board);
-                    GalleryResponse.CompanySummary company = getCompanySummary(board);
+                    List<BoardFilterOption> filterOptions = filterOptionsMap.getOrDefault(board.getId(), List.of());
+                    List<FileInfo> images = getFileInfosFromMap(board, attachmentsMap, filesMap);
+                    String userName = getUserNameFromMap(board, profilesMap);
+                    GalleryResponse.CompanySummary company = getCompanySummaryFromMap(board, companyMap, ratingsMap, reviewCountsMap);
                     return GalleryResponse.from(board, filterOptions, images, false, false, userName, company, null);
                 })
                 .toList();
     }
 
     /**
-     * Pinned Gallery 목록
+     * Pinned Gallery 목록 - N+1 최적화 버전
      */
     @Transactional(readOnly = true)
     public List<GalleryResponse> getPinnedGalleries() {
         List<Board> boards = boardService.getPinnedBoards(BoardType.GALLERY.name());
 
+        if (boards.isEmpty()) {
+            return List.of();
+        }
+
+        // Bulk 조회
+        List<Long> boardIds = boards.stream().map(Board::getId).toList();
+        List<Long> userIds = boards.stream()
+                .map(b -> b.getUser() != null ? b.getUser().getId() : null)
+                .filter(Objects::nonNull).distinct().toList();
+
+        Map<Long, List<BoardFilterOption>> filterOptionsMap = boardFilterOptionRepository.findByBoardIdIn(boardIds)
+                .stream().collect(Collectors.groupingBy(bfo -> bfo.getBoard().getId()));
+        Map<Long, List<BoardAttachment>> attachmentsMap = boardAttachmentRepository.findByBoardIdIn(boardIds)
+                .stream().collect(Collectors.groupingBy(ba -> ba.getBoard().getId()));
+        List<Long> fileIds = attachmentsMap.values().stream().flatMap(List::stream)
+                .map(BoardAttachment::getFileId).distinct().toList();
+        Map<Long, File> filesMap = fileIds.isEmpty() ? Map.of() :
+                fileRepository.findByIdIn(fileIds).stream().collect(Collectors.toMap(File::getId, f -> f));
+        Map<Long, UserProfile> profilesMap = userIds.isEmpty() ? Map.of() :
+                userProfileRepository.findByUserIdIn(userIds).stream()
+                        .collect(Collectors.toMap(up -> up.getUser().getId(), up -> up, (a, b) -> a));
+        List<Company> companies = userIds.isEmpty() ? List.of() : companyRepository.findByOwnerIdIn(userIds);
+        Map<Long, Company> companyMap = companies.stream()
+                .collect(Collectors.toMap(c -> c.getOwner().getId(), c -> c, (a, b) -> a));
+        List<Long> companyIds = companies.stream().map(Company::getId).toList();
+        Map<Long, Double> ratingsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getAverageRatingsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Double) row[1]));
+        Map<Long, Long> reviewCountsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getReviewCountsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
         return boards.stream()
                 .map(board -> {
-                    List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
-                    List<FileInfo> images = getFileInfos(board);
-                    String userName = getUserName(board);
-                    GalleryResponse.CompanySummary company = getCompanySummary(board);
+                    List<BoardFilterOption> filterOptions = filterOptionsMap.getOrDefault(board.getId(), List.of());
+                    List<FileInfo> images = getFileInfosFromMap(board, attachmentsMap, filesMap);
+                    String userName = getUserNameFromMap(board, profilesMap);
+                    GalleryResponse.CompanySummary company = getCompanySummaryFromMap(board, companyMap, ratingsMap, reviewCountsMap);
                     return GalleryResponse.from(board, filterOptions, images, false, false, userName, company, null);
                 })
                 .toList();
     }
 
     /**
-     * 내가 작성한 Gallery 목록 (마이페이지)
+     * 내가 작성한 Gallery 목록 (마이페이지) - N+1 최적화 버전
      */
     @Transactional(readOnly = true)
     public Page<GalleryResponse> getMyGalleries(String userEmail, Pageable pageable) {
         log.info("내 Gallery 목록 조회: userEmail={}", userEmail);
 
-        // Specification 사용하여 내가 작성한 게시글만 조회
         Specification<Board> spec = BoardSpecifications.searchBoards(
-                BoardType.GALLERY.name(),
-                null,  // keyword 없음
-                null,  // filterOptions 없음
-                false, // onlyBookmarked = false
-                true,  // onlyMyPosts = true
-                userEmail
-        );
+                BoardType.GALLERY.name(), null, null, false, true, userEmail);
 
         Page<Board> boards = boardRepository.findAll(spec, pageable);
+        List<Board> boardList = boards.getContent();
+
+        if (boardList.isEmpty()) {
+            return boards.map(b -> null);
+        }
+
+        // Bulk 조회
+        List<Long> boardIds = boardList.stream().map(Board::getId).toList();
+        List<Long> userIds = boardList.stream()
+                .map(b -> b.getUser() != null ? b.getUser().getId() : null)
+                .filter(Objects::nonNull).distinct().toList();
+
+        Map<Long, List<BoardFilterOption>> filterOptionsMap = boardFilterOptionRepository.findByBoardIdIn(boardIds)
+                .stream().collect(Collectors.groupingBy(bfo -> bfo.getBoard().getId()));
+        Map<Long, List<BoardAttachment>> attachmentsMap = boardAttachmentRepository.findByBoardIdIn(boardIds)
+                .stream().collect(Collectors.groupingBy(ba -> ba.getBoard().getId()));
+        List<Long> fileIds = attachmentsMap.values().stream().flatMap(List::stream)
+                .map(BoardAttachment::getFileId).distinct().toList();
+        Map<Long, File> filesMap = fileIds.isEmpty() ? Map.of() :
+                fileRepository.findByIdIn(fileIds).stream().collect(Collectors.toMap(File::getId, f -> f));
+        Map<Long, UserProfile> profilesMap = userIds.isEmpty() ? Map.of() :
+                userProfileRepository.findByUserIdIn(userIds).stream()
+                        .collect(Collectors.toMap(up -> up.getUser().getId(), up -> up, (a, b) -> a));
+        List<Company> companies = userIds.isEmpty() ? List.of() : companyRepository.findByOwnerIdIn(userIds);
+        Map<Long, Company> companyMap = companies.stream()
+                .collect(Collectors.toMap(c -> c.getOwner().getId(), c -> c, (a, b) -> a));
+        List<Long> companyIds = companies.stream().map(Company::getId).toList();
+        Map<Long, Double> ratingsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getAverageRatingsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Double) row[1]));
+        Map<Long, Long> reviewCountsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getReviewCountsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        // Bookmark/Like
+        User user = userRepository.findByEmail(userEmail).orElse(null);
+        Set<Long> bookmarkedBoardIds = user != null ?
+                new HashSet<>(boardBookmarkRepository.findBookmarkedBoardIds(boardIds, user.getId())) : Set.of();
+        Set<Long> likedBoardIds = user != null ?
+                new HashSet<>(boardLikeRepository.findLikedBoardIds(boardIds, user.getId())) : Set.of();
 
         return boards.map(board -> {
-            List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
-            List<FileInfo> images = getFileInfos(board);
-            boolean isBookmarked = boardBookmarkService.isBookmarked(board.getUuid(), userEmail);
-            String userName = getUserName(board);
-            GalleryResponse.CompanySummary company = getCompanySummary(board);
-            boolean liked = isLiked(board, userEmail);
+            List<BoardFilterOption> filterOptions = filterOptionsMap.getOrDefault(board.getId(), List.of());
+            List<FileInfo> images = getFileInfosFromMap(board, attachmentsMap, filesMap);
+            boolean isBookmarked = bookmarkedBoardIds.contains(board.getId());
+            boolean liked = likedBoardIds.contains(board.getId());
+            String userName = getUserNameFromMap(board, profilesMap);
+            GalleryResponse.CompanySummary company = getCompanySummaryFromMap(board, companyMap, ratingsMap, reviewCountsMap);
             return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, null);
         });
     }
 
     /**
-     * 특정 회사의 Gallery 목록 조회 (포트폴리오)
-     *
-     * @param companyUuid 회사 UUID
-     * @param currentUserEmail 현재 로그인 사용자 이메일 (북마크/좋아요 확인용, nullable)
-     * @param pageable 페이지 정보
-     * @return 해당 회사의 갤러리 목록
+     * 특정 회사의 Gallery 목록 조회 (포트폴리오) - N+1 최적화 버전
      */
     @Transactional(readOnly = true)
     public Page<GalleryResponse> getGalleriesByCompanyUuid(UUID companyUuid, String currentUserEmail, Pageable pageable) {
         log.info("회사별 Gallery 목록 조회: companyUuid={}", companyUuid);
 
-        // 1. companyUuid → Company 조회
-        Company company = companyRepository.findByUuid(companyUuid)
+        Company targetCompany = companyRepository.findByUuid(companyUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_NOT_FOUND));
 
-        // 2. Company의 ownerId로 GALLERY 타입 Board 조회 (공개된 게시글만)
         Page<Board> boards = boardRepository.findByUserIdAndBoardTypeAndIsPublishedTrueAndIsDeletedFalse(
-                company.getOwner().getId(), BoardType.GALLERY.name(), pageable);
+                targetCompany.getOwner().getId(), BoardType.GALLERY.name(), pageable);
+        List<Board> boardList = boards.getContent();
 
-        // 3. GalleryResponse로 변환
-        boolean checkBookmark = currentUserEmail != null;
+        if (boardList.isEmpty()) {
+            return boards.map(b -> null);
+        }
+
+        // Bulk 조회
+        List<Long> boardIds = boardList.stream().map(Board::getId).toList();
+        List<Long> userIds = boardList.stream()
+                .map(b -> b.getUser() != null ? b.getUser().getId() : null)
+                .filter(Objects::nonNull).distinct().toList();
+
+        Map<Long, List<BoardFilterOption>> filterOptionsMap = boardFilterOptionRepository.findByBoardIdIn(boardIds)
+                .stream().collect(Collectors.groupingBy(bfo -> bfo.getBoard().getId()));
+        Map<Long, List<BoardAttachment>> attachmentsMap = boardAttachmentRepository.findByBoardIdIn(boardIds)
+                .stream().collect(Collectors.groupingBy(ba -> ba.getBoard().getId()));
+        List<Long> fileIds = attachmentsMap.values().stream().flatMap(List::stream)
+                .map(BoardAttachment::getFileId).distinct().toList();
+        Map<Long, File> filesMap = fileIds.isEmpty() ? Map.of() :
+                fileRepository.findByIdIn(fileIds).stream().collect(Collectors.toMap(File::getId, f -> f));
+        Map<Long, UserProfile> profilesMap = userIds.isEmpty() ? Map.of() :
+                userProfileRepository.findByUserIdIn(userIds).stream()
+                        .collect(Collectors.toMap(up -> up.getUser().getId(), up -> up, (a, b) -> a));
+        List<Company> companies = userIds.isEmpty() ? List.of() : companyRepository.findByOwnerIdIn(userIds);
+        Map<Long, Company> companyMap = companies.stream()
+                .collect(Collectors.toMap(c -> c.getOwner().getId(), c -> c, (a, b) -> a));
+        List<Long> companyIds = companies.stream().map(Company::getId).toList();
+        Map<Long, Double> ratingsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getAverageRatingsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Double) row[1]));
+        Map<Long, Long> reviewCountsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getReviewCountsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        // Bookmark/Like
+        Set<Long> bookmarkedBoardIds = Set.of();
+        Set<Long> likedBoardIds = Set.of();
+        if (currentUserEmail != null) {
+            User user = userRepository.findByEmail(currentUserEmail).orElse(null);
+            if (user != null) {
+                bookmarkedBoardIds = new HashSet<>(boardBookmarkRepository.findBookmarkedBoardIds(boardIds, user.getId()));
+                likedBoardIds = new HashSet<>(boardLikeRepository.findLikedBoardIds(boardIds, user.getId()));
+            }
+        }
+
+        final Set<Long> finalBookmarked = bookmarkedBoardIds;
+        final Set<Long> finalLiked = likedBoardIds;
 
         return boards.map(board -> {
-            List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
-            List<FileInfo> images = getFileInfos(board);
-            boolean isBookmarked = checkBookmark && boardBookmarkService.isBookmarked(board.getUuid(), currentUserEmail);
-            String userName = getUserName(board);
-            GalleryResponse.CompanySummary companySummary = getCompanySummary(board);
-            boolean liked = isLiked(board, currentUserEmail);
+            List<BoardFilterOption> filterOptions = filterOptionsMap.getOrDefault(board.getId(), List.of());
+            List<FileInfo> images = getFileInfosFromMap(board, attachmentsMap, filesMap);
+            boolean isBookmarked = finalBookmarked.contains(board.getId());
+            boolean liked = finalLiked.contains(board.getId());
+            String userName = getUserNameFromMap(board, profilesMap);
+            GalleryResponse.CompanySummary companySummary = getCompanySummaryFromMap(board, companyMap, ratingsMap, reviewCountsMap);
             return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, companySummary, null);
         });
     }
@@ -397,18 +610,27 @@ public class GalleryBoardService {
     }
 
     /**
-     * Board의 파일 정보 조회 (BoardAttachment → File → FileInfo)
+     * Board의 파일 정보 조회 (BoardAttachment → File → FileInfo) [N+1 최적화]
      */
     private List<FileInfo> getFileInfos(Board board) {
         List<BoardAttachment> attachments = boardAttachmentRepository.findByBoardOrderByDisplayOrder(board);
 
+        if (attachments.isEmpty()) {
+            return List.of();
+        }
+
+        // [N+1 최적화] 파일 ID 목록으로 일괄 조회
+        List<Long> fileIds = attachments.stream()
+                .map(BoardAttachment::getFileId)
+                .toList();
+
+        Map<Long, File> fileMap = fileRepository.findByIdIn(fileIds).stream()
+                .collect(Collectors.toMap(File::getId, f -> f));
+
         return attachments.stream()
-                .map(attachment -> {
-                    File file = fileRepository.findById(attachment.getFileId())
-                            .orElse(null);
-                    return file != null ? FileInfo.from(file) : null;
-                })
-                .filter(fileInfo -> fileInfo != null)
+                .map(attachment -> fileMap.get(attachment.getFileId()))
+                .filter(Objects::nonNull)
+                .map(FileInfo::from)
                 .toList();
     }
 
@@ -479,7 +701,7 @@ public class GalleryBoardService {
     }
 
     /**
-     * Company의 리뷰 목록 조회 (상세 조회용)
+     * Company의 리뷰 목록 조회 (상세 조회용) [N+1 최적화]
      * 승인된 리뷰만 조회
      */
     private List<GalleryResponse.ReviewSummary> getReviews(Board board) {
@@ -495,25 +717,54 @@ public class GalleryBoardService {
             }
 
             List<CompanyReview> reviews = companyReviewRepository.findByCompanyAndStatus(company, "PUBLISHED");
+            if (reviews.isEmpty()) {
+                return List.of();
+            }
+
+            // [N+1 최적화] 사용자 프로필 일괄 조회
+            List<Long> userIds = reviews.stream()
+                    .filter(r -> r.getUser() != null)
+                    .map(r -> r.getUser().getId())
+                    .distinct()
+                    .toList();
+            Map<Long, UserProfile> profileMap = Collections.emptyMap();
+            if (!userIds.isEmpty()) {
+                profileMap = userProfileRepository.findByUserIdIn(userIds).stream()
+                        .collect(Collectors.toMap(up -> up.getUser().getId(), up -> up));
+            }
+
+            // [N+1 최적화] 리뷰 이미지 파일 ID 수집 및 일괄 조회
+            List<Long> allFileIds = reviews.stream()
+                    .flatMap(r -> r.getReviewImages().stream())
+                    .filter(img -> !img.getIsDeleted())
+                    .map(CompanyReviewImage::getFileId)
+                    .distinct()
+                    .toList();
+            Map<Long, File> fileMap = Collections.emptyMap();
+            if (!allFileIds.isEmpty()) {
+                fileMap = fileRepository.findByIdIn(allFileIds).stream()
+                        .collect(Collectors.toMap(File::getId, f -> f));
+            }
+
+            final Map<Long, UserProfile> finalProfileMap = profileMap;
+            final Map<Long, File> finalFileMap = fileMap;
+
             return reviews.stream()
                     .map(review -> {
                         String reviewUserName = "익명";
-                        try {
-                            if (review.getUser() != null) {
-                                reviewUserName = userProfileRepository.findByUserId(review.getUser().getId())
-                                        .map(com.hip.damoa.domain.user.model.UserProfile::getName)
-                                        .orElse("익명");
+                        if (review.getUser() != null) {
+                            UserProfile profile = finalProfileMap.get(review.getUser().getId());
+                            if (profile != null) {
+                                reviewUserName = profile.getName();
                             }
-                        } catch (Exception e) {
-                            // 삭제된 사용자
                         }
 
-                        // 리뷰 이미지 조회
+                        // 리뷰 이미지 조회 (Map에서)
                         List<FileInfo> reviewImages = review.getReviewImages().stream()
                                 .filter(img -> !img.getIsDeleted())
                                 .sorted((a, b) -> a.getDisplayOrder().compareTo(b.getDisplayOrder()))
-                                .map(img -> fileRepository.findById(img.getFileId()).orElse(null))
-                                .filter(file -> file != null)
+                                .map(img -> finalFileMap.get(img.getFileId()))
+                                .filter(Objects::nonNull)
                                 .map(FileInfo::from)
                                 .toList();
 
@@ -533,5 +784,53 @@ public class GalleryBoardService {
             log.warn("Failed to get reviews for board: boardId={}", board.getId());
             return List.of();
         }
+    }
+
+    // ==================== N+1 최적화용 헬퍼 메서드 ====================
+
+    /**
+     * [N+1 최적화] Map에서 파일 정보 조회
+     */
+    private List<FileInfo> getFileInfosFromMap(Board board,
+            Map<Long, List<BoardAttachment>> attachmentsMap,
+            Map<Long, File> filesMap) {
+        List<BoardAttachment> attachments = attachmentsMap.getOrDefault(board.getId(), List.of());
+        return attachments.stream()
+                .map(att -> filesMap.get(att.getFileId()))
+                .filter(Objects::nonNull)
+                .map(FileInfo::from)
+                .toList();
+    }
+
+    /**
+     * [N+1 최적화] Map에서 사용자 이름 조회
+     */
+    private String getUserNameFromMap(Board board, Map<Long, UserProfile> profilesMap) {
+        if (board.getUser() == null) return null;
+        UserProfile profile = profilesMap.get(board.getUser().getId());
+        if (profile != null) {
+            return profile.getName();
+        }
+        return board.getUser().getEmail();
+    }
+
+    /**
+     * [N+1 최적화] Map에서 회사 정보 조회
+     */
+    private GalleryResponse.CompanySummary getCompanySummaryFromMap(Board board,
+            Map<Long, Company> companyMap,
+            Map<Long, Double> ratingsMap,
+            Map<Long, Long> reviewCountsMap) {
+        if (board.getUser() == null) return null;
+        Company company = companyMap.get(board.getUser().getId());
+        if (company == null) return null;
+
+        return GalleryResponse.CompanySummary.builder()
+                .companyUuid(company.getUuid())
+                .companyName(company.getName())
+                .phone(company.getPrimaryPhone())
+                .averageRating(ratingsMap.getOrDefault(company.getId(), 0.0))
+                .reviewCount(reviewCountsMap.getOrDefault(company.getId(), 0L).intValue())
+                .build();
     }
 }

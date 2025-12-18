@@ -16,9 +16,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 업체 이미지 관리 서비스
@@ -169,11 +172,14 @@ public class CompanyImageService {
         List<CompanyImage> primaryImages = companyImageRepository
                 .findByCompanyAndImageTypeAndIsDeletedFalse(company, imageType);
 
-        for (CompanyImage img : primaryImages) {
-            if (Boolean.TRUE.equals(img.getIsPrimary())) {
-                img.unsetPrimary();
-                companyImageRepository.save(img);
-            }
+        // [N+1 최적화] saveAll 일괄 저장
+        List<CompanyImage> toUpdate = primaryImages.stream()
+                .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                .peek(CompanyImage::unsetPrimary)
+                .toList();
+
+        if (!toUpdate.isEmpty()) {
+            companyImageRepository.saveAll(toUpdate);
         }
     }
 
@@ -194,6 +200,27 @@ public class CompanyImageService {
     }
 
     /**
+     * [N+1 최적화] CompanyImage 리스트를 Response DTO 리스트로 일괄 변환
+     */
+    public List<com.hip.damoa.domain.company.web.dto.CompanyImageResponse> toResponses(List<CompanyImage> images) {
+        if (images.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 파일 ID 일괄 조회
+        Map<Long, File> fileMap = getFileMap(images);
+
+        return images.stream()
+                .map(image -> {
+                    File file = (image.getFileId() != null) ? fileMap.get(image.getFileId()) : null;
+                    String imageUrl = (file != null) ? file.getFileUrl() : null;
+                    UUID fileUuid = (file != null) ? file.getUuid() : null;
+                    return com.hip.damoa.domain.company.web.dto.CompanyImageResponse.from(image, imageUrl, fileUuid);
+                })
+                .toList();
+    }
+
+    /**
      * CompanyImage 엔티티를 DTO로 변환 (File ID → URL, UUID 변환 포함)
      */
     public com.hip.damoa.domain.company.web.dto.CompanyImageDto toDto(CompanyImage image) {
@@ -207,6 +234,44 @@ public class CompanyImageService {
         UUID fileUuid = (file != null) ? file.getUuid() : null;
 
         return com.hip.damoa.domain.company.web.dto.CompanyImageDto.from(image, imageUrl, fileUuid);
+    }
+
+    /**
+     * [N+1 최적화] CompanyImage 리스트를 DTO 리스트로 일괄 변환
+     */
+    public List<com.hip.damoa.domain.company.web.dto.CompanyImageDto> toDtos(List<CompanyImage> images) {
+        if (images.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 파일 ID 일괄 조회
+        Map<Long, File> fileMap = getFileMap(images);
+
+        return images.stream()
+                .map(image -> {
+                    File file = (image.getFileId() != null) ? fileMap.get(image.getFileId()) : null;
+                    String imageUrl = (file != null) ? file.getFileUrl() : null;
+                    UUID fileUuid = (file != null) ? file.getUuid() : null;
+                    return com.hip.damoa.domain.company.web.dto.CompanyImageDto.from(image, imageUrl, fileUuid);
+                })
+                .toList();
+    }
+
+    /**
+     * [N+1 최적화] 이미지 목록에서 파일 맵 생성
+     */
+    private Map<Long, File> getFileMap(List<CompanyImage> images) {
+        List<Long> fileIds = images.stream()
+                .map(CompanyImage::getFileId)
+                .filter(id -> id != null)
+                .toList();
+
+        if (fileIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        return fileRepository.findByIdIn(fileIds).stream()
+                .collect(Collectors.toMap(File::getId, f -> f));
     }
 
     /**

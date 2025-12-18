@@ -77,4 +77,15 @@ public interface FileDownloadRepository extends JpaRepository<FileDownload, Long
     // 사용자의 총 구매 금액
     @Query("SELECT COALESCE(SUM(fd.pricePaid), 0) FROM FileDownload fd WHERE fd.user.id = :userId AND fd.isFree = false")
     Long sumPricePaidByUserId(@Param("userId") Long userId);
+
+    // [N+1 최적화] 여러 파일의 다운로드 횟수 일괄 조회
+    @Query("SELECT fd.file.id, COUNT(fd.id) FROM FileDownload fd " +
+           "WHERE fd.file.id IN :fileIds " +
+           "GROUP BY fd.file.id")
+    List<Object[]> countByFileIdIn(@Param("fileIds") List<Long> fileIds);
+
+    // [N+1 최적화] 사용자가 다운로드한 파일 ID 목록 일괄 조회
+    @Query("SELECT DISTINCT fd.file.id FROM FileDownload fd " +
+           "WHERE fd.file.id IN :fileIds AND fd.user.id = :userId")
+    List<Long> findDownloadedFileIds(@Param("fileIds") List<Long> fileIds, @Param("userId") Long userId);
 }

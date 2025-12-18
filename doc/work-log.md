@@ -26,13 +26,73 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: Specialty 필터 옵션 통합 완료
-**마지막 업데이트**: 2025-12-12
-**다음 우선순위**: Next.js 프론트엔드 결제 연동 테스트
+**프로젝트 단계**: N+1 쿼리 최적화 완료
+**마지막 업데이트**: 2025-12-18
+**다음 우선순위**: 프론트엔드 연동 테스트
 
 ---
 
 ## 📝 작업 로그
+
+### 2025-12-18
+
+#### ✅ 완료 (Completed)
+
+**[PERF-001] GalleryBoardService N+1 쿼리 최적화** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-18
+- **작업 내용**:
+  - `searchGalleries()` 메서드 N+1 문제 해결
+  - 개선 전: 20개 게시글 조회 시 ~180개 쿼리
+  - 개선 후: 20개 게시글 조회 시 ~10개 쿼리 (95% 감소)
+
+**수정 파일**:
+- `BoardFilterOptionRepository.java` - `findByBoardIdIn()` 추가
+- `BoardAttachmentRepository.java` - `findByBoardIdIn()` 추가
+- `FileRepository.java` - `findByIdIn()` 추가
+- `BoardBookmarkRepository.java` - `findBookmarkedBoardIds()` 추가
+- `BoardLikeRepository.java` - `findLikedBoardIds()` 추가
+- `UserProfileRepository.java` - `findByUserIdIn()` 추가
+- `CompanyRepository.java` - `findByOwnerIdIn()` 추가
+- `CompanyReviewRepository.java` - `getAverageRatingsRaw()`, `getReviewCountsRaw()` 추가
+- `GalleryBoardService.java` - `searchGalleries()` 리팩토링, 헬퍼 메서드 추가
+
+**최적화 방식**:
+- IN 절을 사용한 Bulk 조회로 변경
+- Map을 이용한 메모리 그룹핑
+- 기존 N+1 반복 → 1회 IN 쿼리로 변환
+
+**참고 문서**: `doc/N+1_OPTIMIZATION_GUIDE.md`
+
+---
+
+**[GALLERY-SEARCH-002] Gallery 검색 API companyUuid 필터 추가** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-18
+- **작업 내용**:
+  - `GET /api/boards/gallery/search`에 `companyUuid` 파라미터 추가
+  - 업체 포트폴리오 보기 → 검색 화면에서 companyUuid가 URL에 입력된 상태로 필터링
+  - 다른 필터(keyword, tags, filterOptionIds, onlyBookmarked, onlyMyPosts)와 AND 연산
+
+**수정 파일**:
+- `BoardSpecifications.java`: `hasCompanyUuid` 스펙 추가, `searchBoards`에 companyUuid 조건 통합
+- `GalleryBoardService.java`: `searchGalleries`에 companyUuid 파라미터 추가
+- `GalleryBoardController.java`: `searchGalleries`에 companyUuid @RequestParam 추가
+
+**API 사용법**:
+```
+GET /api/boards/gallery/search?companyUuid={uuid}&filterOptionIds=1,2&keyword=인테리어
+```
+
+**이전 완료 작업 (같은 세션)**:
+- Gallery 상세/검색 Response에 userUuid, userName 추가
+- `GET /api/boards/gallery/company/{companyUuid}` 엔드포인트 추가 (포트폴리오 전용)
+- keyword 검색에 회사 이름 포함 (제목, 내용, 태그, 회사 이름 OR 검색)
+- SecurityConfig에 `/api/boards/gallery/company/*` permitAll 추가
+- ProfileService.java UUID 변환 오류 수정 (3곳)
+- AdminGalleryBoardController 파라미터 수정
+
+---
 
 ### 2025-12-12
 

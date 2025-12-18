@@ -770,9 +770,10 @@ public class CompanyService {
 
         List<CompanyImage> images = companyImageRepository.findByCompany_IdAndIsDeletedFalse(companyId);
 
-        for (CompanyImage image : images) {
-            image.softDelete();
-            companyImageRepository.save(image);
+        // [N+1 최적화] saveAll 일괄 저장
+        if (!images.isEmpty()) {
+            images.forEach(CompanyImage::softDelete);
+            companyImageRepository.saveAll(images);
         }
 
         log.info("기존 업체 이미지 삭제 완료: companyId={}, 삭제된 이미지 수={}", companyId, images.size());

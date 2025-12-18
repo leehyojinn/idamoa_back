@@ -116,4 +116,10 @@ public interface FileRepository extends JpaRepository<File, Long> {
            "f.isDeleted = false " +
            "ORDER BY f.createdAt ASC")
     List<File> findOrphanedFiles(@Param("threshold") LocalDateTime threshold);
+
+    // [N+1 최적화] File ID 목록으로 일괄 조회
+    List<File> findByIdIn(List<Long> ids);
+
+    // [N+1 최적화] UUID 목록으로 일괄 조회
+    List<File> findByUuidInAndIsDeletedFalse(List<UUID> uuids);
 }

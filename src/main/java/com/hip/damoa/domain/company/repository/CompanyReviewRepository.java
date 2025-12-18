@@ -34,4 +34,20 @@ public interface CompanyReviewRepository extends JpaRepository<CompanyReview, Lo
     Page<CompanyReview> findByCompanyAndStatusOrderByCreatedAtDesc(Company company, String status, Pageable pageable);
 
     List<CompanyReview> findByCompanyAndStatus(Company company, String status);
+
+    // [N+1 최적화] 여러 Company의 평균 평점 일괄 조회
+    @Query("SELECT r.company.id, COALESCE(AVG(r.rating), 0.0) " +
+           "FROM CompanyReview r " +
+           "WHERE r.company.id IN :companyIds " +
+           "AND r.isDeleted = false AND r.status = 'PUBLISHED' " +
+           "GROUP BY r.company.id")
+    List<Object[]> getAverageRatingsRaw(@Param("companyIds") List<Long> companyIds);
+
+    // [N+1 최적화] 여러 Company의 리뷰 수 일괄 조회
+    @Query("SELECT r.company.id, COUNT(r.id) " +
+           "FROM CompanyReview r " +
+           "WHERE r.company.id IN :companyIds " +
+           "AND r.isDeleted = false AND r.status = 'PUBLISHED' " +
+           "GROUP BY r.company.id")
+    List<Object[]> getReviewCountsRaw(@Param("companyIds") List<Long> companyIds);
 }

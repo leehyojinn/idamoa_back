@@ -66,10 +66,24 @@ public class AdminFilterService {
 
         Page<FilterCategory> categories = filterCategoryRepository.findAll(spec, pageable);
 
-        // 각 카테고리의 옵션 개수 조회
+        // [N+1 최적화] 카테고리별 옵션 개수 일괄 조회
+        List<Long> categoryIds = categories.getContent().stream()
+                .map(FilterCategory::getId)
+                .toList();
+
+        Map<Long, Long> optionCountMap = Collections.emptyMap();
+        if (!categoryIds.isEmpty()) {
+            List<Object[]> counts = filterOptionRepository.countByCategoryIdIn(categoryIds);
+            optionCountMap = counts.stream()
+                    .collect(Collectors.toMap(
+                            row -> (Long) row[0],
+                            row -> (Long) row[1]
+                    ));
+        }
+
+        final Map<Long, Long> finalCountMap = optionCountMap;
         Page<FilterCategoryResponse> response = categories.map(category -> {
-            int optionCount = filterOptionRepository
-                    .findByCategoryAndIsActiveTrueAndIsDeletedFalse(category).size();
+            int optionCount = finalCountMap.getOrDefault(category.getId(), 0L).intValue();
             return FilterCategoryResponse.from(category, optionCount);
         });
 
@@ -91,8 +105,12 @@ public class AdminFilterService {
         List<FilterOption> options = filterOptionRepository
                 .findByCategoryOrderByDisplayOrderAsc(category);
 
+        // [N+1 최적화] 옵션별 자식 수 일괄 조회
+        Map<Long, Long> childCountMap = getChildCountMap(options);
+
         List<FilterOptionResponse> optionResponses = options.stream()
-                .map(option -> FilterOptionResponse.from(option, option.getChildren().size()))
+                .map(option -> FilterOptionResponse.from(option,
+                        childCountMap.getOrDefault(option.getId(), 0L).intValue()))
                 .collect(Collectors.toList());
 
         return FilterCategoryDetailResponse.from(category, optionResponses);
@@ -215,8 +233,12 @@ public class AdminFilterService {
 
         Page<FilterOption> options = filterOptionRepository.findAll(spec, pageable);
 
+        // [N+1 최적화] 옵션별 자식 수 일괄 조회
+        Map<Long, Long> childCountMap = getChildCountMap(options.getContent());
+
         Page<FilterOptionResponse> response = options.map(option ->
-                FilterOptionResponse.from(option, option.getChildren().size())
+                FilterOptionResponse.from(option,
+                        childCountMap.getOrDefault(option.getId(), 0L).intValue())
         );
 
         log.info("필터 옵션 목록 조회 완료: total={}", response.getTotalElements());
@@ -358,9 +380,13 @@ public class AdminFilterService {
 
         updatedOptions = filterOptionRepository.saveAll(updatedOptions);
 
+        // [N+1 최적화] 옵션별 자식 수 일괄 조회
+        Map<Long, Long> childCountMap = getChildCountMap(updatedOptions);
+
         log.info("필터 옵션 순서 변경 완료");
         return updatedOptions.stream()
-                .map(option -> FilterOptionResponse.from(option, option.getChildren().size()))
+                .map(option -> FilterOptionResponse.from(option,
+                        childCountMap.getOrDefault(option.getId(), 0L).intValue()))
                 .collect(Collectors.toList());
     }
 
@@ -725,8 +751,30 @@ public class AdminFilterService {
         List<FilterOption> options = filterOptionRepository
                 .findByIsDeletedFalseOrderByCategoryIdAscDisplayOrderAsc();
 
+        // [N+1 최적화] 옵션별 자식 수 일괄 조회
+        Map<Long, Long> childCountMap = getChildCountMap(options);
+
         return options.stream()
-                .map(option -> FilterOptionResponse.from(option, option.getChildren().size()))
+                .map(option -> FilterOptionResponse.from(option,
+                        childCountMap.getOrDefault(option.getId(), 0L).intValue()))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * [N+1 최적화] 옵션 목록에서 자식 개수 맵 생성
+     */
+    private Map<Long, Long> getChildCountMap(List<FilterOption> options) {
+        if (options.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Long> optionIds = options.stream()
+                .map(FilterOption::getId)
+                .toList();
+        List<Object[]> counts = filterOptionRepository.countChildrenByParentIdIn(optionIds);
+        return counts.stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Long) row[1]
+                ));
     }
 }

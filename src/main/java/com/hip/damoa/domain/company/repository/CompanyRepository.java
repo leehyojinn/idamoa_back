@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,6 +27,10 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
     Optional<Company> findByOwnerAndIsDeletedFalse(User owner);
 
     Optional<Company> findByOwnerId(Long ownerId);
+
+    // [N+1 최적화] Owner ID 목록으로 Company 일괄 조회
+    @Query("SELECT c FROM Company c WHERE c.owner.id IN :ownerIds AND c.isDeleted = false")
+    List<Company> findByOwnerIdIn(@Param("ownerIds") List<Long> ownerIds);
 
     Optional<Company> findBySlug(String slug);
 
