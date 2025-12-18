@@ -122,11 +122,12 @@ public class GalleryBoardController {
                     "**검색 조건 (모두 선택적, 복합 검색 가능):**\n" +
                     "- keyword: 제목, 내용, 태그, **회사 이름**에서 검색 (LIKE 검색 - 부분 일치)\n" +
                     "- filterOptionIds: 필터 옵션 ID 배열 (예: 업종, 전문영역)\n" +
+                    "- companyUuid: 특정 회사의 갤러리만 조회 (업체 포트폴리오 보기)\n" +
                     "- onlyBookmarked: true 설정 시 북마크한 게시글만 조회 (로그인 필요)\n" +
                     "- onlyMyPosts: true 설정 시 내가 작성한 게시글만 조회 (로그인 필요)\n\n" +
                     "**복합 검색 예시:**\n" +
+                    "- companyUuid + filterOptionIds: 특정 회사의 갤러리 중 필터 조건에 맞는 게시글\n" +
                     "- keyword + filterOptionIds: 특정 키워드와 필터 옵션을 모두 만족하는 게시글\n" +
-                    "- keyword + onlyMyPosts: 내가 작성한 게시글 중 키워드를 포함하는 게시글\n" +
                     "- 모든 조건 조합 가능 (AND 연산)\n\n" +
                     "**페이지네이션:**\n" +
                     "- size: 페이지당 항목 수 (기본 20)\n" +
@@ -145,13 +146,14 @@ public class GalleryBoardController {
                     "**활용:**\n" +
                     "- 사진 게시판 메인 페이지\n" +
                     "- 필터링된 갤러리 목록\n" +
-                    "- 내가 북마크한 갤러리\n" +
-                    "- 내가 작성한 갤러리")
+                    "- 특정 업체 포트폴리오 + 필터 조합\n" +
+                    "- 내가 북마크한 갤러리")
     @GetMapping("/search")
     public ApiResponse<Page<GalleryResponse>> searchGalleries(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String[] tags,
             @RequestParam(required = false) List<Long> filterOptionIds,
+            @RequestParam(required = false) UUID companyUuid,
             @RequestParam(required = false) Boolean onlyBookmarked,
             @RequestParam(required = false) Boolean onlyMyPosts,
             @AuthenticationPrincipal(errorOnInvalidType = false) UserDetails userDetails,
@@ -160,11 +162,11 @@ public class GalleryBoardController {
 
         String userEmail = userDetails != null ? userDetails.getUsername() : null;
 
-        log.info("Gallery 게시글 검색 요청: keyword={}, tags={}, filterOptionIds={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
-                 keyword, tags != null ? String.join(",", tags) : null, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
+        log.info("Gallery 게시글 검색 요청: keyword={}, tags={}, filterOptionIds={}, companyUuid={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
+                 keyword, tags != null ? String.join(",", tags) : null, filterOptionIds, companyUuid, onlyBookmarked, onlyMyPosts, userEmail);
 
         Page<GalleryResponse> response = galleryBoardService.searchGalleries(
-                keyword, tags, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail, pageable);
+                keyword, tags, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail, companyUuid, pageable);
 
         return ApiResponse.success(response);
     }

@@ -64,7 +64,7 @@ public class AdminGalleryBoardController {
                 userDetails.getUsername(), keyword);
         // 관리자는 미게시 포함 전체 조회
         Page<GalleryResponse> response = galleryBoardService.searchGalleries(
-                keyword, null, null, false, false, userDetails.getUsername(), pageable);
+                keyword, null, null, false, false, userDetails.getUsername(), null, pageable);
         return ApiResponse.success(response);
     }
 

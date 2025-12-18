@@ -254,6 +254,36 @@ public class BoardSpecifications {
     }
 
     /**
+     * 특정 회사의 게시글 필터 (companyUuid로 필터링)
+     * Company.owner.id = Board.user.id 관계로 필터링
+     */
+    public static Specification<Board> hasCompanyUuid(java.util.UUID companyUuid) {
+        return (root, query, cb) -> {
+            if (companyUuid == null) {
+                return cb.conjunction();
+            }
+
+            // 서브쿼리: companyUuid로 Company 찾고 owner.id 가져오기
+            Subquery<Long> subquery = query.subquery(Long.class);
+            Root<Company> companyRoot = subquery.from(Company.class);
+            subquery.select(companyRoot.get("owner").get("id"))
+                .where(
+                    cb.and(
+                        cb.equal(companyRoot.get("uuid"), companyUuid),
+                        cb.isNotNull(companyRoot.get("owner")),
+                        cb.isFalse(companyRoot.get("isDeleted"))
+                    )
+                );
+
+            // Board.user.id = Company.owner.id
+            return cb.and(
+                cb.isNotNull(root.get("user")),
+                root.get("user").get("id").in(subquery)
+            );
+        };
+    }
+
+    /**
      * 복합 검색을 위한 종합 메서드 (tags 파라미터 없는 버전 - 하위 호환성)
      */
     public static Specification<Board> searchBoards(
@@ -263,7 +293,21 @@ public class BoardSpecifications {
             Boolean onlyBookmarked,
             Boolean onlyMyPosts,
             String userEmail) {
-        return searchBoards(boardType, keyword, null, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
+        return searchBoards(boardType, keyword, null, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail, null);
+    }
+
+    /**
+     * 복합 검색을 위한 종합 메서드 (tags 포함, companyUuid 없는 버전 - 하위 호환성)
+     */
+    public static Specification<Board> searchBoards(
+            String boardType,
+            String keyword,
+            String[] tags,
+            List<Long> filterOptionIds,
+            Boolean onlyBookmarked,
+            Boolean onlyMyPosts,
+            String userEmail) {
+        return searchBoards(boardType, keyword, tags, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail, null);
     }
 
     /**
@@ -277,13 +321,19 @@ public class BoardSpecifications {
             List<Long> filterOptionIds,
             Boolean onlyBookmarked,
             Boolean onlyMyPosts,
-            String userEmail) {
+            String userEmail,
+            java.util.UUID companyUuid) {
 
         Specification<Board> spec = Specification.where(isNotDeleted())
             .and(isPublished())
             .and(hasBoardType(boardType));
 
-        // 키워드 검색 (제목, 내용, 태그)
+        // 회사 필터 (companyUuid)
+        if (companyUuid != null) {
+            spec = spec.and(hasCompanyUuid(companyUuid));
+        }
+
+        // 키워드 검색 (제목, 내용, 태그, 회사 이름)
         if (keyword != null && !keyword.trim().isEmpty()) {
             spec = spec.and(hasKeyword(keyword));
         }

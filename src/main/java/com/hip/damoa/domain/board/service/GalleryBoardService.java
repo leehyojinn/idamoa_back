@@ -144,16 +144,17 @@ public class GalleryBoardService {
      * @param onlyBookmarked 북마크된 게시글만 조회 (nullable, userEmail 필요)
      * @param onlyMyPosts 내가 쓴 게시글만 조회 (nullable, userEmail 필요)
      * @param userEmail 사용자 이메일 (북마크 조회 시 필요)
+     * @param companyUuid 회사 UUID (특정 회사의 갤러리만 조회, nullable)
      * @param pageable 페이지 정보
      * @return 검색 결과
      */
     @Transactional(readOnly = true)
     public Page<GalleryResponse> searchGalleries(String keyword, String[] tags, List<Long> filterOptionIds,
                                                   Boolean onlyBookmarked, Boolean onlyMyPosts,
-                                                  String userEmail, Pageable pageable) {
+                                                  String userEmail, UUID companyUuid, Pageable pageable) {
 
-        log.info("Gallery 게시글 검색 시작: keyword={}, tags={}, filterOptions={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}",
-                keyword, tags != null ? String.join(",", tags) : null, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail);
+        log.info("Gallery 게시글 검색 시작: keyword={}, tags={}, filterOptions={}, onlyBookmarked={}, onlyMyPosts={}, userEmail={}, companyUuid={}",
+                keyword, tags != null ? String.join(",", tags) : null, filterOptionIds, onlyBookmarked, onlyMyPosts, userEmail, companyUuid);
 
         // 로그인이 필요한 기능 체크
         if ((Boolean.TRUE.equals(onlyBookmarked) || Boolean.TRUE.equals(onlyMyPosts)) && userEmail == null) {
@@ -168,7 +169,8 @@ public class GalleryBoardService {
                 filterOptionIds,
                 onlyBookmarked,
                 onlyMyPosts,
-                userEmail
+                userEmail,
+                companyUuid
         );
 
         // Specification을 사용한 조회
