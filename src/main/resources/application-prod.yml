@@ -65,7 +65,7 @@ spring:
 logging:
   level:
     root: WARN
-    com.interior: INFO
+    com.hip.damoa: INFO
     org.springframework: WARN
     org.hibernate: WARN
   file:

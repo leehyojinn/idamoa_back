@@ -21,14 +21,11 @@ import java.util.UUID;
 @Schema(description = "업체 상세 응답")
 public class CompanyResponse {
 
-    @Schema(description = "업체 내부 ID", example = "1")
-    private Long id;
-
-    @Schema(description = "업체 UUID (외부 노출용)", example = "550e8400-e29b-41d4-a716-446655440000")
+    @Schema(description = "업체 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID uuid;
 
-    @Schema(description = "소유자 ID", example = "1")
-    private Long ownerId;
+    @Schema(description = "소유자 UUID", example = "550e8400-e29b-41d4-a716-446655440001")
+    private UUID ownerUuid;
 
     @Schema(description = "소유자 이메일", example = "owner@example.com")
     private String ownerEmail;
@@ -158,9 +155,8 @@ public class CompanyResponse {
      */
     public static CompanyResponse from(Company company) {
         return CompanyResponse.builder()
-                .id(company.getId())
                 .uuid(company.getUuid())
-                .ownerId(company.getOwner() != null ? company.getOwner().getId() : null)
+                .ownerUuid(company.getOwner() != null ? company.getOwner().getUuid() : null)
                 .ownerEmail(company.getOwner() != null ? company.getOwner().getEmail() : null)
                 .name(company.getName())
                 .slug(company.getSlug())

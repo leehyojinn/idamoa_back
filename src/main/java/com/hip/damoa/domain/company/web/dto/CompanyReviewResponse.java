@@ -21,21 +21,18 @@ import java.util.UUID;
 @Schema(description = "업체 리뷰 응답")
 public class CompanyReviewResponse {
 
-    @Schema(description = "리뷰 내부 ID", example = "1")
-    private Long id;
-
     @Schema(description = "리뷰 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID uuid;
 
-    @Schema(description = "업체 ID", example = "1")
-    private Long companyId;
+    @Schema(description = "업체 UUID", example = "550e8400-e29b-41d4-a716-446655440001")
+    private UUID companyUuid;
 
     @Schema(description = "업체명", example = "다모아 인테리어")
     private String companyName;
 
     // 작성자 정보
-    @Schema(description = "작성자 ID", example = "1")
-    private Long userId;
+    @Schema(description = "작성자 UUID", example = "550e8400-e29b-41d4-a716-446655440002")
+    private UUID userUuid;
 
     @Schema(description = "작성자 이메일", example = "user@example.com")
     private String userEmail;
@@ -95,11 +92,11 @@ public class CompanyReviewResponse {
 
     public static CompanyReviewResponse from(CompanyReview review) {
         return from(review, null, getUserEmailSafe(review),
-                review.getCompany().getId(), review.getCompany().getName());
+                review.getCompany().getUuid(), review.getCompany().getName());
     }
 
     public static CompanyReviewResponse from(CompanyReview review, List<ReviewImageDto> images, String userName) {
-        return from(review, images, userName, review.getCompany().getId(), review.getCompany().getName());
+        return from(review, images, userName, review.getCompany().getUuid(), review.getCompany().getName());
     }
 
     /**
@@ -107,14 +104,14 @@ public class CompanyReviewResponse {
      * 삭제된 User의 경우 안전하게 처리
      */
     public static CompanyReviewResponse from(CompanyReview review, List<ReviewImageDto> images, String userName,
-                                              Long companyId, String companyName) {
-        Long userId = null;
+                                              UUID companyUuid, String companyName) {
+        UUID userUuid = null;
         String userEmail = null;
         String resolvedUserName = userName;
 
         try {
             if (review.getUser() != null) {
-                userId = review.getUser().getId();
+                userUuid = review.getUser().getUuid();
                 userEmail = review.getUser().getEmail();
                 if (resolvedUserName == null) {
                     resolvedUserName = userEmail;
@@ -127,11 +124,10 @@ public class CompanyReviewResponse {
         }
 
         return CompanyReviewResponse.builder()
-                .id(review.getId())
                 .uuid(review.getUuid())
-                .companyId(companyId)
+                .companyUuid(companyUuid)
                 .companyName(companyName)
-                .userId(userId)
+                .userUuid(userUuid)
                 .userEmail(userEmail)
                 .userName(resolvedUserName)
                 .rating(review.getRating())

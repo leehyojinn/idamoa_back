@@ -20,9 +20,6 @@ import java.util.UUID;
 @Schema(description = "파일 업로드 응답")
 public class FileUploadResponse {
 
-    @Schema(description = "파일 ID", example = "123")
-    private Long id;
-
     @Schema(description = "파일 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID uuid;
 
@@ -48,15 +45,11 @@ public class FileUploadResponse {
     @Schema(description = "연결된 엔티티 타입", example = "COMPANY_IMAGE")
     private String entityType;
 
-    @Schema(description = "연결된 엔티티 ID", example = "123")
-    private Long entityId;
-
     @Schema(description = "파일 업로드 일시", example = "2025-01-15T10:30:00")
     private LocalDateTime createdAt;
 
     public static FileUploadResponse from(File file) {
         return FileUploadResponse.builder()
-                .id(file.getId())
                 .uuid(file.getUuid())
                 .originalFilename(file.getOriginalFilename())
                 .storedFilename(file.getStoredFilename())
@@ -65,7 +58,6 @@ public class FileUploadResponse {
                 .mimeType(file.getMimeType())
                 .fileExtension(file.getFileExtension())
                 .entityType(file.getEntityType())
-                .entityId(file.getEntityId())
                 .createdAt(file.getCreatedAt())
                 .build();
     }

@@ -18,9 +18,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CompanyImageResponse {
 
-    private Long id;
-    private Long companyId;
-    private Long fileId;
+    private UUID companyUuid;
     private UUID fileUuid;  // 파일 UUID (수정 시 사용)
     private String imageUrl;
     private String imageType;
@@ -43,9 +41,7 @@ public class CompanyImageResponse {
 
     public static CompanyImageResponse from(CompanyImage image, String imageUrl, UUID fileUuid) {
         return CompanyImageResponse.builder()
-                .id(image.getId())
-                .companyId(image.getCompany().getId())
-                .fileId(image.getFileId())
+                .companyUuid(image.getCompany().getUuid())
                 .fileUuid(fileUuid)  // 파일 UUID
                 .imageUrl(imageUrl)  // File ID → URL 변환된 값 사용
                 .imageType(image.getImageType())

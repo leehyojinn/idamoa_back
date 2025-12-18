@@ -200,11 +200,11 @@ public enum ErrorCode {
     FILE_PURCHASE_REQUIRED(HttpStatus.PAYMENT_REQUIRED, "F009", "파일 구매가 필요합니다"),
 
     // Profile
-    PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "PR000", "프로필을 찾을 수 없습니다"),
-    INVALID_PROFILE_TYPE(HttpStatus.BAD_REQUEST, "PR001", "유효하지 않은 프로필 타입입니다"),
-    PROFILE_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "PR002", "이미 완료된 프로필입니다"),
-    PROFILE_TYPE_NOT_SELECTED(HttpStatus.BAD_REQUEST, "PR003", "프로필 타입이 선택되지 않았습니다"),
-    UNAUTHORIZED_ROLE_CHANGE(HttpStatus.FORBIDDEN, "PR004", "권한 변경 권한이 없습니다"),
+    PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "PF001", "프로필을 찾을 수 없습니다"),
+    INVALID_PROFILE_TYPE(HttpStatus.BAD_REQUEST, "PF002", "유효하지 않은 프로필 타입입니다"),
+    PROFILE_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "PF003", "이미 완료된 프로필입니다"),
+    PROFILE_TYPE_NOT_SELECTED(HttpStatus.BAD_REQUEST, "PF004", "프로필 타입이 선택되지 않았습니다"),
+    UNAUTHORIZED_ROLE_CHANGE(HttpStatus.FORBIDDEN, "PF005", "권한 변경 권한이 없습니다"),
 
     // Board/Content
     BOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "BD001", "게시글을 찾을 수 없습니다"),

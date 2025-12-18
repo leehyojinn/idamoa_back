@@ -20,9 +20,6 @@ import java.util.Map;
 @Schema(description = "사용자 프로필 응답")
 public class UserProfileResponse {
 
-    @Schema(description = "프로필 ID", example = "1")
-    private Long id;
-
     @Schema(description = "이름", example = "홍길동")
     private String name;
 
@@ -34,9 +31,6 @@ public class UserProfileResponse {
 
     @Schema(description = "자기소개", example = "안녕하세요. 인테리어에 관심이 많습니다.")
     private String bio;
-
-    @Schema(description = "아바타 파일 ID", example = "1")
-    private Long avatarFileId;
 
     @Schema(description = "아바타 파일 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private java.util.UUID avatarFileUuid;
@@ -80,12 +74,10 @@ public class UserProfileResponse {
      */
     public static UserProfileResponse from(UserProfile profile, Long avatarFileId, java.util.UUID avatarFileUuid, String avatarUrl) {
         return UserProfileResponse.builder()
-                .id(profile.getId())
                 .name(profile.getName())
                 .nickname(profile.getNickname())
                 .phone(profile.getPhone())
                 .bio(profile.getBio())
-                .avatarFileId(avatarFileId)
                 .avatarFileUuid(avatarFileUuid)
                 .avatarUrl(avatarUrl != null ? avatarUrl : profile.getAvatarUrl())
                 .address(profile.getAddress())
@@ -110,12 +102,10 @@ public class UserProfileResponse {
      */
     public static UserProfileResponse from(UserProfile profile, Long avatarFileId, java.util.UUID avatarFileUuid, String avatarUrl, TokenInfo tokenInfo) {
         return UserProfileResponse.builder()
-                .id(profile.getId())
                 .name(profile.getName())
                 .nickname(profile.getNickname())
                 .phone(profile.getPhone())
                 .bio(profile.getBio())
-                .avatarFileId(avatarFileId)
                 .avatarFileUuid(avatarFileUuid)
                 .avatarUrl(avatarUrl != null ? avatarUrl : profile.getAvatarUrl())
                 .address(profile.getAddress())

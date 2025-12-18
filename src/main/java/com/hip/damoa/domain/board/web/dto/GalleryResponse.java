@@ -88,8 +88,8 @@ public class GalleryResponse {
     private String[] tags;
 
     // 작성자
-    @Schema(description = "작성자 ID", example = "1")
-    private Long userId;
+    @Schema(description = "작성자 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
+    private UUID userUuid;
 
     @Schema(description = "작성자 이메일", example = "user@example.com")
     private String userEmail;
@@ -240,6 +240,18 @@ public class GalleryResponse {
     }
 
     /**
+     * 사용자 UUID 안전하게 조회 (삭제된 사용자 처리)
+     */
+    private static UUID getUserUuidSafe(Board board) {
+        try {
+            return board.getUser() != null ? board.getUser().getUuid() : null;
+        } catch (Exception e) {
+            log.warn("User not found for board: {}", board.getId());
+            return null;
+        }
+    }
+
+    /**
      * 사용자 이메일 안전하게 조회 (삭제된 사용자 처리)
      */
     private static String getUserEmailSafe(Board board) {
@@ -248,18 +260,6 @@ public class GalleryResponse {
         } catch (Exception e) {
             log.warn("User not found for board: {}", board.getId());
             return "알 수 없음";
-        }
-    }
-
-    /**
-     * 사용자 ID 안전하게 조회 (삭제된 사용자 처리)
-     */
-    private static Long getUserIdSafe(Board board) {
-        try {
-            return board.getUser() != null ? board.getUser().getId() : null;
-        } catch (Exception e) {
-            log.warn("User not found for board: {}", board.getId());
-            return null;
         }
     }
 
@@ -327,7 +327,7 @@ public class GalleryResponse {
         }
 
         // User 정보 안전하게 조회
-        Long userId = getUserIdSafe(board);
+        UUID userUuid = getUserUuidSafe(board);
         String userEmail = getUserEmailSafe(board);
         String resolvedUserName = userName != null ? userName : userEmail;
 
@@ -369,7 +369,7 @@ public class GalleryResponse {
                 .publishedAt(board.getPublishedAt())
                 .filterOptions(filterOptionSummaries)
                 .tags(board.getTags() != null ? board.getTags() : new String[0])
-                .userId(userId)
+                .userUuid(userUuid)
                 .userEmail(userEmail)
                 .userName(resolvedUserName)
                 .createdAt(board.getCreatedAt())

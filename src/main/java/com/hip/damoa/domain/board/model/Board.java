@@ -6,6 +6,7 @@ import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.Type;
@@ -95,13 +96,16 @@ public class Board extends BaseEntity {
     @Column(name = "updated_by")
     private Long updatedBy;
 
-    // 연관관계
+    // 연관관계 (N+1 방지를 위해 @BatchSize 적용)
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BoardFilterOption> filterOptions = new ArrayList<>();
 
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BoardBookmark> bookmarks = new ArrayList<>();
 
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BoardAttachment> attachments = new ArrayList<>();
 

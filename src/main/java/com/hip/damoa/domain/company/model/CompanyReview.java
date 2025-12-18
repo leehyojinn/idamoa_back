@@ -6,6 +6,7 @@ import io.hypersistence.utils.hibernate.type.array.LongArrayType;
 import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.Type;
@@ -56,6 +57,7 @@ public class CompanyReview extends BaseEntity {
      * 리뷰 이미지 목록 (OneToMany relationship via join table)
      * Company 패턴과 동일: File ID 기반 관리
      */
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<CompanyReviewImage> reviewImages = new ArrayList<>();

@@ -7,6 +7,7 @@ import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.Type;
 
 import java.math.BigDecimal;
@@ -157,6 +158,7 @@ public class Company extends BaseEntity {
     @Column(name = "images", columnDefinition = "bigint[]")
     private Long[] images;  // File ID 배열
 
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "company", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<CompanyFilterOption> filterOptions = new ArrayList<>();

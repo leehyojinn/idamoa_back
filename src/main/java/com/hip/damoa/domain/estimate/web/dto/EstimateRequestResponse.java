@@ -27,9 +27,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class EstimateRequestResponse {
 
-    private Long id;  // 클라이언트 편의를 위해 ID도 포함
     private UUID uuid;
-    private Long userId;
+    private UUID userUuid;
     private String userEmail;
     private String userName;
     private String title;
@@ -78,13 +77,13 @@ public class EstimateRequestResponse {
      * 삭제된 User의 경우 안전하게 처리
      */
     public static EstimateRequestResponse from(EstimateRequest request, String userName, List<EstimateImageDto> images) {
-        Long userId = null;
+        UUID userUuid = null;
         String userEmail = null;
         String resolvedUserName = userName;
 
         try {
             if (request.getUser() != null) {
-                userId = request.getUser().getId();
+                userUuid = request.getUser().getUuid();
                 userEmail = request.getUser().getEmail();
                 if (resolvedUserName == null) {
                     resolvedUserName = userEmail;
@@ -97,9 +96,8 @@ public class EstimateRequestResponse {
         }
 
         return EstimateRequestResponse.builder()
-                .id(request.getId())
                 .uuid(request.getUuid())
-                .userId(userId)
+                .userUuid(userUuid)
                 .userEmail(userEmail)
                 .userName(resolvedUserName)
                 .title(request.getTitle())

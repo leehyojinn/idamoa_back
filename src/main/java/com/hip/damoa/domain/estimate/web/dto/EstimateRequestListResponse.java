@@ -21,9 +21,6 @@ import java.util.UUID;
 @Schema(description = "견적 요청 목록 응답")
 public class EstimateRequestListResponse {
 
-    @Schema(description = "견적 요청 내부 ID", example = "1")
-    private Long id;
-
     @Schema(description = "견적 요청 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
     private UUID uuid;
 
@@ -62,7 +59,6 @@ public class EstimateRequestListResponse {
 
     public static EstimateRequestListResponse from(EstimateRequest request) {
         return EstimateRequestListResponse.builder()
-                .id(request.getId())
                 .uuid(request.getUuid())
                 .title(request.getTitle())
                 .location(request.getLocation())

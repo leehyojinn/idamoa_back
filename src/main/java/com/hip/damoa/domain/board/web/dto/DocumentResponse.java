@@ -116,8 +116,8 @@ public class DocumentResponse {
     private String[] tags = new String[0];
 
     // 작성자
-    @Schema(description = "작성자 ID", example = "1")
-    private Long userId;
+    @Schema(description = "작성자 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
+    private UUID userUuid;
 
     @Schema(description = "작성자 이메일", example = "user@example.com")
     private String userEmail;
@@ -157,11 +157,11 @@ public class DocumentResponse {
     }
 
     /**
-     * 사용자 ID 안전하게 조회 (삭제된 사용자 처리)
+     * 사용자 UUID 안전하게 조회 (삭제된 사용자 처리)
      */
-    private static Long getUserIdSafe(Board board) {
+    private static UUID getUserUuidSafe(Board board) {
         try {
-            return board.getUser() != null ? board.getUser().getId() : null;
+            return board.getUser() != null ? board.getUser().getUuid() : null;
         } catch (Exception e) {
             log.warn("User not found for board: {}", board.getId());
             return null;
@@ -192,7 +192,7 @@ public class DocumentResponse {
         Map<String, Integer> filePrices = extractFilePrices(typeData, isPaid, price);
 
         // User 정보 안전하게 조회
-        Long userId = getUserIdSafe(board);
+        UUID userUuid = getUserUuidSafe(board);
         String userEmail = getUserEmailSafe(board);
         String resolvedUserName = userName != null ? userName : userEmail;
 
@@ -233,7 +233,7 @@ public class DocumentResponse {
                         })
                         .collect(Collectors.toList()))
                 .tags(board.getTags())
-                .userId(userId)
+                .userUuid(userUuid)
                 .userEmail(userEmail)
                 .userName(resolvedUserName)
                 .createdAt(board.getCreatedAt())

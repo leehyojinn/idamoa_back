@@ -3,6 +3,7 @@ package com.hip.damoa.domain.filter.model;
 import com.hip.damoa.domain.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -49,6 +50,7 @@ public class FilterOption extends BaseEntity {
     @JoinColumn(name = "parent_id")
     private FilterOption parent;
 
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
     private List<FilterOption> children = new ArrayList<>();
 

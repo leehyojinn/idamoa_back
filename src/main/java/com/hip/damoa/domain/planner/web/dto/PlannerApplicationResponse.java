@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class PlannerApplicationResponse {
 
     private UUID uuid;
-    private Long userId;
+    private UUID userUuid;
 
     // 신청 정보
     private String title;
@@ -58,7 +58,7 @@ public class PlannerApplicationResponse {
     private PlannerApplicationStatus status;
     private String adminResponse;
     private String adminMemo;
-    private Long assignedAdminId;
+    private UUID assignedAdminUuid;
     private String assignedAdminName;
 
     // 타임스탬프
@@ -89,20 +89,20 @@ public class PlannerApplicationResponse {
                 .map(PreferredDateDto::from)
                 .collect(Collectors.toList());
 
-        Long userId = null;
+        UUID userUuid = null;
         try {
             if (entity.getUser() != null) {
-                userId = entity.getUser().getId();
+                userUuid = entity.getUser().getUuid();
             }
         } catch (Exception e) {
             log.warn("User not found for plannerApplication: {}", entity.getId());
         }
 
-        Long assignedAdminId = null;
+        UUID assignedAdminUuid = null;
         String assignedAdminName = null;
         try {
             if (entity.getAssignedAdmin() != null) {
-                assignedAdminId = entity.getAssignedAdmin().getId();
+                assignedAdminUuid = entity.getAssignedAdmin().getUuid();
                 assignedAdminName = entity.getAssignedAdmin().getEmail();
             }
         } catch (Exception e) {
@@ -111,7 +111,7 @@ public class PlannerApplicationResponse {
 
         return PlannerApplicationResponse.builder()
                 .uuid(entity.getUuid())
-                .userId(userId)
+                .userUuid(userUuid)
                 .title(entity.getTitle())
                 .content(entity.getContent())
                 .consultationMethod(entity.getConsultationMethod())
@@ -128,7 +128,7 @@ public class PlannerApplicationResponse {
                 .status(entity.getStatus())
                 .adminResponse(entity.getAdminResponse())
                 .adminMemo(entity.getAdminMemo())
-                .assignedAdminId(assignedAdminId)
+                .assignedAdminUuid(assignedAdminUuid)
                 .assignedAdminName(assignedAdminName)
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
