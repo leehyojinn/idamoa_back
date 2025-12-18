@@ -120,7 +120,7 @@ public class GalleryBoardController {
     @Operation(summary = "Gallery 게시글 검색 (통합)",
             description = "사진 게시판 검색 및 목록 조회 통합 API입니다.\n\n" +
                     "**검색 조건 (모두 선택적, 복합 검색 가능):**\n" +
-                    "- keyword: 제목, 내용, 태그에서 검색\n" +
+                    "- keyword: 제목, 내용, 태그, **회사 이름**에서 검색 (LIKE 검색 - 부분 일치)\n" +
                     "- filterOptionIds: 필터 옵션 ID 배열 (예: 업종, 전문영역)\n" +
                     "- onlyBookmarked: true 설정 시 북마크한 게시글만 조회 (로그인 필요)\n" +
                     "- onlyMyPosts: true 설정 시 내가 작성한 게시글만 조회 (로그인 필요)\n\n" +
@@ -296,6 +296,42 @@ public class GalleryBoardController {
 
         Page<GalleryResponse> response = galleryBoardService.getMyGalleries(
                 userDetails.getUsername(), pageable);
+
+        return ApiResponse.success(response);
+    }
+
+    @Operation(summary = "특정 회사의 Gallery 목록 조회 (포트폴리오)",
+            description = "특정 회사가 올린 사진 게시글(포트폴리오) 목록을 조회합니다.\n\n" +
+                    "**사용 목적:**\n" +
+                    "- 검색 결과에서 특정 회사 클릭 시 해당 회사의 포트폴리오 표시\n" +
+                    "- 회사 상세 페이지에서 포트폴리오 섹션 표시\n\n" +
+                    "**조회 대상:**\n" +
+                    "- 해당 회사(companyUuid)의 오너가 작성한 Gallery 게시글\n" +
+                    "- 공개된 게시글만 조회 (isPublished=true)\n" +
+                    "- 삭제되지 않은 게시글만 조회\n\n" +
+                    "**페이지네이션:**\n" +
+                    "- size: 페이지당 항목 수 (기본 20)\n" +
+                    "- page: 페이지 번호 (0부터 시작)\n" +
+                    "- sort: 정렬 기준 (기본: createdAt,DESC - 최신순)\n\n" +
+                    "**응답 정보:**\n" +
+                    "- 게시글 목록 (제목, 이미지, 조회수, 좋아요 수 등)\n" +
+                    "- 회사 정보 (회사명, 전화번호, 평점, 리뷰 수)\n" +
+                    "- 로그인한 경우 북마크/좋아요 여부 포함\n\n" +
+                    "**권한:**\n" +
+                    "- 비로그인 사용자도 조회 가능")
+    @GetMapping("/company/{companyUuid}")
+    public ApiResponse<Page<GalleryResponse>> getGalleriesByCompany(
+            @PathVariable UUID companyUuid,
+            @AuthenticationPrincipal(errorOnInvalidType = false) UserDetails userDetails,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+
+        String userEmail = userDetails != null ? userDetails.getUsername() : null;
+
+        log.info("회사별 Gallery 목록 조회 요청: companyUuid={}, userEmail={}", companyUuid, userEmail);
+
+        Page<GalleryResponse> response = galleryBoardService.getGalleriesByCompanyUuid(
+                companyUuid, userEmail, pageable);
 
         return ApiResponse.success(response);
     }

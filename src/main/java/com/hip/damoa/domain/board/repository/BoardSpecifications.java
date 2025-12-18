@@ -3,6 +3,7 @@ package com.hip.damoa.domain.board.repository;
 import com.hip.damoa.domain.board.model.Board;
 import com.hip.damoa.domain.board.model.BoardBookmark;
 import com.hip.damoa.domain.board.model.BoardFilterOption;
+import com.hip.damoa.domain.company.model.Company;
 import com.hip.damoa.domain.user.model.User;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -90,7 +91,40 @@ public class BoardSpecifications {
     }
 
     /**
-     * 키워드 통합 검색 (제목, 내용, 태그 모두에서 검색)
+     * 회사 이름에서 키워드 검색
+     * Board → User → Company (owner) 관계를 통해 회사 이름 검색
+     */
+    public static Specification<Board> hasKeywordInCompanyName(String keyword) {
+        return (root, query, cb) -> {
+            if (keyword == null || keyword.trim().isEmpty()) {
+                return cb.conjunction();
+            }
+
+            String pattern = "%" + keyword.toLowerCase() + "%";
+
+            // 서브쿼리: Board.user.id = Company.owner.id 인 Company 중 name이 keyword 포함
+            Subquery<Long> subquery = query.subquery(Long.class);
+            Root<Company> companyRoot = subquery.from(Company.class);
+
+            subquery.select(companyRoot.get("owner").get("id"))
+                .where(
+                    cb.and(
+                        cb.isNotNull(companyRoot.get("owner")),
+                        cb.isFalse(companyRoot.get("isDeleted")),
+                        cb.like(cb.lower(companyRoot.get("name")), pattern)
+                    )
+                );
+
+            // Board.user.id IN (회사 owner ids)
+            return cb.and(
+                cb.isNotNull(root.get("user")),
+                root.get("user").get("id").in(subquery)
+            );
+        };
+    }
+
+    /**
+     * 키워드 통합 검색 (제목, 내용, 태그, 회사 이름에서 검색)
      */
     public static Specification<Board> hasKeyword(String keyword) {
         return (root, query, cb) -> {
@@ -101,6 +135,7 @@ public class BoardSpecifications {
             return Specification
                 .where(hasKeywordInTitleOrContent(keyword))
                 .or(hasKeywordInTags(keyword))
+                .or(hasKeywordInCompanyName(keyword))
                 .toPredicate(root, query, cb);
         };
     }

@@ -313,6 +313,40 @@ public class GalleryBoardService {
     }
 
     /**
+     * 특정 회사의 Gallery 목록 조회 (포트폴리오)
+     *
+     * @param companyUuid 회사 UUID
+     * @param currentUserEmail 현재 로그인 사용자 이메일 (북마크/좋아요 확인용, nullable)
+     * @param pageable 페이지 정보
+     * @return 해당 회사의 갤러리 목록
+     */
+    @Transactional(readOnly = true)
+    public Page<GalleryResponse> getGalleriesByCompanyUuid(UUID companyUuid, String currentUserEmail, Pageable pageable) {
+        log.info("회사별 Gallery 목록 조회: companyUuid={}", companyUuid);
+
+        // 1. companyUuid → Company 조회
+        Company company = companyRepository.findByUuid(companyUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMPANY_NOT_FOUND));
+
+        // 2. Company의 ownerId로 GALLERY 타입 Board 조회 (공개된 게시글만)
+        Page<Board> boards = boardRepository.findByUserIdAndBoardTypeAndIsPublishedTrueAndIsDeletedFalse(
+                company.getOwner().getId(), BoardType.GALLERY.name(), pageable);
+
+        // 3. GalleryResponse로 변환
+        boolean checkBookmark = currentUserEmail != null;
+
+        return boards.map(board -> {
+            List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
+            List<FileInfo> images = getFileInfos(board);
+            boolean isBookmarked = checkBookmark && boardBookmarkService.isBookmarked(board.getUuid(), currentUserEmail);
+            String userName = getUserName(board);
+            GalleryResponse.CompanySummary companySummary = getCompanySummary(board);
+            boolean liked = isLiked(board, currentUserEmail);
+            return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, companySummary, null);
+        });
+    }
+
+    /**
      * Gallery 이미지 첨부파일 처리
      */
     private void processGalleryImages(Board board, List<String> imageUuids) {

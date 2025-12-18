@@ -45,6 +45,10 @@ public interface BoardRepository extends JpaRepository<Board, Long>, JpaSpecific
 
     List<Board> findByUserIdAndBoardTypeAndIsDeletedFalse(Long userId, String boardType);
 
+    // 사용자별 + 게시판 타입별 조회 (공개된 게시글만, 페이지네이션)
+    Page<Board> findByUserIdAndBoardTypeAndIsPublishedTrueAndIsDeletedFalse(
+            Long userId, String boardType, Pageable pageable);
+
     // Featured 게시글
     List<Board> findByIsFeaturedTrueAndIsDeletedFalseAndIsPublishedTrueOrderByPublishedAtDesc();
 
