@@ -48,4 +48,9 @@ public interface BoardBookmarkRepository extends JpaRepository<BoardBookmark, Lo
     void deleteByBoardIdAndUserId(Long boardId, Long userId);
 
     void deleteByBoardId(Long boardId);
+
+    // [N+1 최적화] 사용자가 북마크한 Board ID 목록 일괄 조회
+    @Query("SELECT bb.board.id FROM BoardBookmark bb " +
+           "WHERE bb.board.id IN :boardIds AND bb.user.id = :userId")
+    List<Long> findBookmarkedBoardIds(@Param("boardIds") List<Long> boardIds, @Param("userId") Long userId);
 }

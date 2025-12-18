@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -461,54 +462,87 @@ public class InquiryService {
     }
 
     /**
-     * 첨부파일 처리 (Private Method)
+     * 첨부파일 처리 (Private Method) [N+1 최적화]
      */
     private void processAttachments(Inquiry inquiry, java.util.List<String> fileUuids) {
         log.info("첨부파일 처리 시작: inquiryId={}, fileCount={}", inquiry.getId(), fileUuids.size());
 
-        int displayOrder = 0;
+        // UUID 문자열 → UUID 변환
+        List<UUID> uuids = new java.util.ArrayList<>();
         for (String fileUuidStr : fileUuids) {
             try {
-                UUID fileUuid = UUID.fromString(fileUuidStr);
-                File file = fileRepository.findByUuidAndIsDeletedFalse(fileUuid)
-                        .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
-
-                // File의 entityType과 entityId 업데이트
-                file.updateEntityInfo("INQUIRY", inquiry.getId());
-                fileRepository.save(file);
-
-                // InquiryAttachment 생성
-                InquiryAttachment attachment = InquiryAttachment.builder()
-                        .inquiry(inquiry)
-                        .fileId(file.getId())
-                        .fileType("ATTACHMENT")
-                        .displayOrder(displayOrder++)
-                        .build();
-
-                inquiryAttachmentRepository.save(attachment);
-
-                log.info("파일 연결 완료: fileId={}, inquiryId={}", file.getId(), inquiry.getId());
+                uuids.add(UUID.fromString(fileUuidStr));
             } catch (IllegalArgumentException e) {
                 log.error("잘못된 UUID 형식: {}", fileUuidStr);
                 throw new BusinessException(ErrorCode.INVALID_UUID_FORMAT);
             }
         }
 
+        // [N+1 최적화] UUID 목록으로 파일 일괄 조회
+        List<File> files = fileRepository.findByUuidInAndIsDeletedFalse(uuids);
+        if (files.size() != uuids.size()) {
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
+        }
+
+        // UUID 순서대로 파일 정렬 (입력 순서 유지)
+        Map<UUID, File> fileMap = files.stream()
+                .collect(Collectors.toMap(File::getUuid, f -> f));
+
+        List<File> filesToSave = new java.util.ArrayList<>();
+        List<InquiryAttachment> attachmentsToSave = new java.util.ArrayList<>();
+
+        int displayOrder = 0;
+        for (UUID uuid : uuids) {
+            File file = fileMap.get(uuid);
+            if (file == null) {
+                throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
+            }
+
+            // File의 entityType과 entityId 업데이트
+            file.updateEntityInfo("INQUIRY", inquiry.getId());
+            filesToSave.add(file);
+
+            // InquiryAttachment 생성
+            InquiryAttachment attachment = InquiryAttachment.builder()
+                    .inquiry(inquiry)
+                    .fileId(file.getId())
+                    .fileType("ATTACHMENT")
+                    .displayOrder(displayOrder++)
+                    .build();
+            attachmentsToSave.add(attachment);
+        }
+
+        // [N+1 최적화] 일괄 저장
+        fileRepository.saveAll(filesToSave);
+        inquiryAttachmentRepository.saveAll(attachmentsToSave);
+
         log.info("첨부파일 처리 완료: inquiryId={}, attachmentCount={}", inquiry.getId(), displayOrder);
     }
 
     /**
-     * 첨부파일 조회 (Private Method)
+     * 첨부파일 조회 (Private Method) [N+1 최적화]
      */
     private List<InquiryAttachmentResponse> getAttachments(Long inquiryId) {
         List<InquiryAttachment> attachments = inquiryAttachmentRepository
                 .findByInquiryIdAndIsDeletedFalseOrderByDisplayOrderAsc(inquiryId);
 
+        if (attachments.isEmpty()) {
+            return List.of();
+        }
+
+        // [N+1 최적화] 파일 ID 목록으로 일괄 조회
+        List<Long> fileIds = attachments.stream()
+                .map(InquiryAttachment::getFileId)
+                .toList();
+
+        Map<Long, File> fileMap = fileRepository.findByIdIn(fileIds).stream()
+                .filter(f -> !f.getIsDeleted())
+                .collect(Collectors.toMap(File::getId, f -> f));
+
         return attachments.stream()
                 .map(attachment -> {
-                    File file = fileRepository.findById(attachment.getFileId())
-                            .orElse(null);
-                    if (file != null && !file.getIsDeleted()) {
+                    File file = fileMap.get(attachment.getFileId());
+                    if (file != null) {
                         return InquiryAttachmentResponse.from(file, attachment);
                     }
                     return null;

@@ -34,4 +34,7 @@ public interface FilePricingRepository extends JpaRepository<FilePricing, Long> 
     long countByIsPaidTrue();
 
     long countByIsPaidTrueAndIsActiveTrue();
+
+    // [N+1 최적화] 여러 파일의 가격 정보 일괄 조회
+    List<FilePricing> findByFileIdIn(List<Long> fileIds);
 }

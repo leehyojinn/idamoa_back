@@ -27,7 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -105,7 +107,7 @@ public class CompanyReviewService {
     }
 
     /**
-     * 업체 리뷰 목록 조회
+     * 업체 리뷰 목록 조회 [N+1 최적화]
      */
     @Transactional(readOnly = true)
     public Page<CompanyReviewResponse> getCompanyReviews(UUID companyUuid, Pageable pageable) {
@@ -114,8 +116,65 @@ public class CompanyReviewService {
 
         Page<CompanyReview> reviews = reviewRepository.findByCompanyAndStatusOrderByCreatedAtDesc(company, "PUBLISHED", pageable);
 
-        // 트랜잭션 내에서 Response 변환 (Lazy Loading 문제 방지)
-        return reviews.map(this::toResponse);
+        // [N+1 최적화] Bulk 데이터 준비
+        List<CompanyReview> reviewList = reviews.getContent();
+        if (reviewList.isEmpty()) {
+            return reviews.map(this::toResponse);
+        }
+
+        List<Long> reviewIds = reviewList.stream().map(CompanyReview::getId).toList();
+
+        // 1. 리뷰 이미지 일괄 조회
+        List<CompanyReviewImage> allImages = reviewImageRepository.findByReviewIdIn(reviewIds);
+        Map<Long, List<CompanyReviewImage>> imageMap = allImages.stream()
+                .collect(Collectors.groupingBy(img -> img.getReview().getId()));
+
+        // 2. 파일 정보 일괄 조회
+        List<Long> fileIds = allImages.stream().map(CompanyReviewImage::getFileId).distinct().toList();
+        Map<Long, File> fileMap = Collections.emptyMap();
+        if (!fileIds.isEmpty()) {
+            List<File> files = fileRepository.findByIdIn(fileIds);
+            fileMap = files.stream().collect(Collectors.toMap(File::getId, f -> f));
+        }
+
+        // 3. 사용자 프로필 일괄 조회
+        List<Long> userIds = reviewList.stream()
+                .filter(r -> r.getUser() != null)
+                .map(r -> r.getUser().getId())
+                .distinct()
+                .toList();
+        Map<Long, UserProfile> profileMap = Collections.emptyMap();
+        if (!userIds.isEmpty()) {
+            List<UserProfile> profiles = userProfileRepository.findByUserIdIn(userIds);
+            profileMap = profiles.stream().collect(Collectors.toMap(up -> up.getUser().getId(), up -> up));
+        }
+
+        // final 변수로 람다에서 사용
+        final Map<Long, List<CompanyReviewImage>> finalImageMap = imageMap;
+        final Map<Long, File> finalFileMap = fileMap;
+        final Map<Long, UserProfile> finalProfileMap = profileMap;
+
+        return reviews.map(review -> {
+            // 이미지 DTO 생성
+            List<ReviewImageDto> imageDtos = finalImageMap.getOrDefault(review.getId(), Collections.emptyList())
+                    .stream()
+                    .map(img -> {
+                        File file = finalFileMap.get(img.getFileId());
+                        if (file == null) return null;
+                        return ReviewImageDto.from(img, file.getFileUrl(), file.getUuid());
+                    })
+                    .filter(dto -> dto != null)
+                    .toList();
+
+            // 사용자 이름
+            String userName = null;
+            if (review.getUser() != null) {
+                UserProfile profile = finalProfileMap.get(review.getUser().getId());
+                userName = profile != null ? profile.getName() : review.getUser().getEmail();
+            }
+
+            return CompanyReviewResponse.from(review, imageDtos, userName, company.getUuid(), company.getName());
+        });
     }
 
     /**

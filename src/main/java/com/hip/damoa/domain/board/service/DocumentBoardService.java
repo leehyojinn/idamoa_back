@@ -7,6 +7,7 @@ import com.hip.damoa.domain.board.model.BoardAttachment;
 import com.hip.damoa.domain.board.model.BoardFilterOption;
 import com.hip.damoa.domain.board.model.BoardType;
 import com.hip.damoa.domain.board.repository.BoardAttachmentRepository;
+import com.hip.damoa.domain.board.repository.BoardBookmarkRepository;
 import com.hip.damoa.domain.board.repository.BoardFilterOptionRepository;
 import com.hip.damoa.domain.board.repository.BoardRepository;
 import com.hip.damoa.domain.board.repository.BoardSpecifications;
@@ -29,9 +30,15 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Document 게시판 Service
@@ -47,6 +54,7 @@ public class DocumentBoardService {
     private final BoardBookmarkService boardBookmarkService;
     private final BoardFilterOptionRepository boardFilterOptionRepository;
     private final BoardAttachmentRepository boardAttachmentRepository;
+    private final BoardBookmarkRepository boardBookmarkRepository;
     private final BoardRepository boardRepository;
     private final FileRepository fileRepository;
     private final FileDownloadRepository fileDownloadRepository;
@@ -158,41 +166,47 @@ public class DocumentBoardService {
     }
 
     /**
-     * Document 게시글 목록 조회
+     * Document 게시글 목록 조회 [N+1 최적화]
      */
     @Transactional(readOnly = true)
     public Page<DocumentResponse> getDocumentList(Pageable pageable) {
         Page<Board> boards = boardService.getBoardsByType(BoardType.DOCUMENT.name(), pageable);
 
+        // [N+1 최적화] Bulk 데이터 준비
+        DocumentBulkData bulkData = prepareBulkData(boards.getContent(), null);
+
         return boards.map(board -> {
-            List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
-            List<FileInfo> files = getDocumentFileInfos(board);
-            FileInfo thumbnail = getThumbnailFileInfo(board);
-            long downloadCount = getTotalDownloadCount(board);
-            String userName = getUserName(board);
+            List<BoardFilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
+            List<FileInfo> files = getFileInfosFromMap(board, bulkData.attachmentMap(), bulkData.fileMap(), bulkData.pricingMap());
+            FileInfo thumbnail = getThumbnailFromMap(board, bulkData.attachmentMap(), bulkData.fileMap());
+            long downloadCount = getDownloadCountFromMap(board, bulkData.attachmentMap(), bulkData.downloadCountMap());
+            String userName = getUserNameFromMap(board, bulkData.profileMap());
             return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount, userName);
         });
     }
 
     /**
-     * Document 게시글 검색
+     * Document 게시글 검색 [N+1 최적화]
      */
     @Transactional(readOnly = true)
     public Page<DocumentResponse> searchDocument(String keyword, Pageable pageable) {
         Page<Board> boards = boardService.searchBoards(BoardType.DOCUMENT.name(), keyword, pageable);
 
+        // [N+1 최적화] Bulk 데이터 준비
+        DocumentBulkData bulkData = prepareBulkData(boards.getContent(), null);
+
         return boards.map(board -> {
-            List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
-            List<FileInfo> files = getDocumentFileInfos(board);
-            FileInfo thumbnail = getThumbnailFileInfo(board);
-            long downloadCount = getTotalDownloadCount(board);
-            String userName = getUserName(board);
+            List<BoardFilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
+            List<FileInfo> files = getFileInfosFromMap(board, bulkData.attachmentMap(), bulkData.fileMap(), bulkData.pricingMap());
+            FileInfo thumbnail = getThumbnailFromMap(board, bulkData.attachmentMap(), bulkData.fileMap());
+            long downloadCount = getDownloadCountFromMap(board, bulkData.attachmentMap(), bulkData.downloadCountMap());
+            String userName = getUserNameFromMap(board, bulkData.profileMap());
             return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount, userName);
         });
     }
 
     /**
-     * Document 게시글 검색 (통합)
+     * Document 게시글 검색 (통합) [N+1 최적화]
      *
      * @param keyword 검색 키워드 (nullable)
      * @param tags 태그 필터 (nullable)
@@ -230,35 +244,29 @@ public class DocumentBoardService {
         // Specification을 사용한 조회
         Page<Board> boards = boardRepository.findAll(spec, pageable);
 
-        // 북마크 여부 확인을 위한 userEmail 존재 여부
-        boolean checkBookmark = userEmail != null;
-
-        return boards.map(board -> {
-            List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
-            List<FileInfo> files = getDocumentFileInfos(board);
-            FileInfo thumbnail = getThumbnailFileInfo(board);
-            long downloadCount = getTotalDownloadCount(board);
-
-            boolean isBookmarked = checkBookmark && boardBookmarkService.isBookmarked(board.getUuid(), userEmail);
-
-            // hasDownloaded 확인
-            boolean hasDownloaded = false;
-            if (userEmail != null) {
-                User user = userRepository.findByEmail(userEmail).orElse(null);
-                if (user != null) {
-                    @SuppressWarnings("unchecked")
-                    List<String> fileUuids = (List<String>) board.getTypeData().get("files");
-                    if (fileUuids != null && !fileUuids.isEmpty()) {
-                        String firstFileUuid = fileUuids.get(0);
-                        File file = fileRepository.findByUuid(UUID.fromString(firstFileUuid)).orElse(null);
-                        if (file != null) {
-                            hasDownloaded = fileDownloadRepository.existsByFileIdAndUserId(file.getId(), user.getId());
-                        }
-                    }
-                }
+        // [N+1 최적화] 사용자 ID 조회 (한 번만)
+        Long userId = null;
+        if (userEmail != null) {
+            User user = userRepository.findByEmail(userEmail).orElse(null);
+            if (user != null) {
+                userId = user.getId();
             }
+        }
 
-            String userName = getUserName(board);
+        // [N+1 최적화] Bulk 데이터 준비
+        DocumentBulkData bulkData = prepareBulkData(boards.getContent(), userId);
+
+        final Long finalUserId = userId;
+        return boards.map(board -> {
+            List<BoardFilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
+            List<FileInfo> files = getFileInfosFromMap(board, bulkData.attachmentMap(), bulkData.fileMap(), bulkData.pricingMap());
+            FileInfo thumbnail = getThumbnailFromMap(board, bulkData.attachmentMap(), bulkData.fileMap());
+            long downloadCount = getDownloadCountFromMap(board, bulkData.attachmentMap(), bulkData.downloadCountMap());
+
+            boolean isBookmarked = finalUserId != null && bulkData.bookmarkedIds().contains(board.getId());
+            boolean hasDownloaded = hasDownloadedFirstFile(board, bulkData.attachmentMap(), bulkData.downloadedFileIds());
+
+            String userName = getUserNameFromMap(board, bulkData.profileMap());
             return DocumentResponse.from(board, filterOptions, files, thumbnail, isBookmarked, hasDownloaded, downloadCount, userName);
         });
     }
@@ -353,46 +361,56 @@ public class DocumentBoardService {
     }
 
     /**
-     * Featured Document 목록
+     * Featured Document 목록 [N+1 최적화]
      */
     @Transactional(readOnly = true)
     public List<DocumentResponse> getFeaturedDocuments() {
         List<Board> boards = boardService.getFeaturedBoards();
 
-        return boards.stream()
+        // Document 타입만 필터링
+        List<Board> documentBoards = boards.stream()
                 .filter(board -> BoardType.DOCUMENT.name().equals(board.getBoardType()))
+                .toList();
+
+        // [N+1 최적화] Bulk 데이터 준비
+        DocumentBulkData bulkData = prepareBulkData(documentBoards, null);
+
+        return documentBoards.stream()
                 .map(board -> {
-                    List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
-                    List<FileInfo> files = getDocumentFileInfos(board);
-                    FileInfo thumbnail = getThumbnailFileInfo(board);
-                    long downloadCount = getTotalDownloadCount(board);
-                    String userName = getUserName(board);
+                    List<BoardFilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
+                    List<FileInfo> files = getFileInfosFromMap(board, bulkData.attachmentMap(), bulkData.fileMap(), bulkData.pricingMap());
+                    FileInfo thumbnail = getThumbnailFromMap(board, bulkData.attachmentMap(), bulkData.fileMap());
+                    long downloadCount = getDownloadCountFromMap(board, bulkData.attachmentMap(), bulkData.downloadCountMap());
+                    String userName = getUserNameFromMap(board, bulkData.profileMap());
                     return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount, userName);
                 })
                 .toList();
     }
 
     /**
-     * Pinned Document 목록
+     * Pinned Document 목록 [N+1 최적화]
      */
     @Transactional(readOnly = true)
     public List<DocumentResponse> getPinnedDocuments() {
         List<Board> boards = boardService.getPinnedBoards(BoardType.DOCUMENT.name());
 
+        // [N+1 최적화] Bulk 데이터 준비
+        DocumentBulkData bulkData = prepareBulkData(boards, null);
+
         return boards.stream()
                 .map(board -> {
-                    List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
-                    List<FileInfo> files = getDocumentFileInfos(board);
-                    FileInfo thumbnail = getThumbnailFileInfo(board);
-                    long downloadCount = getTotalDownloadCount(board);
-                    String userName = getUserName(board);
+                    List<BoardFilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
+                    List<FileInfo> files = getFileInfosFromMap(board, bulkData.attachmentMap(), bulkData.fileMap(), bulkData.pricingMap());
+                    FileInfo thumbnail = getThumbnailFromMap(board, bulkData.attachmentMap(), bulkData.fileMap());
+                    long downloadCount = getDownloadCountFromMap(board, bulkData.attachmentMap(), bulkData.downloadCountMap());
+                    String userName = getUserNameFromMap(board, bulkData.profileMap());
                     return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount, userName);
                 })
                 .toList();
     }
 
     /**
-     * 내가 작성한 Document 목록 (마이페이지)
+     * 내가 작성한 Document 목록 (마이페이지) [N+1 최적화]
      */
     @Transactional(readOnly = true)
     public Page<DocumentResponse> getMyDocuments(String userEmail, Pageable pageable) {
@@ -410,30 +428,27 @@ public class DocumentBoardService {
 
         Page<Board> boards = boardRepository.findAll(spec, pageable);
 
+        // [N+1 최적화] 사용자 ID 조회 (한 번만)
+        Long userId = null;
+        User user = userRepository.findByEmail(userEmail).orElse(null);
+        if (user != null) {
+            userId = user.getId();
+        }
+
+        // [N+1 최적화] Bulk 데이터 준비
+        DocumentBulkData bulkData = prepareBulkData(boards.getContent(), userId);
+
+        final Long finalUserId = userId;
         return boards.map(board -> {
-            List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
-            List<FileInfo> files = getDocumentFileInfos(board);
-            FileInfo thumbnail = getThumbnailFileInfo(board);
-            long downloadCount = getTotalDownloadCount(board);
+            List<BoardFilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
+            List<FileInfo> files = getFileInfosFromMap(board, bulkData.attachmentMap(), bulkData.fileMap(), bulkData.pricingMap());
+            FileInfo thumbnail = getThumbnailFromMap(board, bulkData.attachmentMap(), bulkData.fileMap());
+            long downloadCount = getDownloadCountFromMap(board, bulkData.attachmentMap(), bulkData.downloadCountMap());
 
-            boolean isBookmarked = boardBookmarkService.isBookmarked(board.getUuid(), userEmail);
+            boolean isBookmarked = finalUserId != null && bulkData.bookmarkedIds().contains(board.getId());
+            boolean hasDownloaded = hasDownloadedFirstFile(board, bulkData.attachmentMap(), bulkData.downloadedFileIds());
 
-            // hasDownloaded 확인
-            boolean hasDownloaded = false;
-            User user = userRepository.findByEmail(userEmail).orElse(null);
-            if (user != null) {
-                @SuppressWarnings("unchecked")
-                List<String> fileUuids = (List<String>) board.getTypeData().get("files");
-                if (fileUuids != null && !fileUuids.isEmpty()) {
-                    String firstFileUuid = fileUuids.get(0);
-                    File file = fileRepository.findByUuid(UUID.fromString(firstFileUuid)).orElse(null);
-                    if (file != null) {
-                        hasDownloaded = fileDownloadRepository.existsByFileIdAndUserId(file.getId(), user.getId());
-                    }
-                }
-            }
-
-            String userName = getUserName(board);
+            String userName = getUserNameFromMap(board, bulkData.profileMap());
             return DocumentResponse.from(board, filterOptions, files, thumbnail, isBookmarked, hasDownloaded, downloadCount, userName);
         });
     }
@@ -652,5 +667,187 @@ public class DocumentBoardService {
         }
 
         log.info("파일 가격 정보 처리 완료");
+    }
+
+    // ==================== [N+1 최적화] 헬퍼 메서드들 ====================
+
+    /**
+     * Board 목록에 대한 bulk 데이터 준비 (N+1 최적화)
+     */
+    private DocumentBulkData prepareBulkData(List<Board> boards, Long userId) {
+        if (boards.isEmpty()) {
+            return new DocumentBulkData(
+                    Collections.emptyMap(),
+                    Collections.emptyMap(),
+                    Collections.emptyMap(),
+                    Collections.emptyMap(),
+                    Collections.emptyMap(),
+                    Collections.emptyMap(),
+                    Collections.emptySet(),
+                    Collections.emptySet()
+            );
+        }
+
+        // 1. Board ID 목록
+        List<Long> boardIds = boards.stream().map(Board::getId).toList();
+
+        // 2. 필터 옵션 일괄 조회
+        List<BoardFilterOption> allFilterOptions = boardFilterOptionRepository.findByBoardIdIn(boardIds);
+        Map<Long, List<BoardFilterOption>> filterOptionMap = allFilterOptions.stream()
+                .collect(Collectors.groupingBy(bfo -> bfo.getBoard().getId()));
+
+        // 3. 첨부파일 일괄 조회 (DOCUMENT + THUMBNAIL)
+        List<BoardAttachment> allAttachments = boardAttachmentRepository.findByBoardIdIn(boardIds);
+        Map<Long, List<BoardAttachment>> attachmentMap = allAttachments.stream()
+                .collect(Collectors.groupingBy(att -> att.getBoard().getId()));
+
+        // 4. 파일 ID 수집 및 파일 일괄 조회
+        List<Long> fileIds = allAttachments.stream()
+                .map(BoardAttachment::getFileId)
+                .distinct()
+                .toList();
+
+        Map<Long, File> fileMap = Collections.emptyMap();
+        Map<Long, FilePricing> pricingMap = Collections.emptyMap();
+        Map<Long, Long> downloadCountMap = Collections.emptyMap();
+        Set<Long> downloadedFileIds = Collections.emptySet();
+
+        if (!fileIds.isEmpty()) {
+            List<File> files = fileRepository.findByIdIn(fileIds);
+            fileMap = files.stream().collect(Collectors.toMap(File::getId, f -> f));
+
+            // 5. 파일 가격 정보 일괄 조회
+            List<FilePricing> pricings = filePricingRepository.findByFileIdIn(fileIds);
+            pricingMap = pricings.stream().collect(Collectors.toMap(fp -> fp.getFile().getId(), fp -> fp));
+
+            // 6. 다운로드 횟수 일괄 조회
+            List<Object[]> downloadCounts = fileDownloadRepository.countByFileIdIn(fileIds);
+            downloadCountMap = new HashMap<>();
+            for (Object[] row : downloadCounts) {
+                Long fileId = (Long) row[0];
+                Long count = (Long) row[1];
+                downloadCountMap.put(fileId, count);
+            }
+
+            // 7. 사용자의 다운로드 여부 일괄 조회
+            if (userId != null) {
+                List<Long> downloadedIds = fileDownloadRepository.findDownloadedFileIds(fileIds, userId);
+                downloadedFileIds = new HashSet<>(downloadedIds);
+            }
+        }
+
+        // 8. 사용자 프로필 일괄 조회
+        List<Long> userIds = boards.stream()
+                .filter(b -> b.getUser() != null)
+                .map(b -> b.getUser().getId())
+                .distinct()
+                .toList();
+
+        Map<Long, com.hip.damoa.domain.user.model.UserProfile> profileMap = Collections.emptyMap();
+        if (!userIds.isEmpty()) {
+            List<com.hip.damoa.domain.user.model.UserProfile> profiles = userProfileRepository.findByUserIdIn(userIds);
+            profileMap = profiles.stream().collect(Collectors.toMap(up -> up.getUser().getId(), up -> up));
+        }
+
+        // 9. 북마크 여부 일괄 조회
+        Set<Long> bookmarkedIds = Collections.emptySet();
+        if (userId != null) {
+            List<Long> bookmarkedBoardIds = boardBookmarkRepository.findBookmarkedBoardIds(boardIds, userId);
+            bookmarkedIds = new HashSet<>(bookmarkedBoardIds);
+        }
+
+        return new DocumentBulkData(filterOptionMap, attachmentMap, fileMap, pricingMap,
+                downloadCountMap, profileMap, bookmarkedIds, downloadedFileIds);
+    }
+
+    /**
+     * Bulk 데이터 홀더 클래스
+     */
+    private record DocumentBulkData(
+            Map<Long, List<BoardFilterOption>> filterOptionMap,
+            Map<Long, List<BoardAttachment>> attachmentMap,
+            Map<Long, File> fileMap,
+            Map<Long, FilePricing> pricingMap,
+            Map<Long, Long> downloadCountMap,
+            Map<Long, com.hip.damoa.domain.user.model.UserProfile> profileMap,
+            Set<Long> bookmarkedIds,
+            Set<Long> downloadedFileIds
+    ) {}
+
+    /**
+     * Map에서 Board의 FileInfo 목록 추출 (Document 타입)
+     */
+    private List<FileInfo> getFileInfosFromMap(Board board,
+                                                Map<Long, List<BoardAttachment>> attachmentMap,
+                                                Map<Long, File> fileMap,
+                                                Map<Long, FilePricing> pricingMap) {
+        List<BoardAttachment> attachments = attachmentMap.getOrDefault(board.getId(), Collections.emptyList());
+        return attachments.stream()
+                .filter(att -> att.getAttachmentType() == BoardAttachment.AttachmentType.DOCUMENT)
+                .map(att -> {
+                    File file = fileMap.get(att.getFileId());
+                    if (file == null) return null;
+                    FilePricing pricing = pricingMap.get(file.getId());
+                    Boolean isPaid = pricing != null && Boolean.TRUE.equals(pricing.getIsPaid());
+                    Integer price = pricing != null ? pricing.getPrice() : 0;
+                    return FileInfo.from(file, isPaid, price);
+                })
+                .filter(info -> info != null)
+                .toList();
+    }
+
+    /**
+     * Map에서 Board의 썸네일 FileInfo 추출
+     */
+    private FileInfo getThumbnailFromMap(Board board,
+                                          Map<Long, List<BoardAttachment>> attachmentMap,
+                                          Map<Long, File> fileMap) {
+        List<BoardAttachment> attachments = attachmentMap.getOrDefault(board.getId(), Collections.emptyList());
+        return attachments.stream()
+                .filter(att -> att.getAttachmentType() == BoardAttachment.AttachmentType.THUMBNAIL)
+                .findFirst()
+                .map(att -> {
+                    File file = fileMap.get(att.getFileId());
+                    return file != null ? FileInfo.from(file) : null;
+                })
+                .orElse(null);
+    }
+
+    /**
+     * Map에서 Board의 다운로드 횟수 추출
+     */
+    private long getDownloadCountFromMap(Board board,
+                                          Map<Long, List<BoardAttachment>> attachmentMap,
+                                          Map<Long, Long> downloadCountMap) {
+        List<BoardAttachment> attachments = attachmentMap.getOrDefault(board.getId(), Collections.emptyList());
+        return attachments.stream()
+                .filter(att -> att.getAttachmentType() == BoardAttachment.AttachmentType.DOCUMENT)
+                .mapToLong(att -> downloadCountMap.getOrDefault(att.getFileId(), 0L))
+                .sum();
+    }
+
+    /**
+     * Map에서 사용자 이름 추출
+     */
+    private String getUserNameFromMap(Board board, Map<Long, com.hip.damoa.domain.user.model.UserProfile> profileMap) {
+        if (board.getUser() == null) {
+            return null;
+        }
+        com.hip.damoa.domain.user.model.UserProfile profile = profileMap.get(board.getUser().getId());
+        return profile != null ? profile.getName() : board.getUser().getEmail();
+    }
+
+    /**
+     * 사용자가 첫 번째 파일을 다운로드했는지 확인
+     */
+    private boolean hasDownloadedFirstFile(Board board,
+                                            Map<Long, List<BoardAttachment>> attachmentMap,
+                                            Set<Long> downloadedFileIds) {
+        List<BoardAttachment> attachments = attachmentMap.getOrDefault(board.getId(), Collections.emptyList());
+        return attachments.stream()
+                .filter(att -> att.getAttachmentType() == BoardAttachment.AttachmentType.DOCUMENT)
+                .findFirst()
+                .map(att -> downloadedFileIds.contains(att.getFileId()))
+                .orElse(false);
     }
 }

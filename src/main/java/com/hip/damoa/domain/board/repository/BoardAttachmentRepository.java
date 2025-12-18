@@ -47,4 +47,19 @@ public interface BoardAttachmentRepository extends JpaRepository<BoardAttachment
     @Query("UPDATE BoardAttachment ba SET ba.isDeleted = true, ba.deletedAt = CURRENT_TIMESTAMP " +
            "WHERE ba.board = :board AND ba.isDeleted = false")
     void softDeleteByBoard(@Param("board") Board board);
+
+    // [N+1 최적화] Board ID 목록으로 첨부파일 일괄 조회
+    @Query("SELECT ba FROM BoardAttachment ba " +
+           "WHERE ba.board.id IN :boardIds AND ba.isDeleted = false " +
+           "ORDER BY ba.board.id, ba.displayOrder")
+    List<BoardAttachment> findByBoardIdIn(@Param("boardIds") List<Long> boardIds);
+
+    // [N+1 최적화] Board ID 목록 + 타입으로 첨부파일 일괄 조회
+    @Query("SELECT ba FROM BoardAttachment ba " +
+           "WHERE ba.board.id IN :boardIds " +
+           "AND ba.attachmentType = :type " +
+           "AND ba.isDeleted = false " +
+           "ORDER BY ba.board.id, ba.displayOrder")
+    List<BoardAttachment> findByBoardIdInAndType(@Param("boardIds") List<Long> boardIds,
+                                                  @Param("type") BoardAttachment.AttachmentType type);
 }

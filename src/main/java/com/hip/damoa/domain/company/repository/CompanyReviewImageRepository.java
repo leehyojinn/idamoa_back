@@ -43,4 +43,13 @@ public interface CompanyReviewImageRepository extends JpaRepository<CompanyRevie
      * 리뷰의 모든 이미지 삭제
      */
     void deleteByReview(CompanyReview review);
+
+    /**
+     * [N+1 최적화] 여러 리뷰의 이미지 일괄 조회
+     */
+    @Query("SELECT cri FROM CompanyReviewImage cri " +
+           "WHERE cri.review.id IN :reviewIds " +
+           "AND cri.isDeleted = false " +
+           "ORDER BY cri.review.id, cri.displayOrder")
+    List<CompanyReviewImage> findByReviewIdIn(@Param("reviewIds") List<Long> reviewIds);
 }

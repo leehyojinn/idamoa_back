@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -183,7 +184,7 @@ public class NoticeBoardService {
     }
 
     /**
-     * 공지사항/이벤트 게시글 목록 조회
+     * 공지사항/이벤트 게시글 목록 조회 [N+1 최적화]
      */
     @Transactional(readOnly = true)
     public Page<NoticeBoardResponse> getNoticeList(String boardType, EventStatus eventStatus, Pageable pageable) {
@@ -197,10 +198,13 @@ public class NoticeBoardService {
             boards = boardService.getBoardsByType(boardType, pageable);
         }
 
+        // [N+1 최적화] Bulk 데이터 준비
+        NoticeBulkData bulkData = prepareBulkData(boards.getContent());
+
         // 각 게시글의 썸네일 로드
         Page<NoticeBoardResponse> responses = boards.map(board -> {
-            FileInfo thumbnail = loadThumbnail(board);
-            String userName = getUserName(board);
+            FileInfo thumbnail = getThumbnailFromMap(board, bulkData);
+            String userName = getUserNameFromMap(board, bulkData);
             return NoticeBoardResponse.from(board, thumbnail, userName);
         });
 
@@ -216,7 +220,7 @@ public class NoticeBoardService {
     }
 
     /**
-     * 공지사항/이벤트 게시글 검색
+     * 공지사항/이벤트 게시글 검색 [N+1 최적화]
      */
     @Transactional(readOnly = true)
     public Page<NoticeBoardResponse> searchNotice(String boardType, String keyword, EventStatus eventStatus, Pageable pageable) {
@@ -230,10 +234,13 @@ public class NoticeBoardService {
             boards = boardService.searchBoards(boardType, keyword, pageable);
         }
 
+        // [N+1 최적화] Bulk 데이터 준비
+        NoticeBulkData bulkData = prepareBulkData(boards.getContent());
+
         // 각 게시글의 썸네일 로드
         Page<NoticeBoardResponse> responses = boards.map(board -> {
-            FileInfo thumbnail = loadThumbnail(board);
-            String userName = getUserName(board);
+            FileInfo thumbnail = getThumbnailFromMap(board, bulkData);
+            String userName = getUserNameFromMap(board, bulkData);
             return NoticeBoardResponse.from(board, thumbnail, userName);
         });
 
@@ -461,7 +468,7 @@ public class NoticeBoardService {
     }
 
     /**
-     * Pinned 게시글 목록
+     * Pinned 게시글 목록 [N+1 최적화]
      */
     @Transactional(readOnly = true)
     public List<NoticeBoardResponse> getPinnedNotices(String boardType) {
@@ -475,11 +482,14 @@ public class NoticeBoardService {
             boards = boardService.getPinnedBoards(boardType);
         }
 
+        // [N+1 최적화] Bulk 데이터 준비
+        NoticeBulkData bulkData = prepareBulkData(boards);
+
         // 각 게시글의 썸네일 로드
         return boards.stream()
                 .map(board -> {
-                    FileInfo thumbnail = loadThumbnail(board);
-                    String userName = getUserName(board);
+                    FileInfo thumbnail = getThumbnailFromMap(board, bulkData);
+                    String userName = getUserNameFromMap(board, bulkData);
                     return NoticeBoardResponse.from(board, thumbnail, userName);
                 })
                 .toList();
@@ -503,5 +513,92 @@ public class NoticeBoardService {
             log.warn("User not found for board: boardId={}", board.getId());
             return "알 수 없음";
         }
+    }
+
+    // ==================== [N+1 최적화] 헬퍼 메서드들 ====================
+
+    /**
+     * Board 목록에 대한 bulk 데이터 준비 (N+1 최적화)
+     */
+    private NoticeBulkData prepareBulkData(List<Board> boards) {
+        if (boards.isEmpty()) {
+            return new NoticeBulkData(
+                    Collections.emptyMap(),
+                    Collections.emptyMap(),
+                    Collections.emptyMap()
+            );
+        }
+
+        // 1. Board ID 목록
+        List<Long> boardIds = boards.stream().map(Board::getId).toList();
+
+        // 2. 첨부파일 일괄 조회 (THUMBNAIL 타입만)
+        List<BoardAttachment> allAttachments = boardAttachmentRepository.findByBoardIdInAndType(
+                boardIds, BoardAttachment.AttachmentType.THUMBNAIL);
+        Map<Long, List<BoardAttachment>> attachmentMap = allAttachments.stream()
+                .collect(Collectors.groupingBy(att -> att.getBoard().getId()));
+
+        // 3. 파일 ID 수집 및 파일 일괄 조회
+        List<Long> fileIds = allAttachments.stream()
+                .map(BoardAttachment::getFileId)
+                .distinct()
+                .toList();
+
+        Map<Long, File> fileMap = Collections.emptyMap();
+        if (!fileIds.isEmpty()) {
+            List<File> files = fileRepository.findByIdIn(fileIds);
+            fileMap = files.stream()
+                    .filter(f -> !f.getIsDeleted())
+                    .collect(Collectors.toMap(File::getId, f -> f));
+        }
+
+        // 4. 사용자 프로필 일괄 조회
+        List<Long> userIds = boards.stream()
+                .filter(b -> b.getUser() != null)
+                .map(b -> b.getUser().getId())
+                .distinct()
+                .toList();
+
+        Map<Long, com.hip.damoa.domain.user.model.UserProfile> profileMap = Collections.emptyMap();
+        if (!userIds.isEmpty()) {
+            List<com.hip.damoa.domain.user.model.UserProfile> profiles = userProfileRepository.findByUserIdIn(userIds);
+            profileMap = profiles.stream().collect(Collectors.toMap(up -> up.getUser().getId(), up -> up));
+        }
+
+        return new NoticeBulkData(attachmentMap, fileMap, profileMap);
+    }
+
+    /**
+     * Bulk 데이터 홀더 클래스
+     */
+    private record NoticeBulkData(
+            Map<Long, List<BoardAttachment>> attachmentMap,
+            Map<Long, File> fileMap,
+            Map<Long, com.hip.damoa.domain.user.model.UserProfile> profileMap
+    ) {}
+
+    /**
+     * Map에서 Board의 썸네일 FileInfo 추출
+     */
+    private FileInfo getThumbnailFromMap(Board board, NoticeBulkData bulkData) {
+        List<BoardAttachment> attachments = bulkData.attachmentMap().getOrDefault(board.getId(), Collections.emptyList());
+        return attachments.stream()
+                .findFirst()
+                .map(att -> {
+                    File file = bulkData.fileMap().get(att.getFileId());
+                    return file != null ? FileInfo.from(file) : null;
+                })
+                .orElse(null);
+    }
+
+    /**
+     * Map에서 사용자 이름 추출
+     */
+    private String getUserNameFromMap(Board board, NoticeBulkData bulkData) {
+        if (board.getUser() == null) {
+            return null;
+        }
+        com.hip.damoa.domain.user.model.UserProfile profile = bulkData.profileMap().get(board.getUser().getId());
+        return profile != null ? profile.getName() : board.getUser().getEmail();
     }
 }

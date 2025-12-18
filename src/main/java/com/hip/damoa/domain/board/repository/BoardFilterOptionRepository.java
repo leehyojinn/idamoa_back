@@ -34,6 +34,13 @@ public interface BoardFilterOptionRepository extends JpaRepository<BoardFilterOp
     // FilterOption 사용 횟수 카운트
     long countByFilterOptionId(Long filterOptionId);
 
+    // [N+1 최적화] Board ID 목록으로 FilterOption 일괄 조회
+    @Query("SELECT bfo FROM BoardFilterOption bfo " +
+           "JOIN FETCH bfo.filterOption fo " +
+           "JOIN FETCH fo.category " +
+           "WHERE bfo.board.id IN :boardIds")
+    List<BoardFilterOption> findByBoardIdIn(@Param("boardIds") List<Long> boardIds);
+
     // Board의 특정 카테고리 필터 조회
     @Query("SELECT bfo FROM BoardFilterOption bfo " +
            "JOIN bfo.filterOption fo " +

@@ -648,7 +648,7 @@ public class ProposalService {
     }
 
     /**
-     * EstimateProposal의 첨부파일을 AttachmentResponse 리스트로 변환
+     * EstimateProposal의 첨부파일을 AttachmentResponse 리스트로 변환 [N+1 최적화]
      * (File ID → URL 변환 + File 정보 포함)
      */
     public List<AttachmentResponse> getAttachmentResponses(EstimateProposal proposal) {
@@ -656,10 +656,17 @@ public class ProposalService {
             return new ArrayList<>();
         }
 
+        // [N+1 최적화] 파일 ID 목록으로 일괄 조회
+        List<Long> fileIds = proposal.getAttachments().stream()
+                .map(EstimateProposalAttachment::getFileId)
+                .toList();
+
+        Map<Long, File> fileMap = fileRepository.findByIdIn(fileIds).stream()
+                .collect(java.util.stream.Collectors.toMap(File::getId, f -> f));
+
         return proposal.getAttachments().stream()
                 .map(attachment -> {
-                    // File 엔티티 조회
-                    File file = fileRepository.findById(attachment.getFileId()).orElse(null);
+                    File file = fileMap.get(attachment.getFileId());
                     if (file == null) {
                         return null;
                     }
@@ -673,7 +680,7 @@ public class ProposalService {
                         file.getFileSize()
                     );
                 })
-                .filter(response -> response != null)  // null 제거
+                .filter(response -> response != null)
                 .toList();
     }
 
