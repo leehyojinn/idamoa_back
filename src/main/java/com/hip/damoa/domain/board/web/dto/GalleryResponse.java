@@ -2,6 +2,7 @@ package com.hip.damoa.domain.board.web.dto;
 
 import com.hip.damoa.domain.board.model.Board;
 import com.hip.damoa.domain.board.model.BoardFilterOption;
+import com.hip.damoa.domain.board.model.GalleryPromotion;
 import com.hip.damoa.domain.filter.model.FilterOption;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -11,6 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -123,6 +125,67 @@ public class GalleryResponse {
     // 리뷰 목록 (상세 조회용)
     @Schema(description = "회사 리뷰 목록 (상세 조회 시에만 제공)")
     private List<ReviewSummary> reviews;
+
+    // 우대 정보
+    @Schema(description = "우대 등록 정보 (활성 우대가 있는 경우)")
+    private PromotionInfo promotion;
+
+    /**
+     * 우대 등록 정보
+     */
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(description = "우대 등록 정보")
+    public static class PromotionInfo {
+        @Schema(description = "우대 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
+        private UUID promotionUuid;
+
+        @Schema(description = "우대 타입", example = "PREMIUM", allowableValues = {"STANDARD", "PREMIUM"})
+        private String promotionType;
+
+        @Schema(description = "월 결제 금액", example = "100000")
+        private BigDecimal monthlyPrice;
+
+        @Schema(description = "가중치 (노출 확률)", example = "3")
+        private Integer weight;
+
+        @Schema(description = "시작일", example = "2025-01-01")
+        private LocalDate startDate;
+
+        @Schema(description = "종료일", example = "2025-01-31")
+        private LocalDate endDate;
+
+        @Schema(description = "남은 일수", example = "15")
+        private Integer remainingDays;
+
+        @Schema(description = "자동 갱신 여부", example = "true")
+        private Boolean autoRenew;
+
+        @Schema(description = "상태", example = "ACTIVE", allowableValues = {"ACTIVE", "EXPIRED", "CANCELLED"})
+        private String status;
+
+        /**
+         * GalleryPromotion Entity to DTO
+         */
+        public static PromotionInfo from(GalleryPromotion promotion) {
+            if (promotion == null) {
+                return null;
+            }
+            return PromotionInfo.builder()
+                    .promotionUuid(promotion.getUuid())
+                    .promotionType(promotion.getPromotionType().name())
+                    .monthlyPrice(promotion.getMonthlyPrice())
+                    .weight(promotion.getWeight())
+                    .startDate(promotion.getStartDate())
+                    .endDate(promotion.getEndDate())
+                    .remainingDays(promotion.getRemainingDays())
+                    .autoRenew(promotion.getAutoRenew())
+                    .status(promotion.getStatus())
+                    .build();
+        }
+    }
 
     /**
      * 저작권 정보
@@ -267,7 +330,7 @@ public class GalleryResponse {
      * Entity to DTO (필터 옵션 없이)
      */
     public static GalleryResponse from(Board board) {
-        return from(board, List.of(), List.of(), false, false, getUserEmailSafe(board), null, null);
+        return from(board, List.of(), List.of(), false, false, getUserEmailSafe(board), null, null, null);
     }
 
     /**
@@ -276,16 +339,27 @@ public class GalleryResponse {
      */
     public static GalleryResponse from(Board board, List<BoardFilterOption> filterOptions,
                                        List<FileInfo> images, boolean isBookmarked, String userName) {
-        return from(board, filterOptions, images, isBookmarked, false, userName, null, null);
+        return from(board, filterOptions, images, isBookmarked, false, userName, null, null, null);
     }
 
     /**
-     * Entity to DTO (전체 정보 포함 - Company + Reviews + isLiked)
+     * Entity to DTO (전체 정보 포함 - Company + Reviews + isLiked) - 하위 호환용
      * 삭제된 User의 경우 안전하게 처리
      */
     public static GalleryResponse from(Board board, List<BoardFilterOption> filterOptions,
                                        List<FileInfo> images, boolean isBookmarked, boolean isLiked,
                                        String userName, CompanySummary company, List<ReviewSummary> reviews) {
+        return from(board, filterOptions, images, isBookmarked, isLiked, userName, company, reviews, null);
+    }
+
+    /**
+     * Entity to DTO (전체 정보 포함 - Company + Reviews + isLiked + Promotion)
+     * 삭제된 User의 경우 안전하게 처리
+     */
+    public static GalleryResponse from(Board board, List<BoardFilterOption> filterOptions,
+                                       List<FileInfo> images, boolean isBookmarked, boolean isLiked,
+                                       String userName, CompanySummary company, List<ReviewSummary> reviews,
+                                       GalleryPromotion promotion) {
         Map<String, Object> typeData = board.getTypeData();
 
         // typeData에서 링크 정보 추출 (relatedLink 또는 link 필드 확인)
@@ -379,6 +453,7 @@ public class GalleryResponse {
                 .isDeleted(board.getIsDeleted())
                 .company(company)
                 .reviews(reviews != null ? reviews : List.of())
+                .promotion(PromotionInfo.from(promotion))
                 .build();
     }
 }

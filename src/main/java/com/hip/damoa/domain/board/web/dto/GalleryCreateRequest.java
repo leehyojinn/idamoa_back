@@ -58,6 +58,15 @@ public class GalleryCreateRequest {
     @Schema(description = "비공개 여부", example = "false")
     private Boolean isPrivate;
 
+    // ===== 우대 등록 옵션 (선택형) =====
+
+    @Schema(description = "우대 타입 (선택형): STANDARD(일반우대 5만원/월), PREMIUM(강력우대 10만원/월)",
+            example = "STANDARD", allowableValues = {"STANDARD", "PREMIUM"})
+    private String promotionType;
+
+    @Schema(description = "자동 갱신 여부 (우대 선택 시)", example = "false")
+    private Boolean autoRenew;
+
     /**
      * 저작권 정보
      */

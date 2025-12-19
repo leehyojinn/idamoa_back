@@ -6,15 +6,19 @@ import com.hip.damoa.domain.board.model.Board;
 import com.hip.damoa.domain.board.model.BoardAttachment;
 import com.hip.damoa.domain.board.model.BoardFilterOption;
 import com.hip.damoa.domain.board.model.BoardType;
+import com.hip.damoa.domain.board.model.GalleryPromotion;
+import com.hip.damoa.domain.board.model.GalleryPromotionType;
 import com.hip.damoa.domain.board.repository.BoardAttachmentRepository;
 import com.hip.damoa.domain.board.repository.BoardBookmarkRepository;
 import com.hip.damoa.domain.board.repository.BoardFilterOptionRepository;
 import com.hip.damoa.domain.board.repository.BoardRepository;
 import com.hip.damoa.domain.board.repository.BoardSpecifications;
+import com.hip.damoa.domain.board.repository.GalleryPromotionRepository;
 import com.hip.damoa.domain.board.web.dto.FileInfo;
 import com.hip.damoa.domain.board.web.dto.GalleryCreateRequest;
 import com.hip.damoa.domain.board.web.dto.GalleryResponse;
 import com.hip.damoa.domain.board.web.dto.GalleryUpdateRequest;
+import com.hip.damoa.domain.payment.service.CreditService;
 import com.hip.damoa.domain.company.model.Company;
 import com.hip.damoa.domain.company.model.CompanyReview;
 import com.hip.damoa.domain.company.model.CompanyReviewImage;
@@ -58,17 +62,37 @@ public class GalleryBoardService {
     private final CompanyReviewRepository companyReviewRepository;
     private final BoardLikeRepository boardLikeRepository;
     private final com.hip.damoa.domain.user.repository.UserRepository userRepository;
+    private final GalleryPromotionService galleryPromotionService;
+    private final GalleryPromotionRepository galleryPromotionRepository;
+    private final CreditService creditService;
+    private final GalleryPromotionSettingsService promotionSettingsService;
 
     /**
      * Gallery 게시글 생성
      */
     @Transactional
     public GalleryResponse createGallery(String userEmail, GalleryCreateRequest request) {
-        log.info("Gallery 게시글 생성 시작: userEmail={}, title={}", userEmail, request.getTitle());
+        log.info("Gallery 게시글 생성 시작: userEmail={}, title={}, promotionType={}",
+                userEmail, request.getTitle(), request.getPromotionType());
 
         // 이미지 검증
         if (request.getImageUuids() == null || request.getImageUuids().isEmpty()) {
             throw new BusinessException(ErrorCode.GALLERY_IMAGE_REQUIRED);
+        }
+
+        // 우대 신청 시 크레딧 잔액 먼저 확인
+        GalleryPromotionType promotionType = null;
+        if (request.getPromotionType() != null && !request.getPromotionType().isBlank()) {
+            try {
+                promotionType = GalleryPromotionType.valueOf(request.getPromotionType());
+            } catch (IllegalArgumentException e) {
+                throw new BusinessException(ErrorCode.INVALID_PROMOTION_TYPE);
+            }
+            // 동적 가격 조회
+            var dynamicPrice = promotionSettingsService.getPriceByType(promotionType);
+            if (!creditService.hasEnoughCredits(userEmail, dynamicPrice)) {
+                throw new BusinessException(ErrorCode.INSUFFICIENT_CREDITS);
+            }
         }
 
         // Board 생성
@@ -93,6 +117,16 @@ public class GalleryBoardService {
         // 이미지 첨부파일 생성
         processGalleryImages(board, request.getImageUuids());
 
+        // 우대 등록 처리 (있는 경우)
+        GalleryPromotion promotion = null;
+        if (promotionType != null) {
+            User user = userRepository.findByEmail(userEmail)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+            promotion = galleryPromotionService.createPromotion(
+                    user, board, promotionType, request.getAutoRenew());
+            log.info("Gallery 우대 등록 완료: boardUuid={}, promotionType={}", board.getUuid(), promotionType);
+        }
+
         log.info("Gallery 게시글 생성 완료: uuid={}", board.getUuid());
 
         // Response 생성
@@ -100,7 +134,7 @@ public class GalleryBoardService {
         List<FileInfo> images = getFileInfos(board);
         String userName = getUserName(board);
         GalleryResponse.CompanySummary company = getCompanySummary(board);
-        return GalleryResponse.from(board, filterOptions, images, false, false, userName, company, null);
+        return GalleryResponse.from(board, filterOptions, images, false, false, userName, company, null, promotion);
     }
 
     /**
@@ -132,11 +166,16 @@ public class GalleryBoardService {
             isBookmarked = boardBookmarkService.isBookmarked(uuid, userEmail);
         }
 
+        // 우대 정보 조회
+        GalleryPromotion promotion = galleryPromotionRepository
+                .findByBoardAndStatusAndIsDeletedFalse(board, "ACTIVE")
+                .orElse(null);
+
         String userName = getUserName(board);
         GalleryResponse.CompanySummary company = getCompanySummary(board);
         List<GalleryResponse.ReviewSummary> reviews = getReviews(board);
         boolean liked = isLiked(board, userEmail);
-        return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, reviews);
+        return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, reviews, promotion);
     }
 
     /**
@@ -251,7 +290,10 @@ public class GalleryBoardService {
             }
         }
 
-        // 10. 최종 매핑 (추가 쿼리 없음 - 메모리에서 처리)
+        // 10. Promotion 일괄 조회 (IN 절 - 1번 쿼리)
+        Map<Long, GalleryPromotion> promotionsMap = galleryPromotionService.getActivePromotionsByBoardIds(boardIds);
+
+        // 11. 최종 매핑 (추가 쿼리 없음 - 메모리에서 처리)
         final Set<Long> finalBookmarked = bookmarkedBoardIds;
         final Set<Long> finalLiked = likedBoardIds;
 
@@ -262,8 +304,9 @@ public class GalleryBoardService {
             boolean liked = finalLiked.contains(board.getId());
             String userName = getUserNameFromMap(board, profilesMap);
             GalleryResponse.CompanySummary company = getCompanySummaryFromMap(board, companyMap, ratingsMap, reviewCountsMap);
+            GalleryPromotion promotion = promotionsMap.get(board.getId());
 
-            return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, null);
+            return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, null, promotion);
         });
     }
 
@@ -272,7 +315,8 @@ public class GalleryBoardService {
      */
     @Transactional
     public GalleryResponse updateGallery(UUID uuid, String userEmail, GalleryUpdateRequest request) {
-        log.info("Gallery 게시글 수정 시작: uuid={}, userEmail={}", uuid, userEmail);
+        log.info("Gallery 게시글 수정 시작: uuid={}, userEmail={}, promotionType={}, cancelPromotion={}",
+                uuid, userEmail, request.getPromotionType(), request.getCancelPromotion());
 
         Board board = boardService.updateBoard(
                 uuid,
@@ -282,6 +326,9 @@ public class GalleryBoardService {
                 request.toTypeData(),
                 request.getTags()
         );
+
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 필터 옵션 업데이트
         if (request.getFilterOptionIds() != null) {
@@ -305,14 +352,73 @@ public class GalleryBoardService {
             }
         }
 
+        // ===== 우대 관리 로직 =====
+        GalleryPromotion promotion = galleryPromotionRepository
+                .findByBoardAndStatusAndIsDeletedFalse(board, "ACTIVE")
+                .orElse(null);
+
+        // 1. 우대 취소 (cancelPromotion = true)
+        // 즉시 만료가 아니라 auto_renew를 false로 설정하여 현재 기간 유지, 다음 달부터 해제
+        if (Boolean.TRUE.equals(request.getCancelPromotion())) {
+            if (promotion != null) {
+                galleryPromotionService.cancelPromotion(user, board);
+                log.info("Gallery 우대 취소 완료: boardUuid={}", uuid);
+                // 취소 후 현재 promotion 다시 조회 (status는 여전히 ACTIVE, auto_renew만 false)
+                promotion = galleryPromotionRepository
+                        .findByBoardAndStatusAndIsDeletedFalse(board, "ACTIVE")
+                        .orElse(null);
+            }
+        }
+        // 2. 우대 등록/업그레이드 (promotionType 설정)
+        else if (request.getPromotionType() != null && !request.getPromotionType().isBlank()) {
+            GalleryPromotionType requestedType;
+            try {
+                requestedType = GalleryPromotionType.valueOf(request.getPromotionType());
+            } catch (IllegalArgumentException e) {
+                throw new BusinessException(ErrorCode.INVALID_PROMOTION_TYPE);
+            }
+
+            if (promotion == null) {
+                // 신규 우대 등록 - 동적 가격 조회
+                var dynamicPrice = promotionSettingsService.getPriceByType(requestedType);
+                if (!creditService.hasEnoughCredits(userEmail, dynamicPrice)) {
+                    throw new BusinessException(ErrorCode.INSUFFICIENT_CREDITS);
+                }
+                promotion = galleryPromotionService.addPromotionToExistingBoard(
+                        user, board, requestedType, request.getAutoRenew());
+                log.info("Gallery 신규 우대 등록 완료: boardUuid={}, type={}", uuid, requestedType);
+            } else {
+                // 기존 우대가 있는 경우 업그레이드 확인
+                if (promotion.getPromotionType() == GalleryPromotionType.STANDARD
+                        && requestedType == GalleryPromotionType.PREMIUM) {
+                    // STANDARD → PREMIUM 업그레이드
+                    promotion = galleryPromotionService.upgradePromotion(user, board);
+                    log.info("Gallery 우대 업그레이드 완료: boardUuid={}", uuid);
+                }
+                // 이미 PREMIUM이면 무시
+            }
+        }
+
+        // 3. 자동갱신 설정 변경 (autoRenew만 변경)
+        if (request.getAutoRenew() != null && promotion != null
+                && !Boolean.TRUE.equals(request.getCancelPromotion())) {
+            galleryPromotionService.updateAutoRenew(user, board, request.getAutoRenew());
+            // 변경된 promotion 다시 조회
+            promotion = galleryPromotionRepository
+                    .findByBoardAndStatusAndIsDeletedFalse(board, "ACTIVE")
+                    .orElse(null);
+            log.info("Gallery 자동갱신 설정 변경 완료: boardUuid={}, autoRenew={}", uuid, request.getAutoRenew());
+        }
+
         log.info("Gallery 게시글 수정 완료: uuid={}", uuid);
 
         List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
         List<FileInfo> images = getFileInfos(board);
         boolean isBookmarked = boardBookmarkService.isBookmarked(uuid, userEmail);
+        boolean liked = isLiked(board, userEmail);
         String userName = getUserName(board);
         GalleryResponse.CompanySummary company = getCompanySummary(board);
-        return GalleryResponse.from(board, filterOptions, images, isBookmarked, false, userName, company, null);
+        return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, null, promotion);
     }
 
     /**
@@ -322,6 +428,150 @@ public class GalleryBoardService {
     public void deleteGallery(UUID uuid, String userEmail) {
         log.info("Gallery 게시글 삭제: uuid={}, userEmail={}", uuid, userEmail);
         boardService.deleteBoard(uuid, userEmail);
+    }
+
+    /**
+     * 우대 갤러리 조회 (가중치 기반 랜덤) - N+1 최적화 버전
+     *
+     * @param filterOptionIds 필터 옵션 ID 목록 (null이면 전체 우대 갤러리에서 랜덤)
+     * @param count 조회할 개수 (기본 8개)
+     * @param userEmail 사용자 이메일 (북마크/좋아요 조회용, nullable)
+     * @return 가중치 기반 랜덤 선택된 우대 갤러리 목록
+     */
+    @Transactional(readOnly = true)
+    public List<GalleryResponse> getFeaturedPromotedGalleries(List<Long> filterOptionIds, int count, String userEmail) {
+        log.info("우대 갤러리 조회: filterOptionIds={}, count={}", filterOptionIds, count);
+
+        // 가중치 기반 랜덤 선택된 우대 정보 조회
+        List<GalleryPromotion> promotions = galleryPromotionService.getFeaturedPromotions(filterOptionIds, count);
+
+        if (promotions.isEmpty()) {
+            return List.of();
+        }
+
+        // Board 목록 추출
+        List<Board> boards = promotions.stream().map(GalleryPromotion::getBoard).toList();
+
+        // Bulk 조회
+        List<Long> boardIds = boards.stream().map(Board::getId).toList();
+        List<Long> userIds = boards.stream()
+                .map(b -> b.getUser() != null ? b.getUser().getId() : null)
+                .filter(Objects::nonNull).distinct().toList();
+
+        Map<Long, List<BoardFilterOption>> filterOptionsMap = boardFilterOptionRepository.findByBoardIdIn(boardIds)
+                .stream().collect(Collectors.groupingBy(bfo -> bfo.getBoard().getId()));
+        Map<Long, List<BoardAttachment>> attachmentsMap = boardAttachmentRepository.findByBoardIdIn(boardIds)
+                .stream().collect(Collectors.groupingBy(ba -> ba.getBoard().getId()));
+        List<Long> fileIds = attachmentsMap.values().stream().flatMap(List::stream)
+                .map(BoardAttachment::getFileId).distinct().toList();
+        Map<Long, File> filesMap = fileIds.isEmpty() ? Map.of() :
+                fileRepository.findByIdIn(fileIds).stream().collect(Collectors.toMap(File::getId, f -> f));
+        Map<Long, UserProfile> profilesMap = userIds.isEmpty() ? Map.of() :
+                userProfileRepository.findByUserIdIn(userIds).stream()
+                        .collect(Collectors.toMap(up -> up.getUser().getId(), up -> up, (a, b) -> a));
+        List<Company> companies = userIds.isEmpty() ? List.of() : companyRepository.findByOwnerIdIn(userIds);
+        Map<Long, Company> companyMap = companies.stream()
+                .collect(Collectors.toMap(c -> c.getOwner().getId(), c -> c, (a, b) -> a));
+        List<Long> companyIds = companies.stream().map(Company::getId).toList();
+        Map<Long, Double> ratingsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getAverageRatingsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Double) row[1]));
+        Map<Long, Long> reviewCountsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getReviewCountsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        // Promotion을 Board ID로 매핑
+        Map<Long, GalleryPromotion> promotionsMap = promotions.stream()
+                .collect(Collectors.toMap(p -> p.getBoard().getId(), p -> p));
+
+        // Bookmark/Like
+        Set<Long> bookmarkedBoardIds = Set.of();
+        Set<Long> likedBoardIds = Set.of();
+        if (userEmail != null) {
+            User user = userRepository.findByEmail(userEmail).orElse(null);
+            if (user != null) {
+                bookmarkedBoardIds = new HashSet<>(boardBookmarkRepository.findBookmarkedBoardIds(boardIds, user.getId()));
+                likedBoardIds = new HashSet<>(boardLikeRepository.findLikedBoardIds(boardIds, user.getId()));
+            }
+        }
+
+        final Set<Long> finalBookmarked = bookmarkedBoardIds;
+        final Set<Long> finalLiked = likedBoardIds;
+
+        return boards.stream()
+                .map(board -> {
+                    List<BoardFilterOption> filterOptions = filterOptionsMap.getOrDefault(board.getId(), List.of());
+                    List<FileInfo> images = getFileInfosFromMap(board, attachmentsMap, filesMap);
+                    String userName = getUserNameFromMap(board, profilesMap);
+                    GalleryResponse.CompanySummary company = getCompanySummaryFromMap(board, companyMap, ratingsMap, reviewCountsMap);
+                    GalleryPromotion promotion = promotionsMap.get(board.getId());
+                    boolean isBookmarked = finalBookmarked.contains(board.getId());
+                    boolean liked = finalLiked.contains(board.getId());
+                    return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, null, promotion);
+                })
+                .toList();
+    }
+
+    /**
+     * 내 우대 갤러리 목록 조회 - N+1 최적화 버전
+     */
+    @Transactional(readOnly = true)
+    public Page<GalleryResponse> getMyPromotedGalleries(String userEmail, Pageable pageable) {
+        log.info("내 우대 갤러리 목록 조회: userEmail={}", userEmail);
+
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Page<GalleryPromotion> promotions = galleryPromotionService.getMyPromotions(user, pageable);
+
+        if (promotions.isEmpty()) {
+            return promotions.map(p -> null);
+        }
+
+        // Board 목록 추출
+        List<Board> boards = promotions.getContent().stream().map(GalleryPromotion::getBoard).toList();
+        List<Long> boardIds = boards.stream().map(Board::getId).toList();
+        List<Long> userIds = boards.stream()
+                .map(b -> b.getUser() != null ? b.getUser().getId() : null)
+                .filter(Objects::nonNull).distinct().toList();
+
+        // Bulk 조회
+        Map<Long, List<BoardFilterOption>> filterOptionsMap = boardFilterOptionRepository.findByBoardIdIn(boardIds)
+                .stream().collect(Collectors.groupingBy(bfo -> bfo.getBoard().getId()));
+        Map<Long, List<BoardAttachment>> attachmentsMap = boardAttachmentRepository.findByBoardIdIn(boardIds)
+                .stream().collect(Collectors.groupingBy(ba -> ba.getBoard().getId()));
+        List<Long> fileIds = attachmentsMap.values().stream().flatMap(List::stream)
+                .map(BoardAttachment::getFileId).distinct().toList();
+        Map<Long, File> filesMap = fileIds.isEmpty() ? Map.of() :
+                fileRepository.findByIdIn(fileIds).stream().collect(Collectors.toMap(File::getId, f -> f));
+        Map<Long, UserProfile> profilesMap = userIds.isEmpty() ? Map.of() :
+                userProfileRepository.findByUserIdIn(userIds).stream()
+                        .collect(Collectors.toMap(up -> up.getUser().getId(), up -> up, (a, b) -> a));
+        List<Company> companies = userIds.isEmpty() ? List.of() : companyRepository.findByOwnerIdIn(userIds);
+        Map<Long, Company> companyMap = companies.stream()
+                .collect(Collectors.toMap(c -> c.getOwner().getId(), c -> c, (a, b) -> a));
+        List<Long> companyIds = companies.stream().map(Company::getId).toList();
+        Map<Long, Double> ratingsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getAverageRatingsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Double) row[1]));
+        Map<Long, Long> reviewCountsMap = companyIds.isEmpty() ? Map.of() :
+                companyReviewRepository.getReviewCountsRaw(companyIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        // Bookmark/Like
+        Set<Long> bookmarkedBoardIds = new HashSet<>(boardBookmarkRepository.findBookmarkedBoardIds(boardIds, user.getId()));
+        Set<Long> likedBoardIds = new HashSet<>(boardLikeRepository.findLikedBoardIds(boardIds, user.getId()));
+
+        return promotions.map(promotion -> {
+            Board board = promotion.getBoard();
+            List<BoardFilterOption> filterOptions = filterOptionsMap.getOrDefault(board.getId(), List.of());
+            List<FileInfo> images = getFileInfosFromMap(board, attachmentsMap, filesMap);
+            boolean isBookmarked = bookmarkedBoardIds.contains(board.getId());
+            boolean liked = likedBoardIds.contains(board.getId());
+            String userName = getUserNameFromMap(board, profilesMap);
+            GalleryResponse.CompanySummary company = getCompanySummaryFromMap(board, companyMap, ratingsMap, reviewCountsMap);
+            return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, null, promotion);
+        });
     }
 
     /**
@@ -365,6 +615,7 @@ public class GalleryBoardService {
         Map<Long, Long> reviewCountsMap = companyIds.isEmpty() ? Map.of() :
                 companyReviewRepository.getReviewCountsRaw(companyIds).stream()
                         .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+        Map<Long, GalleryPromotion> promotionsMap = galleryPromotionService.getActivePromotionsByBoardIds(boardIds);
 
         return galleryBoards.stream()
                 .map(board -> {
@@ -372,7 +623,8 @@ public class GalleryBoardService {
                     List<FileInfo> images = getFileInfosFromMap(board, attachmentsMap, filesMap);
                     String userName = getUserNameFromMap(board, profilesMap);
                     GalleryResponse.CompanySummary company = getCompanySummaryFromMap(board, companyMap, ratingsMap, reviewCountsMap);
-                    return GalleryResponse.from(board, filterOptions, images, false, false, userName, company, null);
+                    GalleryPromotion promotion = promotionsMap.get(board.getId());
+                    return GalleryResponse.from(board, filterOptions, images, false, false, userName, company, null, promotion);
                 })
                 .toList();
     }
@@ -415,6 +667,7 @@ public class GalleryBoardService {
         Map<Long, Long> reviewCountsMap = companyIds.isEmpty() ? Map.of() :
                 companyReviewRepository.getReviewCountsRaw(companyIds).stream()
                         .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+        Map<Long, GalleryPromotion> promotionsMap = galleryPromotionService.getActivePromotionsByBoardIds(boardIds);
 
         return boards.stream()
                 .map(board -> {
@@ -422,7 +675,8 @@ public class GalleryBoardService {
                     List<FileInfo> images = getFileInfosFromMap(board, attachmentsMap, filesMap);
                     String userName = getUserNameFromMap(board, profilesMap);
                     GalleryResponse.CompanySummary company = getCompanySummaryFromMap(board, companyMap, ratingsMap, reviewCountsMap);
-                    return GalleryResponse.from(board, filterOptions, images, false, false, userName, company, null);
+                    GalleryPromotion promotion = promotionsMap.get(board.getId());
+                    return GalleryResponse.from(board, filterOptions, images, false, false, userName, company, null, promotion);
                 })
                 .toList();
     }
@@ -471,6 +725,7 @@ public class GalleryBoardService {
         Map<Long, Long> reviewCountsMap = companyIds.isEmpty() ? Map.of() :
                 companyReviewRepository.getReviewCountsRaw(companyIds).stream()
                         .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+        Map<Long, GalleryPromotion> promotionsMap = galleryPromotionService.getActivePromotionsByBoardIds(boardIds);
 
         // Bookmark/Like
         User user = userRepository.findByEmail(userEmail).orElse(null);
@@ -486,7 +741,8 @@ public class GalleryBoardService {
             boolean liked = likedBoardIds.contains(board.getId());
             String userName = getUserNameFromMap(board, profilesMap);
             GalleryResponse.CompanySummary company = getCompanySummaryFromMap(board, companyMap, ratingsMap, reviewCountsMap);
-            return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, null);
+            GalleryPromotion promotion = promotionsMap.get(board.getId());
+            return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, company, null, promotion);
         });
     }
 
@@ -535,6 +791,7 @@ public class GalleryBoardService {
         Map<Long, Long> reviewCountsMap = companyIds.isEmpty() ? Map.of() :
                 companyReviewRepository.getReviewCountsRaw(companyIds).stream()
                         .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+        Map<Long, GalleryPromotion> promotionsMap = galleryPromotionService.getActivePromotionsByBoardIds(boardIds);
 
         // Bookmark/Like
         Set<Long> bookmarkedBoardIds = Set.of();
@@ -557,7 +814,8 @@ public class GalleryBoardService {
             boolean liked = finalLiked.contains(board.getId());
             String userName = getUserNameFromMap(board, profilesMap);
             GalleryResponse.CompanySummary companySummary = getCompanySummaryFromMap(board, companyMap, ratingsMap, reviewCountsMap);
-            return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, companySummary, null);
+            GalleryPromotion promotion = promotionsMap.get(board.getId());
+            return GalleryResponse.from(board, filterOptions, images, isBookmarked, liked, userName, companySummary, null, promotion);
         });
     }
 

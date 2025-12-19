@@ -96,6 +96,7 @@ public class SecurityConfig {
                                 "/api/payments/plans/*",  // View specific plan
                                 "/api/boards/*/search",  // Search boards (public)
                                 "/api/boards/*/popular",  // Popular boards (public)
+                                "/api/boards/gallery/featured",  // Featured promoted galleries (public)
                                 "/api/boards/gallery/company/*",  // Company gallery (portfolio) - public
                                 "/api/boards/*/*",  // View specific board (public)
                                 "/api/boards/*",  // View boards by type (public)

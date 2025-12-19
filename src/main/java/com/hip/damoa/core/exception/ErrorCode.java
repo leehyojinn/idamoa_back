@@ -279,7 +279,15 @@ public enum ErrorCode {
     INVALID_PARTNERSHIP_TYPE(HttpStatus.BAD_REQUEST, "PI001", "잘못된 문의 유형입니다"),
     PARTNERSHIP_INQUIRY_NOT_FOUND(HttpStatus.NOT_FOUND, "PI002", "제휴/광고 문의를 찾을 수 없습니다"),
     PARTNERSHIP_INQUIRY_CANNOT_BE_UPDATED(HttpStatus.BAD_REQUEST, "PI003", "처리 완료된 문의는 수정할 수 없습니다"),
-    INVALID_PARTNERSHIP_STATUS(HttpStatus.BAD_REQUEST, "PI004", "잘못된 문의 상태입니다");
+    INVALID_PARTNERSHIP_STATUS(HttpStatus.BAD_REQUEST, "PI004", "잘못된 문의 상태입니다"),
+
+    // Gallery Promotion
+    GALLERY_PROMOTION_ALREADY_EXISTS(HttpStatus.CONFLICT, "GP001", "이미 활성화된 우대 등록이 있습니다"),
+    GALLERY_PROMOTION_NOT_FOUND(HttpStatus.NOT_FOUND, "GP002", "우대 등록을 찾을 수 없습니다"),
+    GALLERY_PROMOTION_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "GP003", "활성 상태의 우대 등록이 아닙니다"),
+    GALLERY_ACCESS_DENIED(HttpStatus.FORBIDDEN, "GP004", "해당 갤러리에 대한 권한이 없습니다"),
+    ALREADY_PREMIUM_PROMOTION(HttpStatus.BAD_REQUEST, "GP005", "이미 강력우대 상태입니다"),
+    INVALID_PROMOTION_TYPE(HttpStatus.BAD_REQUEST, "GP006", "유효하지 않은 우대 타입입니다 (STANDARD, PREMIUM 중 선택)");
 
     private final HttpStatus status;
     private final String code;
