@@ -66,11 +66,19 @@ public class GalleryBoardController {
                     "- tags: 태그 배열\n" +
                     "- isPublished: 즉시 게시 여부 (기본: true)\n" +
                     "- isPrivate: 비공개 여부 (기본: false)\n\n" +
+                    "**우대등록 (선택):**\n" +
+                    "- promotionType: 우대 타입 (STANDARD: 일반우대, PREMIUM: 강력우대)\n" +
+                    "- autoRenew: 자동 갱신 여부 (기본: false)\n" +
+                    "- 우대 등록 시 크레딧에서 가격이 차감됩니다\n" +
+                    "- 가격은 관리자 설정에 따라 동적으로 변경될 수 있습니다\n" +
+                    "- 가격 조회: GET /api/boards/gallery/promotion-prices\n\n" +
                     "**권한:**\n" +
-                    "- 로그인 필수\n\n" +
+                    "- 로그인 필수\n" +
+                    "- 우대 등록 시 충분한 크레딧 필요\n\n" +
                     "**게시 후:**\n" +
                     "- 즉시 게시 시 publishedAt 자동 설정\n" +
-                    "- 비공개 설정 시 목록에 노출되지 않음")
+                    "- 비공개 설정 시 목록에 노출되지 않음\n" +
+                    "- 우대 등록 시 1개월간 메인 노출 우선권 부여")
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -186,9 +194,16 @@ public class GalleryBoardController {
                     "- 필터 옵션\n" +
                     "- 태그\n" +
                     "- 공개/비공개 설정\n\n" +
+                    "**우대등록 관리:**\n" +
+                    "- promotionType: 신규 우대 등록 또는 업그레이드 (STANDARD → PREMIUM)\n" +
+                    "- autoRenew: 자동 갱신 설정 변경\n" +
+                    "- cancelPromotion: true 설정 시 현재 기간 유지, 다음 달부터 우대 해제\n" +
+                    "- 신규/업그레이드 시 크레딧에서 가격 차감\n" +
+                    "- 업그레이드 시 차액만 결제 (남은 일수 일할 계산)\n\n" +
                     "**권한:**\n" +
                     "- 작성자 본인만 수정 가능\n" +
-                    "- 다른 사용자가 수정 시도 시 403 Forbidden\n\n" +
+                    "- 다른 사용자가 수정 시도 시 403 Forbidden\n" +
+                    "- 우대 등록/업그레이드 시 충분한 크레딧 필요\n\n" +
                     "**주의사항:**\n" +
                     "- 수정 시 updatedAt 자동 갱신\n" +
                     "- 이미지 변경 시 새로운 파일 업로드 후 UUID 전송")
