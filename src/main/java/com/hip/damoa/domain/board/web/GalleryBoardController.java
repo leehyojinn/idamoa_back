@@ -6,7 +6,9 @@ import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.board.service.BoardBookmarkService;
 import com.hip.damoa.domain.board.service.BoardLikeService;
 import com.hip.damoa.domain.board.service.GalleryBoardService;
+import com.hip.damoa.domain.board.service.GalleryPromotionSettingsService;
 import com.hip.damoa.domain.board.web.dto.GalleryCreateRequest;
+import com.hip.damoa.domain.board.web.dto.GalleryPromotionTypeSettingResponse;
 import com.hip.damoa.domain.board.web.dto.GalleryResponse;
 import com.hip.damoa.domain.board.web.dto.GalleryUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Gallery 게시판 Controller
@@ -42,6 +45,7 @@ public class GalleryBoardController {
     private final GalleryBoardService galleryBoardService;
     private final BoardBookmarkService boardBookmarkService;
     private final BoardLikeService boardLikeService;
+    private final GalleryPromotionSettingsService promotionSettingsService;
 
     @Operation(summary = "Gallery 게시글 생성",
             description = "새로운 사진 게시글을 생성합니다.\n\n" +
@@ -238,27 +242,76 @@ public class GalleryBoardController {
         return ApiResponse.success();
     }
 
-//    @Operation(summary = "Featured Gallery 목록", description = "추천 사진 게시글 목록을 조회합니다")
-//    @GetMapping("/featured")
-//    public ApiResponse<List<GalleryResponse>> getFeaturedGalleries() {
-//
-//        log.info("Featured Gallery 목록 조회 요청");
-//
-//        List<GalleryResponse> response = galleryBoardService.getFeaturedGalleries();
-//
-//        return ApiResponse.success(response);
-//    }
-//
-//    @Operation(summary = "Pinned Gallery 목록", description = "고정된 사진 게시글 목록을 조회합니다")
-//    @GetMapping("/pinned")
-//    public ApiResponse<List<GalleryResponse>> getPinnedGalleries() {
-//
-//        log.info("Pinned Gallery 목록 조회 요청");
-//
-//        List<GalleryResponse> response = galleryBoardService.getPinnedGalleries();
-//
-//        return ApiResponse.success(response);
-//    }
+    @Operation(summary = "우대 갤러리 조회 (Featured Promoted Galleries)",
+            description = "우대 등록된 사진 게시글을 가중치 기반 랜덤으로 조회합니다.\n\n" +
+                    "**가중치 기반 랜덤 선택:**\n" +
+                    "- 일반우대 (STANDARD): 가중치 1 (1배 확률)\n" +
+                    "- 강력우대 (PREMIUM): 가중치 3 (3배 확률)\n\n" +
+                    "**파라미터:**\n" +
+                    "- filterOptionIds (선택): 필터 옵션 ID 목록\n" +
+                    "  - 지정하지 않으면: 전체 우대 갤러리에서 랜덤 선택\n" +
+                    "  - 지정하면: 해당 필터 옵션이 있는 우대 갤러리에서 랜덤 선택\n" +
+                    "- count (선택, 기본 8): 조회할 개수\n\n" +
+                    "**응답:**\n" +
+                    "- 가중치 기반 랜덤 선택된 우대 갤러리 목록\n" +
+                    "- 각 갤러리의 promotion 정보 포함 (promotionType, endDate 등)\n" +
+                    "- 로그인한 경우 북마크/좋아요 여부 포함\n\n" +
+                    "**활용:**\n" +
+                    "- 메인 페이지 상단 우대 갤러리 섹션\n" +
+                    "- 필터별 우대 갤러리 섹션")
+    @GetMapping("/featured")
+    public ApiResponse<List<GalleryResponse>> getFeaturedPromotedGalleries(
+            @RequestParam(required = false) List<Long> filterOptionIds,
+            @RequestParam(defaultValue = "8") int count,
+            @AuthenticationPrincipal(errorOnInvalidType = false) UserDetails userDetails) {
+
+        String userEmail = userDetails != null ? userDetails.getUsername() : null;
+
+        log.info("우대 갤러리 목록 조회 요청: filterOptionIds={}, count={}, userEmail={}", filterOptionIds, count, userEmail);
+
+        List<GalleryResponse> response = galleryBoardService.getFeaturedPromotedGalleries(filterOptionIds, count, userEmail);
+
+        return ApiResponse.success(response);
+    }
+
+    @Operation(summary = "내 우대 갤러리 목록 조회",
+            description = "로그인한 사용자의 우대 등록된 갤러리 목록을 조회합니다.\n\n" +
+                    "**조회 대상:**\n" +
+                    "- 본인이 우대 등록한 갤러리 게시글\n" +
+                    "- 활성(ACTIVE), 만료(EXPIRED), 취소(CANCELLED) 상태 모두 포함\n\n" +
+                    "**페이지네이션:**\n" +
+                    "- size: 페이지당 항목 수 (기본 20)\n" +
+                    "- page: 페이지 번호 (0부터 시작)\n\n" +
+                    "**응답 정보:**\n" +
+                    "- 게시글 목록 (제목, 이미지 등)\n" +
+                    "- promotion 정보 포함:\n" +
+                    "  - promotionType: STANDARD 또는 PREMIUM\n" +
+                    "  - startDate, endDate: 우대 기간\n" +
+                    "  - remainingDays: 남은 일수\n" +
+                    "  - autoRenew: 자동 갱신 여부\n" +
+                    "  - status: ACTIVE/EXPIRED/CANCELLED\n\n" +
+                    "**권한:**\n" +
+                    "- 로그인 필수\n\n" +
+                    "**활용:**\n" +
+                    "- 마이페이지 - 우대 갤러리 관리\n" +
+                    "- 우대 연장/취소/업그레이드 전 현황 확인")
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/promotions/my")
+    public ApiResponse<Page<GalleryResponse>> getMyPromotedGalleries(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
+        log.info("내 우대 갤러리 목록 조회 요청: userEmail={}", userDetails.getUsername());
+
+        Page<GalleryResponse> response = galleryBoardService.getMyPromotedGalleries(userDetails.getUsername(), pageable);
+
+        return ApiResponse.success(response);
+    }
 
     @Operation(summary = "내가 작성한 Gallery 목록 (마이페이지)",
             description = "로그인한 사용자가 작성한 사진 게시글 목록을 조회합니다.\n\n" +
@@ -422,6 +475,34 @@ public class GalleryBoardController {
         boolean isLiked = boardLikeService.toggleLike(uuid, userDetails.getUsername());
 
         return ApiResponse.success(isLiked);
+    }
+
+    @Operation(summary = "우대등록 가격 설정 조회",
+            description = "현재 활성화된 우대등록 타입별 가격 및 가중치 설정을 조회합니다.\n\n" +
+                    "**권한:**\n" +
+                    "- 로그인 필수\n\n" +
+                    "**응답 정보 (타입별 목록):**\n" +
+                    "- promotionType: 타입 코드 (STANDARD, PREMIUM 등)\n" +
+                    "- displayName: 표시명\n" +
+                    "- price: 월 가격\n" +
+                    "- weight: 가중치")
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/promotion-prices")
+    public ApiResponse<List<GalleryPromotionTypeSettingResponse>> getPromotionPrices(
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);
+        }
+
+        log.info("우대등록 가격 설정 조회: userEmail={}", userDetails.getUsername());
+
+        List<GalleryPromotionTypeSettingResponse> response = promotionSettingsService.getActiveSettings()
+                .stream()
+                .map(GalleryPromotionTypeSettingResponse::from)
+                .collect(Collectors.toList());
+
+        return ApiResponse.success(response);
     }
 
 }
