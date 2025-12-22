@@ -96,10 +96,14 @@ public class SecurityConfig {
                                 "/api/payments/plans/*",  // View specific plan
                                 "/api/boards/*/search",  // Search boards (public)
                                 "/api/boards/*/popular",  // Popular boards (public)
-                                "/api/boards/gallery/featured",  // Featured promoted galleries (public)
-                                "/api/boards/gallery/company/*",  // Company gallery (portfolio) - public
                                 "/api/boards/*/*",  // View specific board (public)
                                 "/api/boards/*",  // View boards by type (public)
+                                "/api/portfolios",  // Portfolio list (public)
+                                "/api/portfolios/search",  // Portfolio search (public)
+                                "/api/portfolios/featured",  // Featured promoted portfolios (public)
+                                "/api/portfolios/company/*",  // Company portfolios (public)
+                                "/api/portfolios/promotion-prices",  // Promotion prices (public)
+                                "/api/portfolios/*",  // Portfolio detail (public)
                                 "/api/popups/active",  // Active popups (public)
                                 "/api/popups/*/view",  // Increment view count (public)
                                 "/api/popups/*/click",  // Increment click count (public)

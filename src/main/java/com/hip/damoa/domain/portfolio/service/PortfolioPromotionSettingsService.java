@@ -1,12 +1,12 @@
-package com.hip.damoa.domain.board.service;
+package com.hip.damoa.domain.portfolio.service;
 
 import com.hip.damoa.core.exception.BusinessException;
 import com.hip.damoa.core.exception.ErrorCode;
-import com.hip.damoa.domain.board.model.GalleryPromotionType;
-import com.hip.damoa.domain.board.model.GalleryPromotionTypeSetting;
-import com.hip.damoa.domain.board.repository.GalleryPromotionTypeSettingRepository;
-import com.hip.damoa.domain.board.web.dto.GalleryPromotionTypeSettingCreateRequest;
-import com.hip.damoa.domain.board.web.dto.GalleryPromotionTypeSettingUpdateRequest;
+import com.hip.damoa.domain.portfolio.model.PortfolioPromotionType;
+import com.hip.damoa.domain.portfolio.model.PortfolioPromotionTypeSetting;
+import com.hip.damoa.domain.portfolio.repository.PortfolioPromotionTypeSettingRepository;
+import com.hip.damoa.domain.portfolio.web.dto.PortfolioPromotionTypeSettingCreateRequest;
+import com.hip.damoa.domain.portfolio.web.dto.PortfolioPromotionTypeSettingUpdateRequest;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,22 +19,21 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 갤러리 우대등록 설정 관리 서비스
- * - 타입별 개별 설정 관리 (확장 가능한 구조)
+ * 포트폴리오 프로모션 타입 설정 관리 서비스
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class GalleryPromotionSettingsService {
+public class PortfolioPromotionSettingsService {
 
-    private final GalleryPromotionTypeSettingRepository settingRepository;
+    private final PortfolioPromotionTypeSettingRepository settingRepository;
     private final UserRepository userRepository;
 
     /**
      * 모든 설정 조회 (정렬순)
      */
     @Transactional(readOnly = true)
-    public List<GalleryPromotionTypeSetting> getAllSettings() {
+    public List<PortfolioPromotionTypeSetting> getAllSettings() {
         return settingRepository.findAllByOrderByDisplayOrderAsc();
     }
 
@@ -42,7 +41,7 @@ public class GalleryPromotionSettingsService {
      * 활성화된 설정만 조회 (정렬순)
      */
     @Transactional(readOnly = true)
-    public List<GalleryPromotionTypeSetting> getActiveSettings() {
+    public List<PortfolioPromotionTypeSetting> getActiveSettings() {
         return settingRepository.findByIsActiveTrueOrderByDisplayOrderAsc();
     }
 
@@ -50,7 +49,7 @@ public class GalleryPromotionSettingsService {
      * UUID로 설정 조회
      */
     @Transactional(readOnly = true)
-    public GalleryPromotionTypeSetting getSettingByUuid(UUID uuid) {
+    public PortfolioPromotionTypeSetting getSettingByUuid(UUID uuid) {
         return settingRepository.findByUuid(uuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
@@ -59,7 +58,7 @@ public class GalleryPromotionSettingsService {
      * 프로모션 타입으로 설정 조회
      */
     @Transactional(readOnly = true)
-    public GalleryPromotionTypeSetting getSettingByType(String promotionType) {
+    public PortfolioPromotionTypeSetting getSettingByType(String promotionType) {
         return settingRepository.findByPromotionType(promotionType)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
@@ -68,7 +67,7 @@ public class GalleryPromotionSettingsService {
      * 프로모션 타입으로 활성화된 설정 조회
      */
     @Transactional(readOnly = true)
-    public GalleryPromotionTypeSetting getActiveSettingByType(String promotionType) {
+    public PortfolioPromotionTypeSetting getActiveSettingByType(String promotionType) {
         return settingRepository.findByPromotionTypeAndIsActiveTrue(promotionType)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
@@ -77,15 +76,15 @@ public class GalleryPromotionSettingsService {
      * 새 타입 설정 생성 (관리자 전용)
      */
     @Transactional
-    public GalleryPromotionTypeSetting createSetting(String adminEmail, GalleryPromotionTypeSettingCreateRequest request) {
-        log.info("갤러리 우대등록 타입 생성 시작: adminEmail={}, promotionType={}", adminEmail, request.getPromotionType());
+    public PortfolioPromotionTypeSetting createSetting(String adminEmail, PortfolioPromotionTypeSettingCreateRequest request) {
+        log.info("포트폴리오 프로모션 타입 생성 시작: adminEmail={}, promotionType={}", adminEmail, request.getPromotionType());
 
         // 중복 체크
         if (settingRepository.existsByPromotionType(request.getPromotionType())) {
             throw new BusinessException(ErrorCode.DUPLICATE_RESOURCE);
         }
 
-        GalleryPromotionTypeSetting setting = GalleryPromotionTypeSetting.builder()
+        PortfolioPromotionTypeSetting setting = PortfolioPromotionTypeSetting.builder()
                 .promotionType(request.getPromotionType())
                 .displayName(request.getDisplayName())
                 .price(request.getPrice())
@@ -96,7 +95,7 @@ public class GalleryPromotionSettingsService {
 
         setting = settingRepository.save(setting);
 
-        log.info("갤러리 우대등록 타입 생성 완료: uuid={}, promotionType={}", setting.getUuid(), setting.getPromotionType());
+        log.info("포트폴리오 프로모션 타입 생성 완료: uuid={}, promotionType={}", setting.getUuid(), setting.getPromotionType());
 
         return setting;
     }
@@ -105,13 +104,13 @@ public class GalleryPromotionSettingsService {
      * 설정 업데이트 (관리자 전용)
      */
     @Transactional
-    public GalleryPromotionTypeSetting updateSetting(String adminEmail, UUID uuid, GalleryPromotionTypeSettingUpdateRequest request) {
-        log.info("갤러리 우대등록 타입 업데이트 시작: adminEmail={}, uuid={}", adminEmail, uuid);
+    public PortfolioPromotionTypeSetting updateSetting(String adminEmail, UUID uuid, PortfolioPromotionTypeSettingUpdateRequest request) {
+        log.info("포트폴리오 프로모션 타입 업데이트 시작: adminEmail={}, uuid={}", adminEmail, uuid);
 
         User admin = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        GalleryPromotionTypeSetting setting = settingRepository.findByUuid(uuid)
+        PortfolioPromotionTypeSetting setting = settingRepository.findByUuid(uuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         setting.update(
@@ -126,59 +125,58 @@ public class GalleryPromotionSettingsService {
 
         setting = settingRepository.save(setting);
 
-        log.info("갤러리 우대등록 타입 업데이트 완료: uuid={}, promotionType={}, price={}, weight={}",
+        log.info("포트폴리오 프로모션 타입 업데이트 완료: uuid={}, promotionType={}, price={}, weight={}",
                 setting.getUuid(), setting.getPromotionType(), setting.getPrice(), setting.getWeight());
 
         return setting;
     }
 
     /**
-     * 설정 삭제 (비활성화)
+     * 설정 비활성화
      */
     @Transactional
     public void deactivateSetting(String adminEmail, UUID uuid) {
-        log.info("갤러리 우대등록 타입 비활성화 시작: adminEmail={}, uuid={}", adminEmail, uuid);
+        log.info("포트폴리오 프로모션 타입 비활성화 시작: adminEmail={}, uuid={}", adminEmail, uuid);
 
         User admin = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        GalleryPromotionTypeSetting setting = settingRepository.findByUuid(uuid)
+        PortfolioPromotionTypeSetting setting = settingRepository.findByUuid(uuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         setting.deactivate(admin);
         settingRepository.save(setting);
 
-        log.info("갤러리 우대등록 타입 비활성화 완료: uuid={}, promotionType={}", uuid, setting.getPromotionType());
+        log.info("포트폴리오 프로모션 타입 비활성화 완료: uuid={}, promotionType={}", uuid, setting.getPromotionType());
     }
 
     /**
-     * 프로모션 타입별 가격 조회 (GalleryPromotionType enum 사용)
+     * 프로모션 타입별 가격 조회
      */
     @Transactional(readOnly = true)
-    public BigDecimal getPriceByType(GalleryPromotionType type) {
-        GalleryPromotionTypeSetting setting = settingRepository.findByPromotionTypeAndIsActiveTrue(type.name())
+    public BigDecimal getPriceByType(PortfolioPromotionType type) {
+        PortfolioPromotionTypeSetting setting = settingRepository.findByPromotionTypeAndIsActiveTrue(type.name())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         return setting.getPrice();
     }
 
     /**
-     * 프로모션 타입별 가중치 조회 (GalleryPromotionType enum 사용)
+     * 프로모션 타입별 가중치 조회
      */
     @Transactional(readOnly = true)
-    public Integer getWeightByType(GalleryPromotionType type) {
-        GalleryPromotionTypeSetting setting = settingRepository.findByPromotionTypeAndIsActiveTrue(type.name())
+    public Integer getWeightByType(PortfolioPromotionType type) {
+        PortfolioPromotionTypeSetting setting = settingRepository.findByPromotionTypeAndIsActiveTrue(type.name())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         return setting.getWeight();
     }
 
     /**
      * 업그레이드 차액 조회 (PREMIUM - STANDARD)
-     * - 기존 호환성 유지를 위한 메서드
      */
     @Transactional(readOnly = true)
     public BigDecimal getUpgradePrice() {
-        BigDecimal standardPrice = getPriceByType(GalleryPromotionType.STANDARD);
-        BigDecimal premiumPrice = getPriceByType(GalleryPromotionType.PREMIUM);
+        BigDecimal standardPrice = getPriceByType(PortfolioPromotionType.STANDARD);
+        BigDecimal premiumPrice = getPriceByType(PortfolioPromotionType.PREMIUM);
         return premiumPrice.subtract(standardPrice);
     }
 }
