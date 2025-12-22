@@ -26,13 +26,112 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: N+1 쿼리 최적화 완료
-**마지막 업데이트**: 2025-12-18
+**프로젝트 단계**: Portfolio 관리자 검색 및 추천 필터 수정 완료
+**마지막 업데이트**: 2025-12-22
 **다음 우선순위**: 프론트엔드 연동 테스트
 
 ---
 
 ## 📝 작업 로그
+
+### 2025-12-22
+
+#### ✅ 완료 (Completed)
+
+**[PORTFOLIO-COMPAT-001] Portfolio API 호환성 수정 (Gallery 형식 유지)** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-22
+- **작업 내용**:
+  1. **thumbnailUrl → thumbnailUuid 변경**: 파일 메타데이터 저장을 위해 UUID로 변경
+  2. **Response FileInfo 필드명 통일**: url → fileUrl, originalName → originalFilename, fileExtension 추가
+  3. **Response PromotionInfo 필드명 통일**: uuid → promotionUuid, type → promotionType, remainingDays 추가
+  4. **Swagger 설명 상세화**: 기존 Gallery API의 상세 설명 복원
+
+**수정 파일**:
+- `PortfolioResponse.java` - FileInfo, PromotionInfo 필드명 수정 및 필드 추가
+- `PortfolioCreateRequest.java` - thumbnailUrl → thumbnailUuid
+- `PortfolioUpdateRequest.java` - thumbnailUrl → thumbnailUuid
+- `PortfolioService.java` - thumbnailUuid 처리 로직 추가, toFileInfos 수정
+- `PortfolioController.java` - Swagger 설명 복원 (상세 조회, 생성 API)
+
+**변경된 API 응답 필드**:
+| 기존 (Portfolio) | 수정 후 (Gallery 형식) |
+|-----------------|----------------------|
+| FileInfo.url | FileInfo.fileUrl |
+| FileInfo.originalName | FileInfo.originalFilename |
+| - | FileInfo.fileExtension (추가) |
+| PromotionInfo.uuid | PromotionInfo.promotionUuid |
+| PromotionInfo.type | PromotionInfo.promotionType |
+| - | PromotionInfo.remainingDays (추가) |
+
+---
+
+**[PORTFOLIO-ADMIN-001] 관리자 추천 포트폴리오 기능 + Soft Delete 버그 수정** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-22
+- **작업 내용**:
+  1. **Soft Delete 버그 수정**: 삭제된 포트폴리오가 추천/북마크/좋아요 목록에 노출되는 문제 해결
+  2. **관리자 추천 포트폴리오 API**: isFeatured 플래그 관리 기능 추가
+
+**수정/생성 파일**:
+- `PortfolioPromotionRepository.java` - 모든 쿼리에 포트폴리오 삭제 여부(p.isDeleted = false) 체크 추가
+- `PortfolioBookmarkRepository.java` - 사용자 북마크 조회 시 삭제된 포트폴리오 제외
+- `PortfolioLikeRepository.java` - 사용자 좋아요 조회 시 삭제된 포트폴리오 제외
+- `CompanyPortfolioRepository.java` - 관리자용 검색/추천 목록 조회 메서드 추가
+- `PortfolioService.java` - 관리자용 메서드 추가 (searchPortfoliosForAdmin, getFeaturedPortfoliosForAdmin, setFeatured, deletePortfolioByAdmin)
+- `AdminPortfolioController.java` - **신규 생성** (관리자 포트폴리오 API)
+
+**API 엔드포인트**:
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/api/admin/portfolios` | 전체 포트폴리오 목록 (키워드/추천 필터) |
+| GET | `/api/admin/portfolios/featured` | 추천 포트폴리오 목록 |
+| GET | `/api/admin/portfolios/{uuid}` | 포트폴리오 상세 조회 |
+| PUT | `/api/admin/portfolios/{uuid}/featured?featured=true` | 추천 설정/해제 |
+| DELETE | `/api/admin/portfolios/{uuid}` | 포트폴리오 삭제 |
+
+**추천 시스템 구조**:
+- `isFeatured` (CompanyPortfolio): 레거시 플래그 (현재 미사용)
+- `PortfolioPromotion`: 고객이 크레딧으로 구매하는 유료 우대 (STANDARD/PREMIUM) - **추천 목록의 기준**
+
+---
+
+**[PORTFOLIO-SEARCH-001] 관리자 검색 쿼리 오류 수정 + 추천 필터 로직 변경** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-22
+- **작업 내용**:
+  1. **LOWER(bytea) 오류 수정**: content 컬럼 검색 시 발생하는 오류 해결
+     - COALESCE와 CAST 적용으로 NULL 및 타입 문제 해결
+  2. **추천 필터 로직 변경**: isFeatured 플래그 → 활성 프로모션 기준으로 변경
+     - `featured=true`: 활성 프로모션(status='ACTIVE')이 있는 포트폴리오
+     - `featured=false`: 활성 프로모션이 없는 포트폴리오
+  3. **프로모션 기간 확인**: 30일(plusDays(30)) 사용 확인
+     - 시작일: LocalDate.now() (예: 22일 00:00:00)
+     - 종료일: 시작일 + 30일 (예: 다음달 21일 23:59:59)
+
+**수정 파일**:
+- `CompanyPortfolioRepository.java`
+  - `searchForAdmin()`: LOWER/COALESCE 적용, LEFT JOIN으로 프로모션 체크
+  - `findByIsFeaturedTrueAndIsDeletedFalse()`: 활성 프로모션 기준으로 변경
+  - `findWithActivePromotion()`: 새 메서드 추가
+- `AdminPortfolioController.java`: Swagger 문서 업데이트
+  - featured 파라미터 설명 변경 (우대 등록 여부)
+  - getFeaturedPortfolios 설명 변경 (활성 프로모션 기준)
+  - toggleFeatured 레거시 표시
+
+**쿼리 변경 전후**:
+```sql
+-- 변경 전 (오류 발생)
+LOWER(p.content) LIKE LOWER(...)
+AND p.isFeatured = :featured
+
+-- 변경 후 (정상 동작)
+LOWER(COALESCE(CAST(p.content AS string), '')) LIKE LOWER(...)
+LEFT JOIN PortfolioPromotion pp ON pp.portfolio = p AND pp.status = 'ACTIVE'
+AND (:featured = true AND pp.id IS NOT NULL) OR (:featured = false AND pp.id IS NULL)
+```
+
+---
 
 ### 2025-12-18
 
@@ -3143,3 +3242,150 @@ Database
 - FilterController에 API 엔드포인트 추가 (GET /api/filters/tree/{categoryCode})
 - 프론트엔드 업종 선택 UI 개발 (회원가입, 검색 페이지)
 
+
+---
+
+### 2025-12-22
+
+#### ✅ 완료 (Completed)
+
+**[PORTFOLIO-001] Gallery → Company Portfolio 마이그레이션** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-22
+- **작업 내용**:
+  - Gallery Board 기능을 독립적인 Company Portfolio 도메인으로 완전 이관
+  - Board 엔티티와 분리하여 독립적인 Portfolio 도메인 구성
+  - 기존 Gallery 기능(프로모션, 필터, 북마크/좋아요) 모두 이관
+  - 데이터 마이그레이션 없음 (신규 등록 방식)
+
+**생성 파일**:
+
+1. **V72 마이그레이션**:
+   - `src/main/resources/db/migration/V72__Migrate_gallery_to_portfolio.sql`
+   - company_portfolios 테이블에 새 컬럼 추가 (content, relatedLink, copyright 등)
+   - portfolio_promotions, portfolio_promotion_type_settings, portfolio_promotion_payments 테이블 생성
+   - portfolio_filter_options, portfolio_bookmarks, portfolio_likes 테이블 생성
+   - gallery 관련 테이블 삭제
+
+2. **Entity (domain/portfolio/model/)**:
+   - PortfolioPromotion.java
+   - PortfolioPromotionType.java (enum: STANDARD, PREMIUM)
+   - PortfolioPromotionStatus.java (enum: ACTIVE, EXPIRED, CANCELLED)
+   - PortfolioPromotionTypeSetting.java
+   - PortfolioPromotionPayment.java
+   - PortfolioPromotionPaymentType.java (enum)
+   - PortfolioFilterOption.java
+   - PortfolioBookmark.java
+   - PortfolioLike.java
+
+3. **Repository (domain/portfolio/repository/)**:
+   - PortfolioPromotionRepository.java
+   - PortfolioPromotionTypeSettingRepository.java
+   - PortfolioPromotionPaymentRepository.java
+   - PortfolioFilterOptionRepository.java
+   - PortfolioBookmarkRepository.java
+   - PortfolioLikeRepository.java
+
+4. **Service (domain/portfolio/service/)**:
+   - PortfolioService.java
+   - PortfolioPromotionService.java
+   - PortfolioPromotionSettingsService.java
+   - PortfolioBookmarkService.java
+   - PortfolioLikeService.java
+
+5. **DTO (domain/portfolio/web/dto/)**:
+   - PortfolioCreateRequest.java
+   - PortfolioUpdateRequest.java
+   - PortfolioResponse.java
+   - PortfolioPromotionResponse.java
+   - PortfolioPromotionTypeSettingCreateRequest.java
+   - PortfolioPromotionTypeSettingUpdateRequest.java
+   - PortfolioPromotionTypeSettingResponse.java
+
+6. **Controller (domain/portfolio/web/)**:
+   - PortfolioController.java (/api/portfolios)
+   - AdminPortfolioPromotionSettingsController.java (/api/admin/portfolio-promotion-settings)
+
+7. **Scheduler (infra/scheduler/)**:
+   - PortfolioPromotionScheduler.java
+
+**수정 파일**:
+- CompanyPortfolio.java: 새 필드 추가 (content, relatedLink, copyright 등)
+- CompanyPortfolioRepository.java: 추가 쿼리 메서드
+- BoardType.java: GALLERY enum 제거
+- BoardFilterController.java: Gallery 엔드포인트 제거
+- ErrorCode.java: GALLERY_* → PORTFOLIO_* 에러코드 변경
+- DocumentResponse.java: FilterOptionSummary inner class 추가
+- SecurityConfig.java: /api/portfolios/** 경로 추가
+
+**삭제 파일 (32개)**:
+- Controllers: GalleryBoardController, AdminGalleryBoardController, AdminGalleryPromotionSettingsController
+- Services: GalleryBoardService, GalleryPromotionService, GalleryPromotionSettingsService
+- Entities: GalleryPromotion, GalleryPromotionType, GalleryPromotionPayment, GalleryPromotionTypeSetting
+- Repositories: GalleryPromotionRepository, GalleryPromotionPaymentRepository, GalleryPromotionTypeSettingRepository
+- DTOs: GalleryCreateRequest, GalleryUpdateRequest, GalleryResponse, GalleryPromotionResponse 등
+- Scheduler: GalleryPromotionScheduler
+- HTML/JS: gallery-list.html, test-gallery-search.js 등
+
+**API 엔드포인트**:
+- POST /api/portfolios - 포트폴리오 생성
+- GET /api/portfolios/{uuid} - 상세 조회
+- PUT /api/portfolios/{uuid} - 수정
+- DELETE /api/portfolios/{uuid} - 삭제
+- GET /api/portfolios - 목록 조회
+- GET /api/portfolios/featured - 우대 포트폴리오 (가중치 기반)
+- GET /api/portfolios/my - 내 포트폴리오
+- GET /api/portfolios/company/{companyUuid} - 업체별 포트폴리오
+- POST /api/portfolios/{uuid}/bookmark - 북마크 토글
+- POST /api/portfolios/{uuid}/like - 좋아요 토글
+- GET /api/portfolios/promotion-prices - 프로모션 가격 조회
+
+**빌드 상태**: ✅ 컴파일 성공
+
+**계획 문서**: `C:\Users\USER\.claude\plans\snoopy-stirring-kurzweil.md`
+
+---
+
+**[PORTFOLIO-002] Portfolio 첨부파일 중간 테이블 적용** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-22
+- **작업 내용**:
+  - Board의 board_attachments 패턴과 동일하게 portfolio_attachments 중간 테이블 적용
+  - 기존 company_portfolios.images 배열 방식에서 정규화된 중간 테이블 방식으로 변경
+
+**생성 파일**:
+1. `V73__Create_portfolio_attachments_table.sql`
+   - portfolio_attachments 테이블 생성
+   - 인덱스 생성 (portfolio_id, file_id, attachment_type, display_order)
+   - CASCADE 삭제 규칙 적용
+
+2. `PortfolioAttachment.java` (Entity)
+   - portfolio_id (FK → company_portfolios)
+   - file_id (FK → files)
+   - attachment_type (IMAGE, VIDEO, THUMBNAIL)
+   - display_order
+
+3. `PortfolioAttachmentRepository.java`
+   - findByPortfolioIdWithFile() - Fetch Join으로 파일 정보 함께 조회
+   - findImagesByPortfolioId() - 이미지만 조회
+   - findVideosByPortfolioId() - 비디오만 조회
+   - softDeleteByPortfolioId() - 소프트 삭제
+
+**수정 파일**:
+1. `PortfolioService.java`
+   - addAttachments() - 첨부파일 추가 (중간 테이블)
+   - updateAttachments() - 첨부파일 업데이트
+   - toFileInfos() - 첨부파일 → FileInfo 변환
+   - 모든 조회 메서드에서 attachmentRepository 사용
+
+**변경된 구조**:
+```
+Before (비정규화):
+  company_portfolios.images = ["url1", "url2", ...]  (text[])
+
+After (정규화된 중간 테이블):
+  company_portfolios  ←→  portfolio_attachments  ←→  files
+       (1)                    (N)                    (1)
+```
+
+**빌드 상태**: ✅ 컴파일 성공

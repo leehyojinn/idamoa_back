@@ -217,7 +217,6 @@ public enum ErrorCode {
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "BD008", "카테고리를 찾을 수 없습니다"),
     EVENT_NOT_EDITABLE(HttpStatus.BAD_REQUEST, "BD009", "이벤트 게시글이 아니므로 이벤트 상태를 변경할 수 없습니다"),
     INVALID_EVENT_STATUS(HttpStatus.BAD_REQUEST, "BD010", "유효하지 않은 이벤트 상태값입니다. ACTIVE 또는 ENDED만 가능합니다"),
-    GALLERY_IMAGE_REQUIRED(HttpStatus.BAD_REQUEST, "BD011", "사진 게시글에는 최소 1개 이상의 이미지가 필요합니다"),
     DOCUMENT_FILE_REQUIRED(HttpStatus.BAD_REQUEST, "BD012", "자료 게시글에는 최소 1개 이상의 파일이 필요합니다"),
 
     // Filter
@@ -281,13 +280,17 @@ public enum ErrorCode {
     PARTNERSHIP_INQUIRY_CANNOT_BE_UPDATED(HttpStatus.BAD_REQUEST, "PI003", "처리 완료된 문의는 수정할 수 없습니다"),
     INVALID_PARTNERSHIP_STATUS(HttpStatus.BAD_REQUEST, "PI004", "잘못된 문의 상태입니다"),
 
-    // Gallery Promotion
-    GALLERY_PROMOTION_ALREADY_EXISTS(HttpStatus.CONFLICT, "GP001", "이미 활성화된 우대 등록이 있습니다"),
-    GALLERY_PROMOTION_NOT_FOUND(HttpStatus.NOT_FOUND, "GP002", "우대 등록을 찾을 수 없습니다"),
-    GALLERY_PROMOTION_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "GP003", "활성 상태의 우대 등록이 아닙니다"),
-    GALLERY_ACCESS_DENIED(HttpStatus.FORBIDDEN, "GP004", "해당 갤러리에 대한 권한이 없습니다"),
-    ALREADY_PREMIUM_PROMOTION(HttpStatus.BAD_REQUEST, "GP005", "이미 강력우대 상태입니다"),
-    INVALID_PROMOTION_TYPE(HttpStatus.BAD_REQUEST, "GP006", "유효하지 않은 우대 타입입니다 (STANDARD, PREMIUM 중 선택)");
+    // Portfolio
+    PORTFOLIO_NOT_FOUND(HttpStatus.NOT_FOUND, "PF001", "포트폴리오를 찾을 수 없습니다"),
+    PORTFOLIO_ACCESS_DENIED(HttpStatus.FORBIDDEN, "PF002", "해당 포트폴리오에 대한 권한이 없습니다"),
+    PORTFOLIO_IMAGE_REQUIRED(HttpStatus.BAD_REQUEST, "PF003", "포트폴리오에는 최소 1개 이상의 이미지가 필요합니다"),
+
+    // Portfolio Promotion
+    PORTFOLIO_PROMOTION_ALREADY_EXISTS(HttpStatus.CONFLICT, "PP001", "이미 활성화된 우대 등록이 있습니다"),
+    PORTFOLIO_PROMOTION_NOT_FOUND(HttpStatus.NOT_FOUND, "PP002", "우대 등록을 찾을 수 없습니다"),
+    PORTFOLIO_PROMOTION_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "PP003", "활성 상태의 우대 등록이 아닙니다"),
+    ALREADY_PREMIUM_PROMOTION(HttpStatus.BAD_REQUEST, "PP004", "이미 강력우대 상태입니다"),
+    INVALID_PROMOTION_TYPE(HttpStatus.BAD_REQUEST, "PP005", "유효하지 않은 우대 타입입니다 (STANDARD, PREMIUM 중 선택)");
 
     private final HttpStatus status;
     private final String code;

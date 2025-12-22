@@ -108,7 +108,7 @@ public class DocumentResponse {
     // 필터
     @Schema(description = "필터 옵션 목록")
     @Builder.Default
-    private List<GalleryResponse.FilterOptionSummary> filterOptions = List.of();
+    private List<FilterOptionSummary> filterOptions = List.of();
 
     // 태그
     @Schema(description = "태그 배열", example = "[\"인테리어\", \"설계도면\", \"병원\"]")
@@ -219,7 +219,7 @@ public class DocumentResponse {
                 .filterOptions(filterOptions.stream()
                         .map(bfo -> {
                             FilterOption fo = bfo.getFilterOption();
-                            return GalleryResponse.FilterOptionSummary.builder()
+                            return FilterOptionSummary.builder()
                                     .id(fo.getId())
                                     .uuid(fo.getUuid())
                                     .categoryCode(fo.getCategory().getCode())
@@ -277,5 +277,42 @@ public class DocumentResponse {
         }
 
         return filePrices;
+    }
+
+    /**
+     * 필터 옵션 요약 정보
+     */
+    @Schema(description = "필터 옵션 요약")
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FilterOptionSummary {
+        @Schema(description = "필터 옵션 ID")
+        private Long id;
+
+        @Schema(description = "필터 옵션 UUID")
+        private UUID uuid;
+
+        @Schema(description = "카테고리 코드")
+        private String categoryCode;
+
+        @Schema(description = "카테고리명")
+        private String categoryName;
+
+        @Schema(description = "옵션 코드")
+        private String code;
+
+        @Schema(description = "옵션명")
+        private String name;
+
+        @Schema(description = "짧은 이름")
+        private String shortName;
+
+        @Schema(description = "색상 코드")
+        private String color;
+
+        @Schema(description = "아이콘")
+        private String icon;
     }
 }

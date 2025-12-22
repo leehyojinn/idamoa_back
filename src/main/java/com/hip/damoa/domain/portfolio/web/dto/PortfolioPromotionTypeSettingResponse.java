@@ -1,23 +1,17 @@
-package com.hip.damoa.domain.board.web.dto;
+package com.hip.damoa.domain.portfolio.web.dto;
 
-import com.hip.damoa.domain.board.model.GalleryPromotionTypeSetting;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.hip.damoa.domain.portfolio.model.PortfolioPromotionTypeSetting;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * 갤러리 우대등록 타입별 설정 응답 DTO
- */
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class GalleryPromotionTypeSettingResponse {
+public class PortfolioPromotionTypeSettingResponse {
 
     private UUID uuid;
     private String promotionType;
@@ -30,8 +24,8 @@ public class GalleryPromotionTypeSettingResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static GalleryPromotionTypeSettingResponse from(GalleryPromotionTypeSetting setting) {
-        return GalleryPromotionTypeSettingResponse.builder()
+    public static PortfolioPromotionTypeSettingResponse from(PortfolioPromotionTypeSetting setting) {
+        return PortfolioPromotionTypeSettingResponse.builder()
                 .uuid(setting.getUuid())
                 .promotionType(setting.getPromotionType())
                 .displayName(setting.getDisplayName())
