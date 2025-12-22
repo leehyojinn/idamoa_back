@@ -48,6 +48,7 @@ public class AdminFilterController {
             **조회 옵션**
             - entityType: COMPANY(업체), BOARD(게시판) 중 선택하여 해당 타입의 카테고리만 조회
             - keyword: 카테고리 코드, 이름, 설명에서 검색
+            - isActive: 활성/비활성 상태로 필터링 (true: 활성, false: 비활성, null: 전체)
 
             ## 정렬
             - 기본값: displayOrder ASC (순서 오름차순)
@@ -58,10 +59,11 @@ public class AdminFilterController {
     public ApiResponse<Page<FilterCategoryResponse>> getFilterCategories(
             @Parameter(description = "엔티티 타입 - COMPANY(업체용 필터), BOARD(게시판용 필터)") @RequestParam(required = false) String entityType,
             @Parameter(description = "검색 키워드 - 카테고리 코드, 이름, 설명에서 검색") @RequestParam(required = false) String keyword,
+            @Parameter(description = "활성 상태 필터 (true: 활성, false: 비활성, null: 전체)") @RequestParam(required = false) Boolean isActive,
             @PageableDefault(size = 20, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable pageable) {
 
-        log.info("필터 카테고리 목록 조회: entityType={}, keyword={}", entityType, keyword);
-        Page<FilterCategoryResponse> categories = adminFilterService.getFilterCategories(entityType, keyword, pageable);
+        log.info("필터 카테고리 목록 조회: entityType={}, keyword={}, isActive={}", entityType, keyword, isActive);
+        Page<FilterCategoryResponse> categories = adminFilterService.getFilterCategories(entityType, keyword, isActive, pageable);
         return ApiResponse.success(categories);
     }
 

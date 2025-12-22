@@ -51,8 +51,8 @@ public class AdminFilterService {
      * 필터 카테고리 목록 조회
      */
     @Transactional(readOnly = true)
-    public Page<FilterCategoryResponse> getFilterCategories(String entityType, String keyword, Pageable pageable) {
-        log.info("필터 카테고리 목록 조회 시작: entityType={}, keyword={}", entityType, keyword);
+    public Page<FilterCategoryResponse> getFilterCategories(String entityType, String keyword, Boolean isActive, Pageable pageable) {
+        log.info("필터 카테고리 목록 조회 시작: entityType={}, keyword={}, isActive={}", entityType, keyword, isActive);
 
         Specification<FilterCategory> spec = Specification.where(isNotDeleted());
 
@@ -62,6 +62,10 @@ public class AdminFilterService {
 
         if (StringUtils.hasText(keyword)) {
             spec = spec.and(hasKeyword(keyword));
+        }
+
+        if (isActive != null) {
+            spec = spec.and(categoryIsActive(isActive));
         }
 
         Page<FilterCategory> categories = filterCategoryRepository.findAll(spec, pageable);
@@ -565,6 +569,10 @@ public class AdminFilterService {
                     cb.like(cb.lower(root.get("description")), pattern)
             );
         };
+    }
+
+    private Specification<FilterCategory> categoryIsActive(Boolean isActive) {
+        return (root, query, cb) -> cb.equal(root.get("isActive"), isActive);
     }
 
     private Specification<FilterOption> optionIsNotDeleted() {

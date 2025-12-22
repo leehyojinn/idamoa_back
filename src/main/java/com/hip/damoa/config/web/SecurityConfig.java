@@ -108,6 +108,8 @@ public class SecurityConfig {
                                 "/api/popups/*/view",  // Increment view count (public)
                                 "/api/popups/*/click",  // Increment click count (public)
                                 "/api/partnership-inquiries",  // Partnership inquiry (public)
+                                "/api/partnerships",  // Active partnerships (public)
+                                "/api/partnerships/**",  // Partnership details (public)
                                 "/api/filters",  // Get all filter categories (public)
                                 "/api/filters/**",  // Get specific filter category/options (public)
                                 "/api/planner-applications/list",  // 플래너 신청 목록 (public)
