@@ -26,7 +26,7 @@
 
 ## 🎯 현재 상태 (Current Status)
 
-**프로젝트 단계**: Portfolio 관리자 검색 및 추천 필터 수정 완료
+**프로젝트 단계**: 제휴업체 관리 기능 구현 완료
 **마지막 업데이트**: 2025-12-22
 **다음 우선순위**: 프론트엔드 연동 테스트
 
@@ -37,6 +37,50 @@
 ### 2025-12-22
 
 #### ✅ 완료 (Completed)
+
+**[PARTNERSHIP-001] 제휴업체 관리 기능 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-22
+- **작업 내용**:
+  1. **DB 마이그레이션**: company_partnerships 테이블 생성 (Partial Unique Index로 업체당 1개 활성 제휴만 허용)
+  2. **Entity/Repository**: CompanyPartnership Entity, Repository 생성
+  3. **Service**: 제휴 등록/수정/삭제/취소, 순서 일괄 변경, 만료 처리 기능
+  4. **Admin Controller**: 관리자용 제휴업체 CRUD API
+  5. **Public Controller**: 활성 제휴업체 목록 조회 API
+  6. **Scheduler**: 매일 자정 만료된 제휴 자동 처리
+
+**생성 파일**:
+- `db/migration/V76__Create_company_partnerships.sql` - 마이그레이션
+- `domain/company/model/CompanyPartnership.java` - Entity
+- `domain/company/repository/CompanyPartnershipRepository.java` - Repository
+- `domain/company/service/CompanyPartnershipService.java` - Service
+- `domain/company/web/dto/CompanyPartnershipCreateRequest.java` - 등록 Request
+- `domain/company/web/dto/CompanyPartnershipUpdateRequest.java` - 수정 Request
+- `domain/company/web/dto/CompanyPartnershipReorderRequest.java` - 순서 변경 Request
+- `domain/company/web/dto/CompanyPartnershipResponse.java` - 관리자 Response
+- `domain/company/web/dto/CompanyPartnershipListResponse.java` - 퍼블릭 Response
+- `domain/admin/web/AdminCompanyPartnershipController.java` - 관리자 Controller
+- `domain/company/web/CompanyPartnershipController.java` - 퍼블릭 Controller
+- `infra/scheduler/CompanyPartnershipScheduler.java` - 스케줄러
+
+**수정 파일**:
+- `core/exception/ErrorCode.java` - Partnership 에러코드 추가
+- `domain/company/repository/CompanyImageRepository.java` - N+1 방지용 일괄 조회 메서드 추가
+
+**API 엔드포인트**:
+| Method | Path | 설명 |
+|--------|------|------|
+| POST | `/api/admin/company-partnerships` | 제휴업체 등록 |
+| GET | `/api/admin/company-partnerships` | 제휴업체 목록 (status 필터) |
+| GET | `/api/admin/company-partnerships/{uuid}` | 제휴 상세 조회 |
+| PUT | `/api/admin/company-partnerships/{uuid}` | 제휴 수정 |
+| PATCH | `/api/admin/company-partnerships/{uuid}/cancel` | 제휴 취소 |
+| DELETE | `/api/admin/company-partnerships/{uuid}` | 제휴 삭제 |
+| POST | `/api/admin/company-partnerships/reorder` | 순서 일괄 변경 |
+| GET | `/api/admin/company-partnerships/company/{companyUuid}/history` | 업체별 이력 조회 |
+| GET | `/api/partnerships` | 활성 제휴업체 목록 (퍼블릭) |
+
+---
 
 **[PORTFOLIO-COMPAT-001] Portfolio API 호환성 수정 (Gallery 형식 유지)** ✅
 - **작업자**: Claude

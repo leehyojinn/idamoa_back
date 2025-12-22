@@ -290,7 +290,13 @@ public enum ErrorCode {
     PORTFOLIO_PROMOTION_NOT_FOUND(HttpStatus.NOT_FOUND, "PP002", "우대 등록을 찾을 수 없습니다"),
     PORTFOLIO_PROMOTION_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "PP003", "활성 상태의 우대 등록이 아닙니다"),
     ALREADY_PREMIUM_PROMOTION(HttpStatus.BAD_REQUEST, "PP004", "이미 강력우대 상태입니다"),
-    INVALID_PROMOTION_TYPE(HttpStatus.BAD_REQUEST, "PP005", "유효하지 않은 우대 타입입니다 (STANDARD, PREMIUM 중 선택)");
+    INVALID_PROMOTION_TYPE(HttpStatus.BAD_REQUEST, "PP005", "유효하지 않은 우대 타입입니다 (STANDARD, PREMIUM 중 선택)"),
+
+    // Company Partnership
+    PARTNERSHIP_NOT_FOUND(HttpStatus.NOT_FOUND, "PS001", "제휴 정보를 찾을 수 없습니다"),
+    PARTNERSHIP_ALREADY_EXISTS(HttpStatus.CONFLICT, "PS002", "해당 업체에 이미 활성 제휴가 존재합니다"),
+    INVALID_PARTNERSHIP_DATES(HttpStatus.BAD_REQUEST, "PS003", "만료일은 시작일보다 이후여야 합니다"),
+    INVALID_PARTNERSHIP_END_DATE(HttpStatus.BAD_REQUEST, "PS004", "새 만료일은 현재 만료일보다 이후여야 합니다");
 
     private final HttpStatus status;
     private final String code;
