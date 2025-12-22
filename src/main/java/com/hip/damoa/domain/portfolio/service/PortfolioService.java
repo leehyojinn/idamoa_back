@@ -617,10 +617,16 @@ public class PortfolioService {
             return null;
         }
 
+        Double avgRating = company.getAvgRating() != null
+                ? company.getAvgRating().doubleValue()
+                : null;
+
         return PortfolioResponse.CompanySummary.builder()
                 .companyUuid(company.getUuid())
                 .companyName(company.getName())
                 .phone(company.getPrimaryPhone())
+                .averageRating(avgRating)
+                .reviewCount(company.getReviewCount())
                 .build();
     }
 
