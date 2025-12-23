@@ -287,14 +287,9 @@ public class DocumentBoardService {
                 request.getTags()
         );
 
-        // 필터 옵션 업데이트
+        // 필터 옵션 업데이트 - JSONB 배열 방식
         if (request.getFilterOptionIds() != null) {
-            // 기존 필터 삭제
-            boardFilterOptionRepository.deleteByBoardId(board.getId());
-            // 새 필터 추가
-            if (!request.getFilterOptionIds().isEmpty()) {
-                boardService.addFilterOptions(uuid, request.getFilterOptionIds());
-            }
+            boardService.addFilterOptions(uuid, request.getFilterOptionIds());
         }
 
         // 문서 첨부파일 업데이트

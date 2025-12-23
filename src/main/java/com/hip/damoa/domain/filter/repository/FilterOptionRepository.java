@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,6 +16,26 @@ public interface FilterOptionRepository extends JpaRepository<FilterOption, Long
     List<FilterOption> findByCategoryAndIsActiveTrueAndIsDeletedFalse(FilterCategory category);
     List<FilterOption> findByCategoryAndParentIsNullAndIsActiveTrueAndIsDeletedFalse(FilterCategory category);
     List<FilterOption> findByIdIn(List<Long> ids);
+
+    // ===== JSONB 배열 기반 필터 조회 =====
+
+    /**
+     * ID 목록으로 필터 옵션 조회 (삭제되지 않은 것만)
+     * - JSONB 배열에 저장된 filter_option_ids를 조회할 때 사용
+     */
+    List<FilterOption> findByIdInAndIsDeletedFalse(Collection<Long> ids);
+
+    /**
+     * ID 목록으로 필터 옵션과 카테고리 함께 조회
+     * - 응답에 카테고리별로 그룹화할 때 사용
+     */
+    @Query("""
+        SELECT fo FROM FilterOption fo
+        JOIN FETCH fo.category
+        WHERE fo.id IN :ids AND fo.isDeleted = false
+        ORDER BY fo.category.displayOrder, fo.displayOrder
+        """)
+    List<FilterOption> findByIdInWithCategory(@Param("ids") Collection<Long> ids);
 
     // Public API용 (soft delete 제외)
     List<FilterOption> findByCategoryAndIsActiveTrueAndIsDeletedFalseOrderByDisplayOrderAsc(FilterCategory category);

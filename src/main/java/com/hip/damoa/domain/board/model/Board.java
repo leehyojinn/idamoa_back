@@ -96,6 +96,15 @@ public class Board extends BaseEntity {
     @Column(name = "updated_by")
     private Long updatedBy;
 
+    /**
+     * 필터 옵션 ID 목록 (JSONB 배열)
+     * - 조인 테이블 대신 JSONB 배열로 관리하여 성능 개선
+     * - 검색 시 GIN 인덱스 활용
+     */
+    @Type(JsonBinaryType.class)
+    @Column(name = "filter_option_ids", columnDefinition = "jsonb")
+    private List<Long> filterOptionIds = new ArrayList<>();
+
     // 연관관계 (N+1 방지를 위해 @BatchSize 적용)
     @BatchSize(size = 100)
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -236,5 +245,19 @@ public class Board extends BaseEntity {
 
     public void setUpdatedBy(Long userId) {
         this.updatedBy = userId;
+    }
+
+    /**
+     * 필터 옵션 ID 목록 반환
+     */
+    public List<Long> getFilterOptionIds() {
+        return this.filterOptionIds;
+    }
+
+    /**
+     * 필터 옵션 ID 목록 업데이트 (JSONB 배열)
+     */
+    public void updateFilterOptionIds(List<Long> ids) {
+        this.filterOptionIds = ids != null ? new ArrayList<>(ids) : new ArrayList<>();
     }
 }
