@@ -409,12 +409,13 @@ public class NoticeBoardService {
     }
 
     /**
-     * 공지사항/이벤트 게시글 삭제
+     * 공지사항/이벤트 게시글 삭제 (관리자용)
      */
     @Transactional
     public void deleteNotice(UUID uuid, String userEmail) {
         log.info("게시글 삭제: uuid={}, userEmail={}", uuid, userEmail);
-        boardService.deleteBoard(uuid, userEmail);
+        // 관리자 API에서 호출되므로 권한 검증 없이 삭제
+        boardService.deleteBoardByAdmin(uuid);
     }
 
     /**

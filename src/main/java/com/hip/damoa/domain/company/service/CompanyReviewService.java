@@ -203,7 +203,7 @@ public class CompanyReviewService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
 
         // 리뷰 작성자인지 확인
-        if (!review.getUser().getId().equals(user.getId())) {
+        if (review.getUser() == null || !review.getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.NOT_REVIEW_AUTHOR);
         }
 
@@ -241,7 +241,7 @@ public class CompanyReviewService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
 
         // 리뷰 작성자인지 확인
-        if (!review.getUser().getId().equals(user.getId())) {
+        if (review.getUser() == null || !review.getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.NOT_REVIEW_AUTHOR);
         }
 

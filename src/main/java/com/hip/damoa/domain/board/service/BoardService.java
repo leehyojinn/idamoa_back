@@ -313,9 +313,25 @@ public class BoardService {
      * 권한 확인 (작성자 본인인지)
      */
     private void validateOwnership(Board board, String userEmail) {
+        // user가 null인 경우 (시스템 생성 게시글 등) - 일반 사용자는 삭제 불가
+        if (board.getUser() == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
         if (!board.getUser().getEmail().equals(userEmail)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
+    }
+
+    /**
+     * 게시글 삭제 (관리자용 - 권한 검증 없이)
+     */
+    @Transactional
+    public void deleteBoardByAdmin(UUID uuid) {
+        log.info("게시글 삭제 (관리자): uuid={}", uuid);
+
+        Board board = getBoard(uuid);
+        board.softDelete();
+        log.info("게시글 삭제 완료 (관리자): uuid={}", uuid);
     }
 
     /**

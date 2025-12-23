@@ -148,7 +148,8 @@ public class EstimateRequestService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND));
 
         // 권한 확인
-        if (!estimateRequest.getUser().getId().equals(user.getId())) {
+        if (estimateRequest.getUser() == null
+                || !estimateRequest.getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.NOT_REQUEST_OWNER);
         }
 
@@ -278,7 +279,8 @@ public class EstimateRequestService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND));
 
         // 권한 확인
-        if (!estimateRequest.getUser().getId().equals(user.getId())) {
+        if (estimateRequest.getUser() == null
+                || !estimateRequest.getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.NOT_REQUEST_OWNER);
         }
 
@@ -349,7 +351,8 @@ public class EstimateRequestService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND));
 
         // 권한 확인
-        if (!estimateRequest.getUser().getId().equals(user.getId())) {
+        if (estimateRequest.getUser() == null
+                || !estimateRequest.getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.NOT_REQUEST_OWNER);
         }
 
@@ -482,7 +485,7 @@ public class EstimateRequestService {
         }
 
         // 1. 견적 요청자 본인인 경우 - 모든 제안 조회 (WITHDRAWN 제외)
-        if (estimateRequest.getUser().getId().equals(user.getId())) {
+        if (estimateRequest.getUser() != null && estimateRequest.getUser().getId().equals(user.getId())) {
             List<EstimateProposal> proposals = proposalRepository.findByRequestAndStatusNotWithdrawn(estimateRequest);
 
             long viewedCount = proposals.stream()

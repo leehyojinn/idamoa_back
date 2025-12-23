@@ -113,7 +113,7 @@ public class PortfolioPromotionService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_PROMOTION_NOT_FOUND));
 
         // 소유자 확인
-        if (!promotion.getUser().getId().equals(user.getId())) {
+        if (promotion.getUser() == null || !promotion.getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.PORTFOLIO_ACCESS_DENIED);
         }
 
@@ -138,7 +138,7 @@ public class PortfolioPromotionService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_PROMOTION_NOT_FOUND));
 
         // 소유자 확인
-        if (!promotion.getUser().getId().equals(user.getId())) {
+        if (promotion.getUser() == null || !promotion.getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.PORTFOLIO_ACCESS_DENIED);
         }
 
@@ -195,7 +195,7 @@ public class PortfolioPromotionService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_PROMOTION_NOT_FOUND));
 
         // 소유자 확인
-        if (!promotion.getUser().getId().equals(user.getId())) {
+        if (promotion.getUser() == null || !promotion.getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.PORTFOLIO_ACCESS_DENIED);
         }
 
