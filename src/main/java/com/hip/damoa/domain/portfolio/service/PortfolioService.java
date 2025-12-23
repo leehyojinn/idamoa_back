@@ -315,12 +315,9 @@ public class PortfolioService {
             updateAttachments(portfolio, request.getVideoUuids(), PortfolioAttachment.AttachmentType.VIDEO);
         }
 
-        // 필터 옵션 업데이트
+        // 필터 옵션 업데이트 - JSONB 배열 방식
         if (request.getFilterOptionIds() != null) {
-            portfolioFilterOptionRepository.deleteByPortfolioId(portfolio.getId());
-            if (!request.getFilterOptionIds().isEmpty()) {
-                addFilterOptions(portfolio, request.getFilterOptionIds());
-            }
+            addFilterOptions(portfolio, request.getFilterOptionIds());
         }
 
         // 프로모션 처리
@@ -667,14 +664,30 @@ public class PortfolioService {
         return PortfolioResponse.simpleFrom(portfolio, images, isBookmarked, isLiked, company, promotion);
     }
 
+    /**
+     * 필터 옵션 추가 - JSONB 배열 방식
+     */
     private void addFilterOptions(CompanyPortfolio portfolio, List<Long> filterOptionIds) {
-        for (Long filterOptionId : filterOptionIds) {
-            FilterOption filterOption = filterOptionRepository.findById(filterOptionId)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.FILTER_OPTION_NOT_FOUND));
-
-            PortfolioFilterOption pfo = PortfolioFilterOption.of(portfolio, filterOption);
-            portfolioFilterOptionRepository.save(pfo);
+        if (filterOptionIds == null || filterOptionIds.isEmpty()) {
+            portfolio.updateFilterOptionIds(List.of());
+            return;
         }
+
+        // 유효한 필터 옵션만 추출
+        List<FilterOption> validOptions = filterOptionRepository.findByIdInAndIsDeletedFalse(filterOptionIds);
+        List<Long> validIds = validOptions.stream()
+                .map(FilterOption::getId)
+                .collect(Collectors.toList());
+
+        if (validIds.size() != filterOptionIds.size()) {
+            log.warn("일부 필터 옵션을 찾을 수 없음: 요청={}, 유효={}", filterOptionIds.size(), validIds.size());
+        }
+
+        // JSONB 배열 업데이트 (UPDATE 1회)
+        portfolio.updateFilterOptionIds(validIds);
+
+        log.info("필터 옵션 저장 완료 (JSONB): portfolioId={}, 저장된 옵션 수={}",
+                portfolio.getId(), validIds.size());
     }
 
     private PortfolioResponse.CompanySummary getCompanySummary(Company company) {

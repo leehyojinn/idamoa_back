@@ -863,70 +863,75 @@ public class CompanyService {
     }
 
     /**
-     * 필터 옵션 처리 (저장)
+     * 필터 옵션 처리 (저장) - JSONB 배열 방식
      */
     private void processFilterOptions(Company company, List<Long> filterOptionIds) {
         if (filterOptionIds == null || filterOptionIds.isEmpty()) {
             log.info("필터 옵션 없음: companyId={}", company.getId());
+            company.updateFilterOptionIds(List.of());
             return;
         }
 
         log.info("필터 옵션 처리 시작: companyId={}, filterOptionCount={}",
                 company.getId(), filterOptionIds.size());
 
-        // 필터 옵션 조회
-        List<FilterOption> filterOptions = filterOptionRepository.findByIdIn(filterOptionIds);
+        // 필터 옵션 유효성 검증
+        List<FilterOption> validOptions = filterOptionRepository.findByIdInAndIsDeletedFalse(filterOptionIds);
 
-        if (filterOptions.size() != filterOptionIds.size()) {
+        if (validOptions.size() != filterOptionIds.size()) {
             log.warn("일부 필터 옵션을 찾을 수 없음: 요청={}, 조회={}",
-                    filterOptionIds.size(), filterOptions.size());
+                    filterOptionIds.size(), validOptions.size());
         }
 
-        // CompanyFilterOption 엔티티 생성 및 저장
-        List<CompanyFilterOption> companyFilterOptions = filterOptions.stream()
-                .map(filterOption -> CompanyFilterOption.builder()
-                        .company(company)
-                        .filterOption(filterOption)
-                        .build())
+        // 유효한 ID만 추출하여 JSONB 배열에 저장
+        List<Long> validIds = validOptions.stream()
+                .map(FilterOption::getId)
                 .collect(Collectors.toList());
 
-        companyFilterOptionRepository.saveAll(companyFilterOptions);
+        company.updateFilterOptionIds(validIds);
 
-        log.info("필터 옵션 저장 완료: companyId={}, 저장된 옵션 수={}",
-                company.getId(), companyFilterOptions.size());
+        log.info("필터 옵션 저장 완료 (JSONB): companyId={}, 저장된 옵션 수={}",
+                company.getId(), validIds.size());
     }
 
     /**
-     * 필터 옵션 업데이트 (기존 것 삭제 후 새로 저장)
+     * 필터 옵션 업데이트 - JSONB 배열 방식
      */
     private void updateFilterOptions(Company company, List<Long> filterOptionIds) {
-        // 기존 필터 옵션 삭제
-        companyFilterOptionRepository.deleteByCompany(company);
-        log.info("기존 필터 옵션 삭제 완료: companyId={}", company.getId());
+        log.info("필터 옵션 업데이트 시작: companyId={}", company.getId());
 
-        // 새 필터 옵션 저장
+        // JSONB 배열로 직접 저장 (DELETE + INSERT 대신 UPDATE 1회)
         processFilterOptions(company, filterOptionIds);
     }
 
     /**
-     * 업체 필터를 카테고리별로 그룹화
+     * 업체 필터를 카테고리별로 그룹화 - JSONB 배열 방식
      */
     public List<CompanyFilterGroupDto> getCompanyFilterGroups(Company company) {
-        List<CompanyFilterOption> filterOptions = companyFilterOptionRepository.findByCompany(company);
+        List<Long> filterOptionIds = company.getFilterOptionIds();
+
+        if (filterOptionIds == null || filterOptionIds.isEmpty()) {
+            return List.of();
+        }
+
+        // JSONB 배열의 ID들로 필터 옵션 조회 (카테고리 포함)
+        List<FilterOption> filterOptions = filterOptionRepository.findByIdInWithCategory(filterOptionIds);
+
+        if (filterOptions.isEmpty()) {
+            return List.of();
+        }
 
         // 카테고리별로 그룹화
-        java.util.Map<com.hip.damoa.domain.filter.model.FilterCategory, List<CompanyFilterOption>> groupedByCategory =
+        java.util.Map<com.hip.damoa.domain.filter.model.FilterCategory, List<FilterOption>> groupedByCategory =
             filterOptions.stream()
-                .collect(java.util.stream.Collectors.groupingBy(
-                    cfo -> cfo.getFilterOption().getCategory()
-                ));
+                .collect(java.util.stream.Collectors.groupingBy(FilterOption::getCategory));
 
         // DTO로 변환
         return groupedByCategory.entrySet().stream()
             .map(entry -> {
                 com.hip.damoa.domain.filter.model.FilterCategory category = entry.getKey();
                 List<FilterOptionDto> options = entry.getValue().stream()
-                    .map(cfo -> FilterOptionDto.from(cfo.getFilterOption()))
+                    .map(FilterOptionDto::from)
                     .collect(java.util.stream.Collectors.toList());
 
                 return CompanyFilterGroupDto.builder()
@@ -945,56 +950,58 @@ public class CompanyService {
     }
 
     /**
-     * 업체 수정 시 필터 옵션 스마트 업데이트
-     * - 동일한 것은 유지
-     * - 삭제된 것은 제거
-     * - 새로 추가된 것은 추가
+     * 업체 수정 시 필터 옵션 스마트 업데이트 - JSONB 배열 방식
+     * 기존: DELETE N + INSERT M
+     * 개선: UPDATE 1회로 JSONB 배열 전체 교체
      */
     private void updateFilterOptionsSmart(Company company, List<Long> newFilterOptionIds) {
         if (newFilterOptionIds == null) {
             return; // null이면 변경하지 않음
         }
 
-        // 현재 필터 옵션 ID들
-        List<CompanyFilterOption> currentOptions = companyFilterOptionRepository.findByCompany(company);
-        Set<Long> currentOptionIds = currentOptions.stream()
-            .map(cfo -> cfo.getFilterOption().getId())
-            .collect(java.util.stream.Collectors.toSet());
+        List<Long> currentIds = company.getFilterOptionIds();
+        Set<Long> currentIdSet = currentIds != null ? new HashSet<>(currentIds) : new HashSet<>();
+        Set<Long> newIdSet = new HashSet<>(newFilterOptionIds);
 
-        Set<Long> newOptionIdSet = new HashSet<>(newFilterOptionIds);
-
-        // 삭제할 항목 (현재는 있지만 새 목록에는 없음)
-        List<CompanyFilterOption> toDelete = currentOptions.stream()
-            .filter(cfo -> !newOptionIdSet.contains(cfo.getFilterOption().getId()))
-            .collect(java.util.stream.Collectors.toList());
-
-        // 추가할 항목 (새 목록에는 있지만 현재는 없음)
-        List<Long> toAdd = newFilterOptionIds.stream()
-            .filter(id -> !currentOptionIds.contains(id))
-            .collect(java.util.stream.Collectors.toList());
-
-        // 삭제 처리
-        if (!toDelete.isEmpty()) {
-            companyFilterOptionRepository.deleteAll(toDelete);
-            log.info("필터 옵션 삭제: companyId={}, 삭제 개수={}", company.getId(), toDelete.size());
-        }
-
-        // 추가 처리
-        if (!toAdd.isEmpty()) {
-            List<FilterOption> filterOptionsToAdd = filterOptionRepository.findAllById(toAdd);
-            List<CompanyFilterOption> newCompanyFilterOptions = filterOptionsToAdd.stream()
-                .map(filterOption -> CompanyFilterOption.builder()
-                    .company(company)
-                    .filterOption(filterOption)
-                    .build())
-                .collect(java.util.stream.Collectors.toList());
-
-            companyFilterOptionRepository.saveAll(newCompanyFilterOptions);
-            log.info("필터 옵션 추가: companyId={}, 추가 개수={}", company.getId(), newCompanyFilterOptions.size());
-        }
-
-        if (toDelete.isEmpty() && toAdd.isEmpty()) {
+        // 변경 여부 확인
+        if (currentIdSet.equals(newIdSet)) {
             log.info("필터 옵션 변경 없음: companyId={}", company.getId());
+            return;
         }
+
+        // 유효성 검증: 새 ID들이 실제로 존재하는지 확인
+        List<FilterOption> validOptions = filterOptionRepository.findByIdInAndIsDeletedFalse(newFilterOptionIds);
+        List<Long> validIds = validOptions.stream()
+            .map(FilterOption::getId)
+            .collect(Collectors.toList());
+
+        if (validIds.size() != newFilterOptionIds.size()) {
+            log.warn("일부 필터 옵션을 찾을 수 없음: 요청={}, 유효={}",
+                    newFilterOptionIds.size(), validIds.size());
+        }
+
+        // JSONB 배열 업데이트 (UPDATE 1회)
+        company.updateFilterOptionIds(validIds);
+
+        log.info("필터 옵션 업데이트 완료 (JSONB): companyId={}, 이전={}, 이후={}",
+            company.getId(), currentIdSet.size(), validIds.size());
+    }
+
+    /**
+     * 업체의 필터 옵션 조회 - JSONB 배열 방식
+     */
+    @Transactional(readOnly = true)
+    public List<FilterOptionDto> getCompanyFilterOptionsList(Company company) {
+        List<Long> filterOptionIds = company.getFilterOptionIds();
+
+        if (filterOptionIds == null || filterOptionIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<FilterOption> filterOptions = filterOptionRepository.findByIdInAndIsDeletedFalse(filterOptionIds);
+
+        return filterOptions.stream()
+                .map(FilterOptionDto::from)
+                .collect(Collectors.toList());
     }
 }

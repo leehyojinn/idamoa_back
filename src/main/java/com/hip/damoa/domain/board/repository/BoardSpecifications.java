@@ -141,8 +141,8 @@ public class BoardSpecifications {
     }
 
     /**
-     * 필터 옵션으로 검색
-     * BoardFilterOption 조인 테이블을 통해 필터링
+     * 필터 옵션으로 검색 - JSONB 배열 방식
+     * filter_option_ids JSONB 배열에서 검색
      */
     public static Specification<Board> hasFilterOptions(List<Long> filterOptionIds) {
         return (root, query, cb) -> {
@@ -150,14 +150,18 @@ public class BoardSpecifications {
                 return cb.conjunction();
             }
 
-            // DISTINCT 설정
-            query.distinct(true);
+            // JSONB 배열에서 필터 옵션 중 하나라도 포함되어 있는지 확인 (OR 조건)
+            Predicate[] predicates = filterOptionIds.stream()
+                .map(optionId -> cb.isTrue(
+                    cb.function("jsonb_contains_id",
+                        Boolean.class,
+                        root.get("filterOptionIds"),
+                        cb.literal(optionId)
+                    )
+                ))
+                .toArray(Predicate[]::new);
 
-            // BoardFilterOption과 JOIN
-            Join<Board, BoardFilterOption> filterJoin = root.join("filterOptions", JoinType.INNER);
-
-            // filterOption.id IN (filterOptionIds)
-            return filterJoin.get("filterOption").get("id").in(filterOptionIds);
+            return cb.or(predicates);
         };
     }
 
@@ -200,8 +204,8 @@ public class BoardSpecifications {
     }
 
     /**
-     * 필터 옵션 고급 검색 (카테고리별 OR, 카테고리간 AND)
-     * CompanySpecifications와 유사한 패턴
+     * 필터 옵션 고급 검색 - JSONB 배열 방식
+     * CompanySpecifications와 동일한 패턴
      */
     public static Specification<Board> hasFilterOptionsAdvanced(List<Long> filterOptionIds) {
         return (root, query, cb) -> {
@@ -209,20 +213,18 @@ public class BoardSpecifications {
                 return cb.conjunction();
             }
 
-            // DISTINCT 설정
-            query.distinct(true);
+            // JSONB 배열에서 필터 옵션 중 하나라도 포함되어 있는지 확인 (OR 조건)
+            Predicate[] predicates = filterOptionIds.stream()
+                .map(optionId -> cb.isTrue(
+                    cb.function("jsonb_contains_id",
+                        Boolean.class,
+                        root.get("filterOptionIds"),
+                        cb.literal(optionId)
+                    )
+                ))
+                .toArray(Predicate[]::new);
 
-            // EXISTS 서브쿼리 사용
-            Subquery<Long> subquery = query.subquery(Long.class);
-            Root<BoardFilterOption> bfoRoot = subquery.from(BoardFilterOption.class);
-
-            subquery.select(bfoRoot.get("board").get("id"))
-                .where(
-                    cb.equal(bfoRoot.get("board").get("id"), root.get("id")),
-                    bfoRoot.get("filterOption").get("id").in(filterOptionIds)
-                );
-
-            return cb.exists(subquery);
+            return cb.or(predicates);
         };
     }
 

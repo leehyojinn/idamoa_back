@@ -145,7 +145,7 @@ public class PortfolioSpecifications {
     }
 
     /**
-     * 필터 옵션으로 검색
+     * 필터 옵션으로 검색 - JSONB 배열 방식
      */
     public static Specification<CompanyPortfolio> hasFilterOptions(List<Long> filterOptionIds) {
         return (root, query, cb) -> {
@@ -153,19 +153,18 @@ public class PortfolioSpecifications {
                 return cb.conjunction();
             }
 
-            query.distinct(true);
+            // JSONB 배열에서 필터 옵션 중 하나라도 포함되어 있는지 확인 (OR 조건)
+            Predicate[] predicates = filterOptionIds.stream()
+                .map(optionId -> cb.isTrue(
+                    cb.function("jsonb_contains_id",
+                        Boolean.class,
+                        root.get("filterOptionIds"),
+                        cb.literal(optionId)
+                    )
+                ))
+                .toArray(Predicate[]::new);
 
-            // EXISTS 서브쿼리 사용
-            Subquery<Long> subquery = query.subquery(Long.class);
-            Root<PortfolioFilterOption> pfoRoot = subquery.from(PortfolioFilterOption.class);
-
-            subquery.select(pfoRoot.get("portfolio").get("id"))
-                .where(
-                    cb.equal(pfoRoot.get("portfolio").get("id"), root.get("id")),
-                    pfoRoot.get("filterOption").get("id").in(filterOptionIds)
-                );
-
-            return cb.exists(subquery);
+            return cb.or(predicates);
         };
     }
 

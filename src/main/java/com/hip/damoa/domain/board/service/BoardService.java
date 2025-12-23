@@ -220,11 +220,15 @@ public class BoardService {
     }
 
     /**
-     * 필터 옵션 추가
+     * 필터 옵션 추가 - JSONB 배열 방식
      */
     @Transactional
     public void addFilterOptions(UUID boardUuid, List<Long> filterOptionIds) {
         log.info("필터 옵션 추가: boardUuid={}, filterOptionIds={}", boardUuid, filterOptionIds);
+
+        if (filterOptionIds == null || filterOptionIds.isEmpty()) {
+            return;
+        }
 
         Board board = getBoard(boardUuid);
 
@@ -234,47 +238,75 @@ public class BoardService {
             throw new BusinessException(ErrorCode.BOARD_TYPE_NOT_SUPPORT_FILTER);
         }
 
-        for (Long filterOptionId : filterOptionIds) {
-            // 이미 존재하는지 확인
-            if (boardFilterOptionRepository.existsByBoardIdAndFilterOptionId(board.getId(), filterOptionId)) {
-                continue;
-            }
+        // 유효한 필터 옵션만 추출
+        List<FilterOption> validOptions = filterOptionRepository.findByIdInAndIsDeletedFalse(filterOptionIds);
+        List<Long> validIds = validOptions.stream()
+                .map(FilterOption::getId)
+                .collect(java.util.stream.Collectors.toList());
 
-            FilterOption filterOption = filterOptionRepository.findById(filterOptionId)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.FILTER_OPTION_NOT_FOUND));
+        // JSONB 배열 업데이트 (UPDATE 1회)
+        board.updateFilterOptionIds(validIds);
+        boardRepository.save(board);
 
-            BoardFilterOption boardFilterOption = BoardFilterOption.builder()
-                    .board(board)
-                    .filterOption(filterOption)
-                    .build();
-
-            boardFilterOptionRepository.save(boardFilterOption);
-            board.addFilterOption(boardFilterOption);
-        }
-
-        log.info("필터 옵션 추가 완료: boardUuid={}, 추가된 개수={}", boardUuid, filterOptionIds.size());
+        log.info("필터 옵션 추가 완료 (JSONB): boardUuid={}, 추가된 개수={}", boardUuid, validIds.size());
     }
 
     /**
-     * 필터 옵션 제거
+     * 필터 옵션 제거 - JSONB 배열 방식
      */
     @Transactional
     public void removeFilterOption(UUID boardUuid, Long filterOptionId) {
         log.info("필터 옵션 제거: boardUuid={}, filterOptionId={}", boardUuid, filterOptionId);
 
         Board board = getBoard(boardUuid);
-        boardFilterOptionRepository.deleteByBoardIdAndFilterOptionId(board.getId(), filterOptionId);
 
-        log.info("필터 옵션 제거 완료");
+        List<Long> currentIds = board.getFilterOptionIds();
+        if (currentIds == null || currentIds.isEmpty()) {
+            return;
+        }
+
+        // 해당 ID 제거
+        List<Long> updatedIds = currentIds.stream()
+                .filter(id -> !id.equals(filterOptionId))
+                .collect(java.util.stream.Collectors.toList());
+
+        board.updateFilterOptionIds(updatedIds);
+        boardRepository.save(board);
+
+        log.info("필터 옵션 제거 완료 (JSONB): 이전={}, 이후={}", currentIds.size(), updatedIds.size());
     }
 
     /**
-     * 게시글의 모든 필터 옵션 조회
+     * 게시글의 모든 필터 옵션 조회 - JSONB 배열 방식
      */
     @Transactional(readOnly = true)
     public List<BoardFilterOption> getBoardFilterOptions(UUID boardUuid) {
         Board board = getBoard(boardUuid);
+        // 기존 호환성 유지를 위해 조인 테이블 조회 (점진적 마이그레이션)
         return boardFilterOptionRepository.findByBoardId(board.getId());
+    }
+
+    /**
+     * 게시글의 필터 옵션 ID 목록 조회 - JSONB 배열 방식
+     */
+    @Transactional(readOnly = true)
+    public List<Long> getBoardFilterOptionIds(UUID boardUuid) {
+        Board board = getBoard(boardUuid);
+        List<Long> ids = board.getFilterOptionIds();
+        return ids != null ? ids : List.of();
+    }
+
+    /**
+     * 게시글의 필터 옵션 상세 조회 - JSONB 배열 방식
+     */
+    @Transactional(readOnly = true)
+    public List<FilterOption> getBoardFilterOptionDetails(UUID boardUuid) {
+        Board board = getBoard(boardUuid);
+        List<Long> ids = board.getFilterOptionIds();
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return filterOptionRepository.findByIdInAndIsDeletedFalse(ids);
     }
 
     /**

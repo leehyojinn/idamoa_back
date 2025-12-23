@@ -72,7 +72,7 @@ public class CompanySpecifications {
     }
 
     /**
-     * 카테고리별 필터 옵션 (OR within category, AND across categories)
+     * 카테고리별 필터 옵션 (OR within category, AND across categories) - JSONB 배열 방식
      *
      * @param filterOptionsByCategory Map<CategoryId, List<OptionIds>>
      *                                 예: {1: [1,2], 2: [10,11]} = (옵션1 OR 옵션2) AND (옵션10 OR 옵션11)
@@ -83,26 +83,26 @@ public class CompanySpecifications {
                 return cb.conjunction();
             }
 
-            // DISTINCT 설정 (중복 제거)
-            query.distinct(true);
-
             // 각 카테고리별로 AND 조건 생성
+            // JSONB 배열에서 각 카테고리의 옵션 중 하나라도 포함되어 있는지 확인
             Predicate[] categoryPredicates = filterOptionsByCategory.entrySet().stream()
                 .map(entry -> {
                     List<Long> optionIds = entry.getValue();
 
-                    // 각 카테고리에 대해 EXISTS 서브쿼리 생성
-                    // (회사가 해당 카테고리의 옵션 중 하나라도 가지고 있는지)
-                    Subquery<Long> subquery = query.subquery(Long.class);
-                    Root<CompanyFilterOption> cfoRoot = subquery.from(CompanyFilterOption.class);
+                    // 카테고리 내 OR 조건: 하나라도 포함되어 있으면 됨
+                    // JSONB ?| (hasAny) 연산자 사용: filter_option_ids ?| array['1', '2']
+                    // JPA에서는 native function으로 처리
+                    Predicate[] orPredicates = optionIds.stream()
+                        .map(optionId -> cb.isTrue(
+                            cb.function("jsonb_contains_id",
+                                Boolean.class,
+                                root.get("filterOptionIds"),
+                                cb.literal(optionId)
+                            )
+                        ))
+                        .toArray(Predicate[]::new);
 
-                    subquery.select(cfoRoot.get("company").get("id"))
-                        .where(
-                            cb.equal(cfoRoot.get("company").get("id"), root.get("id")),
-                            cfoRoot.get("filterOption").get("id").in(optionIds)
-                        );
-
-                    return cb.exists(subquery);
+                    return cb.or(orPredicates);
                 })
                 .toArray(Predicate[]::new);
 
@@ -112,7 +112,61 @@ public class CompanySpecifications {
     }
 
     /**
-     * 서비스 지역 필터 - 필터 옵션을 통한 검색
+     * 필터 옵션 ID 목록으로 검색 (JSONB 배열 방식) - 간단한 버전
+     * 모든 필터 옵션이 포함된 업체 검색
+     *
+     * @param filterOptionIds 필터 옵션 ID 목록
+     */
+    public static Specification<Company> hasFilterOptionIds(List<Long> filterOptionIds) {
+        return (root, query, cb) -> {
+            if (filterOptionIds == null || filterOptionIds.isEmpty()) {
+                return cb.conjunction();
+            }
+
+            // 각 필터 옵션 ID가 JSONB 배열에 포함되어 있는지 확인 (AND 조건)
+            // filter_option_ids @> '[1, 2, 3]'::jsonb
+            Predicate[] predicates = filterOptionIds.stream()
+                .map(optionId -> cb.isTrue(
+                    cb.function("jsonb_contains_id",
+                        Boolean.class,
+                        root.get("filterOptionIds"),
+                        cb.literal(optionId)
+                    )
+                ))
+                .toArray(Predicate[]::new);
+
+            return cb.and(predicates);
+        };
+    }
+
+    /**
+     * 필터 옵션 ID 목록 중 하나라도 포함된 업체 검색 (JSONB 배열 방식)
+     *
+     * @param filterOptionIds 필터 옵션 ID 목록
+     */
+    public static Specification<Company> hasAnyFilterOptionIds(List<Long> filterOptionIds) {
+        return (root, query, cb) -> {
+            if (filterOptionIds == null || filterOptionIds.isEmpty()) {
+                return cb.conjunction();
+            }
+
+            // 각 필터 옵션 ID가 JSONB 배열에 포함되어 있는지 확인 (OR 조건)
+            Predicate[] predicates = filterOptionIds.stream()
+                .map(optionId -> cb.isTrue(
+                    cb.function("jsonb_contains_id",
+                        Boolean.class,
+                        root.get("filterOptionIds"),
+                        cb.literal(optionId)
+                    )
+                ))
+                .toArray(Predicate[]::new);
+
+            return cb.or(predicates);
+        };
+    }
+
+    /**
+     * 서비스 지역 필터 - 필터 옵션을 통한 검색 (JSONB 배열 방식)
      * REGION 카테고리의 필터 옵션 ID들로 검색
      */
     public static Specification<Company> hasRegionFilters(List<Long> regionFilterIds) {
@@ -121,17 +175,18 @@ public class CompanySpecifications {
                 return cb.conjunction();
             }
 
-            // EXISTS 서브쿼리로 필터 옵션 확인
-            Subquery<Long> subquery = query.subquery(Long.class);
-            Root<CompanyFilterOption> cfoRoot = subquery.from(CompanyFilterOption.class);
+            // JSONB 배열에서 지역 필터 옵션 중 하나라도 포함되어 있는지 확인 (OR 조건)
+            Predicate[] predicates = regionFilterIds.stream()
+                .map(optionId -> cb.isTrue(
+                    cb.function("jsonb_contains_id",
+                        Boolean.class,
+                        root.get("filterOptionIds"),
+                        cb.literal(optionId)
+                    )
+                ))
+                .toArray(Predicate[]::new);
 
-            subquery.select(cfoRoot.get("company").get("id"))
-                .where(
-                    cb.equal(cfoRoot.get("company").get("id"), root.get("id")),
-                    cfoRoot.get("filterOption").get("id").in(regionFilterIds)
-                );
-
-            return cb.exists(subquery);
+            return cb.or(predicates);
         };
     }
 

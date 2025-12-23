@@ -9,6 +9,8 @@ import org.hibernate.annotations.Type;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -111,6 +113,16 @@ public class CompanyPortfolio extends BaseEntity {
     @Builder.Default
     private Integer displayOrder = 0;
 
+    /**
+     * 필터 옵션 ID 목록 (JSONB 배열)
+     * - 조인 테이블 대신 JSONB 배열로 관리하여 성능 개선
+     * - 검색 시 GIN 인덱스 활용
+     */
+    @Type(JsonBinaryType.class)
+    @Column(name = "filter_option_ids", columnDefinition = "jsonb")
+    @Builder.Default
+    private List<Long> filterOptionIds = new ArrayList<>();
+
     // ===== Business Methods =====
 
     /**
@@ -209,5 +221,12 @@ public class CompanyPortfolio extends BaseEntity {
         if (copyrightAttribution != null) this.copyrightAttribution = copyrightAttribution;
         if (isPublic != null) this.isPublic = isPublic;
         if (displayOrder != null) this.displayOrder = displayOrder;
+    }
+
+    /**
+     * 필터 옵션 ID 목록 업데이트 (JSONB 배열)
+     */
+    public void updateFilterOptionIds(List<Long> ids) {
+        this.filterOptionIds = ids != null ? new ArrayList<>(ids) : new ArrayList<>();
     }
 }
