@@ -502,7 +502,7 @@ public class PortfolioService {
     // ===== Helper Methods =====
 
     /**
-     * 첨부파일 추가 (중간 테이블)
+     * 첨부파일 추가 (중간 테이블) - 신규 생성 시 사용
      */
     private void addAttachments(CompanyPortfolio portfolio, List<String> fileUuids, PortfolioAttachment.AttachmentType type) {
         int order = 0;
@@ -527,22 +527,87 @@ public class PortfolioService {
     }
 
     /**
-     * 첨부파일 업데이트 (기존 삭제 후 새로 추가)
+     * 첨부파일 업데이트 (비교 후 변경된 것만 처리)
+     * - 삭제할 것: 기존에 있지만 새 목록에 없는 것 → soft delete
+     * - 추가할 것: 새 목록에 있지만 기존에 없는 것 → insert
+     * - 유지할 것: 양쪽에 다 있는 것 → 순서만 업데이트
      */
     private void updateAttachments(CompanyPortfolio portfolio, List<String> fileUuids, PortfolioAttachment.AttachmentType type) {
-        // 기존 해당 타입 첨부파일 조회
-        List<PortfolioAttachment> existing = attachmentRepository.findByPortfolioIdAndType(portfolio.getId(), type);
+        log.info("첨부파일 업데이트 시작: portfolioId={}, type={}", portfolio.getId(), type);
 
-        // 기존 첨부파일 소프트 삭제
-        for (PortfolioAttachment attachment : existing) {
-            attachment.softDelete();
-            attachmentRepository.save(attachment);
+        // 1. 기존 첨부파일 조회 (삭제되지 않은 것만)
+        List<PortfolioAttachment> existingAttachments = attachmentRepository.findByPortfolioIdAndType(portfolio.getId(), type);
+
+        // 기존 첨부파일의 File ID Set
+        Set<Long> existingFileIds = existingAttachments.stream()
+                .map(att -> att.getFile().getId())
+                .collect(Collectors.toSet());
+
+        // 기존 첨부파일을 File ID로 빠르게 찾기 위한 Map
+        Map<Long, PortfolioAttachment> existingMap = existingAttachments.stream()
+                .collect(Collectors.toMap(att -> att.getFile().getId(), att -> att));
+
+        // 2. 새 파일 UUID를 File ID로 변환
+        Set<Long> newFileIds = new HashSet<>();
+        Map<Long, File> newFileMap = new HashMap<>();
+
+        if (fileUuids != null && !fileUuids.isEmpty()) {
+            for (String uuidStr : fileUuids) {
+                if (uuidStr != null && !uuidStr.isEmpty()) {
+                    UUID uuid = UUID.fromString(uuidStr);
+                    File file = fileRepository.findByUuidAndIsDeletedFalse(uuid)
+                            .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+                    newFileIds.add(file.getId());
+                    newFileMap.put(file.getId(), file);
+                }
+            }
         }
 
-        // 새 첨부파일 추가
-        if (!fileUuids.isEmpty()) {
-            addAttachments(portfolio, fileUuids, type);
+        // 3. 삭제할 첨부파일 처리 (기존에 있지만 새 목록에 없는 것)
+        int deletedCount = 0;
+        for (PortfolioAttachment existing : existingAttachments) {
+            if (!newFileIds.contains(existing.getFile().getId())) {
+                existing.softDelete();
+                attachmentRepository.save(existing);
+                deletedCount++;
+            }
         }
+        log.info("삭제된 첨부파일 수: {}", deletedCount);
+
+        // 4. 추가/유지 처리 (새 목록 순서대로)
+        int addedCount = 0;
+        int displayOrder = 0;
+
+        if (fileUuids != null) {
+            for (String uuidStr : fileUuids) {
+                if (uuidStr != null && !uuidStr.isEmpty()) {
+                    UUID uuid = UUID.fromString(uuidStr);
+                    File file = fileRepository.findByUuidAndIsDeletedFalse(uuid)
+                            .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+
+                    if (existingFileIds.contains(file.getId())) {
+                        // 기존에 있는 파일 → 순서만 업데이트
+                        PortfolioAttachment existing = existingMap.get(file.getId());
+                        existing.updateDisplayOrder(displayOrder++);
+                        attachmentRepository.save(existing);
+                    } else {
+                        // 새로 추가할 파일
+                        file.updateEntityInfo(ENTITY_TYPE_PORTFOLIO, portfolio.getId());
+                        fileRepository.save(file);
+
+                        PortfolioAttachment attachment = PortfolioAttachment.builder()
+                                .portfolio(portfolio)
+                                .file(file)
+                                .attachmentType(type)
+                                .displayOrder(displayOrder++)
+                                .build();
+                        attachmentRepository.save(attachment);
+                        addedCount++;
+                    }
+                }
+            }
+        }
+        log.info("추가된 첨부파일 수: {}", addedCount);
     }
 
     /**
@@ -617,10 +682,16 @@ public class PortfolioService {
             return null;
         }
 
+        Double avgRating = company.getAvgRating() != null
+                ? company.getAvgRating().doubleValue()
+                : null;
+
         return PortfolioResponse.CompanySummary.builder()
                 .companyUuid(company.getUuid())
                 .companyName(company.getName())
                 .phone(company.getPrimaryPhone())
+                .averageRating(avgRating)
+                .reviewCount(company.getReviewCount())
                 .build();
     }
 

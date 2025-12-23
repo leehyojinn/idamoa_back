@@ -80,7 +80,19 @@ public class FileUploadService {
             "image/vnd.dxf", "image/x-dxf",                                                 // .dxf
             "model/vnd.dwf", "drawing/x-dwf",                                               // .dwf
             // 텍스트
-            "text/plain"
+            "text/plain",
+            // 오디오
+            "audio/mpeg", "audio/mp3",                                                      // .mp3
+            // 동영상
+            "video/mp4",                                                                    // .mp4
+            "video/x-msvideo", "video/avi",                                                 // .avi
+            "video/quicktime",                                                              // .mov
+            "video/x-ms-wmv",                                                               // .wmv
+            "video/x-matroska",                                                             // .mkv
+            "video/webm",                                                                   // .webm
+            "video/x-m4v",                                                                  // .m4v
+            "video/mpeg",                                                                   // .mpeg, .mpg
+            "video/x-flv"                                                                   // .flv
     );
 
     /**
