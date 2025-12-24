@@ -34,6 +34,8 @@ public class PopupService {
     private final PopupRepository popupRepository;
     private final FileRepository fileRepository;
 
+    private static final String ENTITY_TYPE_POPUP = "POPUP";
+
     /**
      * 팝업 생성 (ADMIN)
      */
@@ -42,8 +44,9 @@ public class PopupService {
         log.info("팝업 생성 시작: userEmail={}, title={}", userEmail, request.getTitle());
 
         // 이미지 UUID 검증 (선택사항)
+        File imageFile = null;
         if (request.getImageUuid() != null) {
-            fileRepository.findByUuidAndIsDeletedFalse(request.getImageUuid())
+            imageFile = fileRepository.findByUuidAndIsDeletedFalse(request.getImageUuid())
                     .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
         }
 
@@ -67,10 +70,17 @@ public class PopupService {
 
         popup = popupRepository.save(popup);
 
+        // 이미지 파일의 entityType, entityId 업데이트 (orphan 파일 삭제 방지)
+        if (imageFile != null) {
+            imageFile.updateEntityInfo(ENTITY_TYPE_POPUP, popup.getId());
+            fileRepository.save(imageFile);
+            log.info("팝업 이미지 엔티티 연결: fileId={}, popupId={}", imageFile.getId(), popup.getId());
+        }
+
         log.info("팝업 생성 완료: uuid={}", popup.getUuid());
 
         // 이미지 URL 로드
-        String imageUrl = loadImageUrl(popup.getImageUuid());
+        String imageUrl = imageFile != null ? imageFile.getFileUrl() : null;
 
         return PopupResponse.from(popup, imageUrl);
     }
@@ -85,9 +95,13 @@ public class PopupService {
         Popup popup = popupRepository.findByUuidAndIsDeletedFalse(uuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POPUP_NOT_FOUND));
 
-        // 이미지 UUID 검증 (선택사항)
+        // 기존 이미지 UUID
+        UUID oldImageUuid = popup.getImageUuid();
+
+        // 새 이미지 UUID 검증 및 로드 (선택사항)
+        File newImageFile = null;
         if (request.getImageUuid() != null) {
-            fileRepository.findByUuidAndIsDeletedFalse(request.getImageUuid())
+            newImageFile = fileRepository.findByUuidAndIsDeletedFalse(request.getImageUuid())
                     .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
         }
 
@@ -108,10 +122,33 @@ public class PopupService {
                 userEmail
         );
 
+        // 이미지가 변경된 경우 entityType, entityId 업데이트
+        boolean imageChanged = (oldImageUuid == null && request.getImageUuid() != null)
+                || (oldImageUuid != null && !oldImageUuid.equals(request.getImageUuid()));
+
+        if (imageChanged) {
+            // 기존 이미지의 엔티티 연결 해제
+            if (oldImageUuid != null) {
+                fileRepository.findByUuidAndIsDeletedFalse(oldImageUuid)
+                        .ifPresent(oldFile -> {
+                            oldFile.updateEntityInfo(null, null);
+                            fileRepository.save(oldFile);
+                            log.info("기존 팝업 이미지 엔티티 연결 해제: fileUuid={}", oldImageUuid);
+                        });
+            }
+
+            // 새 이미지의 엔티티 연결
+            if (newImageFile != null) {
+                newImageFile.updateEntityInfo(ENTITY_TYPE_POPUP, popup.getId());
+                fileRepository.save(newImageFile);
+                log.info("새 팝업 이미지 엔티티 연결: fileId={}, popupId={}", newImageFile.getId(), popup.getId());
+            }
+        }
+
         log.info("팝업 수정 완료: uuid={}", uuid);
 
         // 이미지 URL 로드
-        String imageUrl = loadImageUrl(popup.getImageUuid());
+        String imageUrl = newImageFile != null ? newImageFile.getFileUrl() : null;
 
         return PopupResponse.from(popup, imageUrl);
     }
@@ -125,6 +162,16 @@ public class PopupService {
 
         Popup popup = popupRepository.findByUuidAndIsDeletedFalse(uuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POPUP_NOT_FOUND));
+
+        // 이미지 엔티티 연결 해제
+        if (popup.getImageUuid() != null) {
+            fileRepository.findByUuidAndIsDeletedFalse(popup.getImageUuid())
+                    .ifPresent(file -> {
+                        file.updateEntityInfo(null, null);
+                        fileRepository.save(file);
+                        log.info("팝업 이미지 엔티티 연결 해제: fileUuid={}", popup.getImageUuid());
+                    });
+        }
 
         popup.softDelete();
 
