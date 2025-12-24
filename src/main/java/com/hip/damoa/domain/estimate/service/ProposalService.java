@@ -123,13 +123,15 @@ public class ProposalService {
         estimateRequestRepository.save(estimateRequest);
 
         // 견적 요청 작성자에게 알림 전송
-        String requestOwnerEmail = estimateRequest.getUser().getEmail();
-        notificationService.notifyNewProposal(
-                requestOwnerEmail,
-                estimateRequest.getUuid(),
-                company.getName(),
-                proposal.getTitle()
-        );
+        String requestOwnerEmail = estimateRequest.getUser() != null ? estimateRequest.getUser().getEmail() : null;
+        if (requestOwnerEmail != null) {
+            notificationService.notifyNewProposal(
+                    requestOwnerEmail,
+                    estimateRequest.getUuid(),
+                    company.getName(),
+                    proposal.getTitle()
+            );
+        }
 
         log.info("제안 제출 완료: id={}, companyId={}, attachments={}",
                  proposal.getId(), company.getId(), proposal.getAttachments().size());
@@ -264,7 +266,7 @@ public class ProposalService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ESTIMATE_REQUEST_NOT_FOUND));
 
         // 1. 견적 요청자 본인인 경우 - 모든 제안 조회 (WITHDRAWN 제외)
-        if (estimateRequest.getUser().getId().equals(user.getId())) {
+        if (estimateRequest.getUser() != null && estimateRequest.getUser().getId().equals(user.getId())) {
             return proposalRepository.findByRequestAndStatusNotWithdrawn(estimateRequest);
         }
 
@@ -307,7 +309,8 @@ public class ProposalService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROPOSAL_NOT_FOUND));
 
         // 권한 확인 (견적 요청자 또는 제안 작성 업체)
-        boolean isRequestOwner = proposal.getRequest().getUser().getId().equals(user.getId());
+        boolean isRequestOwner = proposal.getRequest().getUser() != null
+                && proposal.getRequest().getUser().getId().equals(user.getId());
         boolean isProposalOwner = false;
 
         // 업체 소유자인지 확인
@@ -347,7 +350,8 @@ public class ProposalService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROPOSAL_NOT_FOUND));
 
         // 권한 확인
-        if (!proposal.getRequest().getUser().getId().equals(user.getId())) {
+        if (proposal.getRequest().getUser() == null
+                || !proposal.getRequest().getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.NOT_REQUEST_OWNER);
         }
 
@@ -384,7 +388,8 @@ public class ProposalService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROPOSAL_NOT_FOUND));
 
         // 권한 확인
-        if (!proposal.getRequest().getUser().getId().equals(user.getId())) {
+        if (proposal.getRequest().getUser() == null
+                || !proposal.getRequest().getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.NOT_REQUEST_OWNER);
         }
 

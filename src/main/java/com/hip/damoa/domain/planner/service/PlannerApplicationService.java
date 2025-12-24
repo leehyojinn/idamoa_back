@@ -41,6 +41,7 @@ public class PlannerApplicationService {
     private final EntityManager entityManager;
 
     private static final long MAX_TOTAL_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+    private static final String ENTITY_TYPE_PLANNER_ATTACHMENT = "PLANNER_ATTACHMENT";
 
     // ===== 공개 API (비회원 접근 가능) =====
 
@@ -510,6 +511,14 @@ public class PlannerApplicationService {
             return;
         }
 
+        // 파일 엔티티 정보 업데이트 (orphan 삭제 방지)
+        List<File> files = fileRepository.findAllById(fileIds);
+        for (File file : files) {
+            file.updateEntityInfo(ENTITY_TYPE_PLANNER_ATTACHMENT, application.getId());
+        }
+        fileRepository.saveAll(files);
+        log.info("플래너 첨부파일 엔티티 연결: applicationId={}, fileCount={}", application.getId(), files.size());
+
         int order = 0;
         for (Long fileId : fileIds) {
             PlannerApplicationAttachment attachment = PlannerApplicationAttachment.builder()
@@ -535,13 +544,30 @@ public class PlannerApplicationService {
 
         Set<Long> newFileIdSet = new HashSet<>(newFileIds != null ? newFileIds : List.of());
 
+        // 삭제되는 파일 ID 수집
+        List<Long> removedFileIds = new ArrayList<>();
+
         // 1. 기존에 있었지만 새 목록에 없는 파일 -> soft delete
         for (PlannerApplicationAttachment existing : existingAttachments) {
             if (!newFileIdSet.contains(existing.getFileId())) {
                 existing.softDelete();
                 attachmentRepository.save(existing);
+                removedFileIds.add(existing.getFileId());
             }
         }
+
+        // 삭제된 파일의 엔티티 연결 해제
+        if (!removedFileIds.isEmpty()) {
+            List<File> removedFiles = fileRepository.findAllById(removedFileIds);
+            for (File file : removedFiles) {
+                file.updateEntityInfo(null, null);
+            }
+            fileRepository.saveAll(removedFiles);
+            log.info("플래너 첨부파일 엔티티 연결 해제: applicationId={}, fileCount={}", application.getId(), removedFiles.size());
+        }
+
+        // 신규 파일 ID 수집
+        List<Long> addedFileIds = new ArrayList<>();
 
         // 2. 새 목록에만 있는 파일 -> 신규 추가
         int maxOrder = existingAttachments.stream()
@@ -557,7 +583,18 @@ public class PlannerApplicationService {
                         .displayOrder(++maxOrder)
                         .build();
                 attachmentRepository.save(attachment);
+                addedFileIds.add(fileId);
             }
+        }
+
+        // 신규 파일의 엔티티 연결
+        if (!addedFileIds.isEmpty()) {
+            List<File> addedFiles = fileRepository.findAllById(addedFileIds);
+            for (File file : addedFiles) {
+                file.updateEntityInfo(ENTITY_TYPE_PLANNER_ATTACHMENT, application.getId());
+            }
+            fileRepository.saveAll(addedFiles);
+            log.info("플래너 첨부파일 엔티티 연결: applicationId={}, fileCount={}", application.getId(), addedFiles.size());
         }
     }
 

@@ -55,12 +55,15 @@ public class ProfileService {
         return new Object[]{file.getId(), file.getUuid(), avatarUrl};
     }
 
+    private static final String ENTITY_TYPE_USER_AVATAR = "USER_PROFILE_AVATAR";
+
     /**
-     * UUID로 File 조회하여 URL 반환
+     * UUID로 File 조회하여 URL 반환 및 엔티티 연결
      * @param uuidString 파일 UUID 문자열
+     * @param profileId UserProfile ID (orphan 파일 삭제 방지)
      * @return 파일 URL (없으면 null)
      */
-    private String getFileUrlByUuid(String uuidString) {
+    private String getFileUrlByUuid(String uuidString, Long profileId) {
         if (uuidString == null || uuidString.isEmpty()) {
             return null;
         }
@@ -69,9 +72,10 @@ public class ProfileService {
         File file = fileRepository.findByUuidAndIsDeletedFalse(uuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
 
-        // entity 정보 업데이트
-        file.updateEntityInfo("USER_PROFILE_AVATAR", null);
+        // entity 정보 업데이트 (orphan 파일 삭제 방지)
+        file.updateEntityInfo(ENTITY_TYPE_USER_AVATAR, profileId);
         fileRepository.save(file);
+        log.info("아바타 파일 엔티티 연결: fileId={}, profileId={}", file.getId(), profileId);
 
         return file.getFileUrl();
     }
@@ -329,7 +333,7 @@ public class ProfileService {
 
         // 아바타 업데이트 (UUID → URL 변환)
         if (request.getAvatarUuid() != null) {
-            String avatarUrl = getFileUrlByUuid(request.getAvatarUuid());
+            String avatarUrl = getFileUrlByUuid(request.getAvatarUuid(), userProfile.getId());
             if (avatarUrl != null) {
                 userProfile.updateAvatar(avatarUrl);
             }

@@ -62,7 +62,8 @@ public class ChatService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 사용자가 견적 요청 작성자인지, 업체 소유자인지 확인
-        boolean isRequestOwner = estimateRequest.getUser().getId().equals(currentUser.getId());
+        boolean isRequestOwner = estimateRequest.getUser() != null
+                && estimateRequest.getUser().getId().equals(currentUser.getId());
 
         ChatRoom chatRoom;
 
@@ -120,8 +121,10 @@ public class ChatService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 접근 권한 확인 (견적 요청 작성자 또는 업체 소유자만 가능)
-        boolean isRequestOwner = estimateRequest.getUser().getId().equals(currentUser.getId());
-        boolean isCompanyOwner = company.getOwner().getId().equals(currentUser.getId());
+        boolean isRequestOwner = estimateRequest.getUser() != null
+                && estimateRequest.getUser().getId().equals(currentUser.getId());
+        boolean isCompanyOwner = company.getOwner() != null
+                && company.getOwner().getId().equals(currentUser.getId());
 
         if (!isRequestOwner && !isCompanyOwner) {
             log.warn("채팅방 접근 권한 없음: userEmail={}, estimateRequestUuid={}, companyUuid={}",
@@ -178,11 +181,12 @@ public class ChatService {
         SenderType senderType;
         Long senderId;
 
-        if (chatRoom.getUser().getId().equals(currentUser.getId())) {
+        if (chatRoom.getUser() != null && chatRoom.getUser().getId().equals(currentUser.getId())) {
             // 견적 요청 작성자
             senderType = SenderType.USER;
             senderId = currentUser.getId();
-        } else if (chatRoom.getCompany().getOwner().getId().equals(currentUser.getId())) {
+        } else if (chatRoom.getCompany() != null && chatRoom.getCompany().getOwner() != null
+                && chatRoom.getCompany().getOwner().getId().equals(currentUser.getId())) {
             // 업체 소유자
             senderType = SenderType.COMPANY;
             senderId = chatRoom.getCompany().getId();
@@ -231,8 +235,11 @@ public class ChatService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 접근 권한 확인
-        boolean hasAccess = chatRoom.getUser().getId().equals(currentUser.getId()) ||
-                chatRoom.getCompany().getOwner().getId().equals(currentUser.getId());
+        boolean isRoomUser = chatRoom.getUser() != null
+                && chatRoom.getUser().getId().equals(currentUser.getId());
+        boolean isRoomCompanyOwner = chatRoom.getCompany() != null && chatRoom.getCompany().getOwner() != null
+                && chatRoom.getCompany().getOwner().getId().equals(currentUser.getId());
+        boolean hasAccess = isRoomUser || isRoomCompanyOwner;
 
         if (!hasAccess) {
             log.warn("채팅방 접근 권한 없음: chatRoomUuid={}, userEmail={}",
@@ -267,11 +274,12 @@ public class ChatService {
         // 발신자 타입 확인 (읽는 사람과 반대)
         SenderType excludeSenderType;
 
-        if (chatRoom.getUser().getId().equals(currentUser.getId())) {
+        if (chatRoom.getUser() != null && chatRoom.getUser().getId().equals(currentUser.getId())) {
             // USER가 읽음 -> COMPANY가 보낸 메시지 읽음 처리
             excludeSenderType = SenderType.USER;
             chatRoom.resetUserUnreadCount();
-        } else if (chatRoom.getCompany().getOwner().getId().equals(currentUser.getId())) {
+        } else if (chatRoom.getCompany() != null && chatRoom.getCompany().getOwner() != null
+                && chatRoom.getCompany().getOwner().getId().equals(currentUser.getId())) {
             // COMPANY가 읽음 -> USER가 보낸 메시지 읽음 처리
             excludeSenderType = SenderType.COMPANY;
             chatRoom.resetCompanyUnreadCount();
@@ -344,8 +352,11 @@ public class ChatService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 접근 권한 확인
-        boolean hasAccess = chatRoom.getUser().getId().equals(currentUser.getId()) ||
-                chatRoom.getCompany().getOwner().getId().equals(currentUser.getId());
+        boolean isRoomUser = chatRoom.getUser() != null
+                && chatRoom.getUser().getId().equals(currentUser.getId());
+        boolean isRoomCompanyOwner = chatRoom.getCompany() != null && chatRoom.getCompany().getOwner() != null
+                && chatRoom.getCompany().getOwner().getId().equals(currentUser.getId());
+        boolean hasAccess = isRoomUser || isRoomCompanyOwner;
 
         if (!hasAccess) {
             log.warn("채팅방 접근 권한 없음: chatRoomUuid={}, userEmail={}",
