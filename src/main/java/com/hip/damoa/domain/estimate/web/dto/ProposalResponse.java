@@ -1,5 +1,6 @@
 package com.hip.damoa.domain.estimate.web.dto;
 
+import com.hip.damoa.core.util.ResponseUtils;
 import com.hip.damoa.domain.estimate.model.EstimateProposal;
 import com.hip.damoa.domain.file.web.dto.FileUploadResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -94,23 +95,23 @@ public class ProposalResponse {
     public static ProposalResponse from(EstimateProposal proposal) {
         return ProposalResponse.builder()
                 .uuid(proposal.getUuid())
-                .title(proposal.getTitle())
-                .description(proposal.getDescription())
-                .price(proposal.getPrice())
-                .status(proposal.getStatus())
-                .isSelected(proposal.getIsSelected())
+                .title(ResponseUtils.safe(proposal.getTitle()))
+                .description(ResponseUtils.safe(proposal.getDescription()))
+                .price(ResponseUtils.safe(proposal.getPrice()))
+                .status(ResponseUtils.safe(proposal.getStatus(), "SUBMITTED"))
+                .isSelected(ResponseUtils.safe(proposal.getIsSelected()))
                 .selectedAt(proposal.getSelectedAt())
                 .validUntil(proposal.getValidUntil())
                 // attachments는 Service에서 별도로 설정
-                .pricingDetails(proposal.getPricingDetails())
-                .timeline(proposal.getTimeline())
+                .pricingDetails(ResponseUtils.safeMap(proposal.getPricingDetails()))
+                .timeline(ResponseUtils.safeMap(proposal.getTimeline()))
                 .companyUuid(proposal.getCompany().getUuid())
-                .companyName(proposal.getCompany().getName())
+                .companyName(ResponseUtils.safe(proposal.getCompany().getName()))
                 .requestUuid(proposal.getRequest().getUuid())
-                .requestTitle(proposal.getRequest().getTitle())
+                .requestTitle(ResponseUtils.safe(proposal.getRequest().getTitle()))
                 .createdAt(proposal.getCreatedAt())
                 .updatedAt(proposal.getUpdatedAt())
-                .isDeleted(proposal.getIsDeleted())
+                .isDeleted(ResponseUtils.safe(proposal.getIsDeleted()))
                 .build();
     }
 }
