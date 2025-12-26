@@ -1,5 +1,6 @@
 package com.hip.damoa.domain.company.web.dto;
 
+import com.hip.damoa.core.util.ResponseUtils;
 import com.hip.damoa.domain.company.model.Company;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -95,23 +96,23 @@ public class CompanyListResponse {
     public static CompanyListResponse from(Company company) {
         return CompanyListResponse.builder()
                 .uuid(company.getUuid())
-                .name(company.getName())
-                .slug(company.getSlug())
-                .description(company.getDescription())
-                .primaryPhone(company.getPrimaryPhone())
-                .address(company.getAddress())
-                .avgRating(company.getAvgRating())
-                .reviewCount(company.getReviewCount())
-                .viewCount(company.getViewCount())
-                .likeCount(company.getLikeCount())
-                .completedProjects(company.getCompletedProjects())
-                .status(company.getStatus())
-                .featured(company.getFeatured())
-                .verified(company.getVerified())
-                .isPremium(company.isPremium())
-                .premiumTier(company.getPremiumTier())
+                .name(ResponseUtils.safe(company.getName()))
+                .slug(ResponseUtils.safe(company.getSlug()))
+                .description(ResponseUtils.safe(company.getDescription()))
+                .primaryPhone(ResponseUtils.safe(company.getPrimaryPhone()))
+                .address(ResponseUtils.safe(company.getAddress()))
+                .avgRating(ResponseUtils.safe(company.getAvgRating()))
+                .reviewCount(ResponseUtils.safe(company.getReviewCount()))
+                .viewCount(ResponseUtils.safe(company.getViewCount()))
+                .likeCount(ResponseUtils.safe(company.getLikeCount()))
+                .completedProjects(ResponseUtils.safe(company.getCompletedProjects()))
+                .status(ResponseUtils.safe(company.getStatus(), "ACTIVE"))
+                .featured(ResponseUtils.safe(company.getFeatured()))
+                .verified(ResponseUtils.safe(company.getVerified()))
+                .isPremium(ResponseUtils.safe(company.isPremium()))
+                .premiumTier(ResponseUtils.safe(company.getPremiumTier()))
                 .createdAt(company.getCreatedAt())
-                .isDeleted(company.getIsDeleted())
+                .isDeleted(ResponseUtils.safe(company.getIsDeleted()))
                 .build();
     }
 
@@ -121,24 +122,24 @@ public class CompanyListResponse {
     public static CompanyListResponse from(Company company, List<CompanyImageDto> images) {
         return CompanyListResponse.builder()
                 .uuid(company.getUuid())
-                .name(company.getName())
-                .slug(company.getSlug())
-                .description(company.getDescription())
-                .primaryPhone(company.getPrimaryPhone())
-                .address(company.getAddress())
-                .avgRating(company.getAvgRating())
-                .reviewCount(company.getReviewCount())
-                .viewCount(company.getViewCount())
-                .likeCount(company.getLikeCount())
-                .completedProjects(company.getCompletedProjects())
-                .status(company.getStatus())
-                .featured(company.getFeatured())
-                .verified(company.getVerified())
-                .isPremium(company.isPremium())
-                .premiumTier(company.getPremiumTier())
-                .images(images)
+                .name(ResponseUtils.safe(company.getName()))
+                .slug(ResponseUtils.safe(company.getSlug()))
+                .description(ResponseUtils.safe(company.getDescription()))
+                .primaryPhone(ResponseUtils.safe(company.getPrimaryPhone()))
+                .address(ResponseUtils.safe(company.getAddress()))
+                .avgRating(ResponseUtils.safe(company.getAvgRating()))
+                .reviewCount(ResponseUtils.safe(company.getReviewCount()))
+                .viewCount(ResponseUtils.safe(company.getViewCount()))
+                .likeCount(ResponseUtils.safe(company.getLikeCount()))
+                .completedProjects(ResponseUtils.safe(company.getCompletedProjects()))
+                .status(ResponseUtils.safe(company.getStatus(), "ACTIVE"))
+                .featured(ResponseUtils.safe(company.getFeatured()))
+                .verified(ResponseUtils.safe(company.getVerified()))
+                .isPremium(ResponseUtils.safe(company.isPremium()))
+                .premiumTier(ResponseUtils.safe(company.getPremiumTier()))
+                .images(ResponseUtils.safeList(images))
                 .createdAt(company.getCreatedAt())
-                .isDeleted(company.getIsDeleted())
+                .isDeleted(ResponseUtils.safe(company.getIsDeleted()))
                 .build();
     }
 }

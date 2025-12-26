@@ -1,5 +1,6 @@
 package com.hip.damoa.domain.company.web.dto;
 
+import com.hip.damoa.core.util.ResponseUtils;
 import com.hip.damoa.domain.company.model.CompanyReview;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -126,19 +127,19 @@ public class CompanyReviewResponse {
         return CompanyReviewResponse.builder()
                 .uuid(review.getUuid())
                 .companyUuid(companyUuid)
-                .companyName(companyName)
+                .companyName(ResponseUtils.safe(companyName))
                 .userUuid(userUuid)
-                .userEmail(userEmail)
-                .userName(resolvedUserName)
-                .rating(review.getRating())
-                .title(review.getTitle())
-                .content(review.getContent())
-                .images(images != null ? images : List.of())
-                .reply(review.getReply())
+                .userEmail(ResponseUtils.safe(userEmail))
+                .userName(ResponseUtils.safe(resolvedUserName))
+                .rating(ResponseUtils.safe(review.getRating()))
+                .title(ResponseUtils.safe(review.getTitle()))
+                .content(ResponseUtils.safe(review.getContent()))
+                .images(ResponseUtils.safeList(images))
+                .reply(ResponseUtils.safe(review.getReply()))
                 .repliedAt(review.getRepliedAt())
-                .likeCount(review.getLikeCount())
-                .reportCount(review.getReportCount())
-                .status(review.getStatus())
+                .likeCount(ResponseUtils.safe(review.getLikeCount()))
+                .reportCount(ResponseUtils.safe(review.getReportCount()))
+                .status(ResponseUtils.safe(review.getStatus(), "VISIBLE"))
                 .createdAt(review.getCreatedAt())
                 .updatedAt(review.getUpdatedAt())
                 .build();
