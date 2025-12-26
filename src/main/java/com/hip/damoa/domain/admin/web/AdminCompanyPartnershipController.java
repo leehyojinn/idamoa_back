@@ -127,19 +127,25 @@ public class AdminCompanyPartnershipController {
         return ApiResponse.success(CompanyPartnershipResponse.from(partnership));
     }
 
-    @Operation(summary = "제휴 취소",
-            description = "제휴를 취소 상태로 변경합니다.\n" +
-                    "취소된 제휴는 CANCELLED 상태가 되며 퍼블릭에 노출되지 않습니다.")
-    @PatchMapping("/{uuid}/cancel")
-    public ApiResponse<Void> cancelPartnership(
+    @Operation(summary = "제휴 상태 토글",
+            description = "제휴 상태를 토글합니다 (ACTIVE <-> CANCELLED).\n\n" +
+                    "**동작:**\n" +
+                    "- ACTIVE -> CANCELLED (비활성화)\n" +
+                    "- CANCELLED -> ACTIVE (재활성화)\n" +
+                    "- EXPIRED 상태는 토글 불가\n\n" +
+                    "**응답:**\n" +
+                    "변경된 제휴 정보를 반환합니다.")
+    @PatchMapping("/{uuid}/toggle-status")
+    public ApiResponse<CompanyPartnershipResponse> togglePartnershipStatus(
             @PathVariable UUID uuid,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        log.info("제휴 취소 요청: uuid={}, userEmail={}", uuid, userDetails.getUsername());
+        log.info("제휴 상태 토글 요청: uuid={}, userEmail={}", uuid, userDetails.getUsername());
 
-        partnershipService.cancelPartnership(userDetails.getUsername(), uuid);
+        CompanyPartnership partnership = partnershipService.togglePartnershipStatus(
+                userDetails.getUsername(), uuid);
 
-        return ApiResponse.success();
+        return ApiResponse.success(CompanyPartnershipResponse.from(partnership));
     }
 
     @Operation(summary = "제휴 삭제",

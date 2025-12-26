@@ -296,7 +296,8 @@ public enum ErrorCode {
     PARTNERSHIP_NOT_FOUND(HttpStatus.NOT_FOUND, "PS001", "제휴 정보를 찾을 수 없습니다"),
     PARTNERSHIP_ALREADY_EXISTS(HttpStatus.CONFLICT, "PS002", "해당 업체에 이미 활성 제휴가 존재합니다"),
     INVALID_PARTNERSHIP_DATES(HttpStatus.BAD_REQUEST, "PS003", "만료일은 시작일보다 이후여야 합니다"),
-    INVALID_PARTNERSHIP_END_DATE(HttpStatus.BAD_REQUEST, "PS004", "새 만료일은 현재 만료일보다 이후여야 합니다");
+    INVALID_PARTNERSHIP_END_DATE(HttpStatus.BAD_REQUEST, "PS004", "새 만료일은 현재 만료일보다 이후여야 합니다"),
+    PARTNERSHIP_EXPIRED_CANNOT_TOGGLE(HttpStatus.BAD_REQUEST, "PS005", "만료된 제휴는 상태 변경이 불가합니다");
 
     private final HttpStatus status;
     private final String code;
