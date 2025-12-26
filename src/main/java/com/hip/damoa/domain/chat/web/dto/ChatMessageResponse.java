@@ -1,6 +1,5 @@
 package com.hip.damoa.domain.chat.web.dto;
 
-import com.hip.damoa.core.util.ResponseUtils;
 import com.hip.damoa.domain.chat.model.ChatMessage;
 import com.hip.damoa.domain.chat.model.SenderType;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -54,9 +53,9 @@ public class ChatMessageResponse {
                 .uuid(chatMessage.getUuid())
                 .chatRoomUuid(chatMessage.getChatRoom().getUuid())
                 .senderType(chatMessage.getSenderType())
-                .senderId(ResponseUtils.safe(chatMessage.getSenderId()))
-                .message(ResponseUtils.safe(chatMessage.getMessage()))
-                .isRead(ResponseUtils.safe(chatMessage.getIsRead()))
+                .senderId(chatMessage.getSenderId())
+                .message(chatMessage.getMessage())
+                .isRead(chatMessage.getIsRead())
                 .readAt(chatMessage.getReadAt())
                 .createdAt(chatMessage.getCreatedAt())
                 .build();

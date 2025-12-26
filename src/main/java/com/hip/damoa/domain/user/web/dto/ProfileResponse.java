@@ -1,7 +1,6 @@
 package com.hip.damoa.domain.user.web.dto;
 
 import com.hip.damoa.core.jwt.TokenInfo;
-import com.hip.damoa.core.util.ResponseUtils;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.model.UserProfile;
 import lombok.AllArgsConstructor;
@@ -72,21 +71,21 @@ public class ProfileResponse {
      */
     public static ProfileResponse from(UserProfile profile, User user, Long avatarFileId, java.util.UUID avatarFileUuid, String avatarUrl, TokenInfo tokenInfo) {
         return ProfileResponse.builder()
-                .profileType(ResponseUtils.safe(profile.getProfileType(), "USER"))
-                .name(ResponseUtils.safe(profile.getName()))
-                .phone(ResponseUtils.safe(profile.getPhone()))
-                .email(ResponseUtils.safe(user.getEmail()))
-                .address(ResponseUtils.safe(profile.getAddress()))
-                .postalCode(ResponseUtils.safe(profile.getPostalCode()))
-                .nickname(ResponseUtils.safe(profile.getNickname()))
+                .profileType(profile.getProfileType())
+                .name(profile.getName())
+                .phone(profile.getPhone())
+                .email(user.getEmail())
+                .address(profile.getAddress())
+                .postalCode(profile.getPostalCode())
+                .nickname(profile.getNickname())
                 .avatarFileUuid(avatarFileUuid)
-                .avatarUrl(ResponseUtils.safe(avatarUrl != null ? avatarUrl : profile.getAvatarUrl()))
-                .profileVisibility(ResponseUtils.safe(profile.getProfileVisibility(), "PUBLIC"))
-                .bio(ResponseUtils.safe(profile.getBio()))
-                .socialLinks(ResponseUtils.safeMap(profile.getSocialLinks()))
-                .termsAgreed(ResponseUtils.safe(user.getTermsAgreed()))
-                .privacyAgreed(ResponseUtils.safe(user.getPrivacyAgreed()))
-                .marketingAgreed(ResponseUtils.safe(user.getMarketingAgreed()))
+                .avatarUrl(avatarUrl != null ? avatarUrl : profile.getAvatarUrl())
+                .profileVisibility(profile.getProfileVisibility())
+                .bio(profile.getBio())
+                .socialLinks(profile.getSocialLinks())
+                .termsAgreed(user.getTermsAgreed())
+                .privacyAgreed(user.getPrivacyAgreed())
+                .marketingAgreed(user.getMarketingAgreed())
                 .tokenInfo(tokenInfo)
                 .build();
     }
