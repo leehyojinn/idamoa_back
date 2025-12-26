@@ -176,6 +176,39 @@ public class CompanyPartnershipService {
     }
 
     /**
+     * 제휴 상태 토글 (관리자용) - ACTIVE <-> CANCELLED
+     */
+    @Transactional
+    public CompanyPartnership togglePartnershipStatus(String adminEmail, UUID partnershipUuid) {
+        log.info("제휴 상태 토글: adminEmail={}, uuid={}", adminEmail, partnershipUuid);
+
+        // 관리자 확인
+        User admin = userRepository.findByEmail(adminEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (!admin.hasRole("ADMIN")) {
+            throw new BusinessException(ErrorCode.ADMIN_ROLE_REQUIRED);
+        }
+
+        // 제휴 조회
+        CompanyPartnership partnership = partnershipRepository.findByUuidAndIsDeletedFalse(partnershipUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PARTNERSHIP_NOT_FOUND));
+
+        // EXPIRED 상태는 토글 불가
+        if ("EXPIRED".equals(partnership.getStatus())) {
+            throw new BusinessException(ErrorCode.PARTNERSHIP_EXPIRED_CANNOT_TOGGLE);
+        }
+
+        // 상태 토글
+        String newStatus = partnership.toggleStatus();
+        partnership = partnershipRepository.save(partnership);
+
+        log.info("제휴 상태 토글 완료: partnershipId={}, newStatus={}", partnership.getId(), newStatus);
+
+        return partnership;
+    }
+
+    /**
      * 제휴 삭제 (관리자용) - Soft Delete
      */
     @Transactional

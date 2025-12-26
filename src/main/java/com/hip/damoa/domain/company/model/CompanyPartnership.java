@@ -64,6 +64,27 @@ public class CompanyPartnership extends BaseEntity {
     }
 
     /**
+     * 제휴 활성화 처리
+     */
+    public void activate() {
+        this.status = "ACTIVE";
+    }
+
+    /**
+     * 제휴 상태 토글 (ACTIVE <-> CANCELLED)
+     * @return 변경 후 상태
+     */
+    public String toggleStatus() {
+        if ("ACTIVE".equals(this.status)) {
+            this.status = "CANCELLED";
+        } else if ("CANCELLED".equals(this.status)) {
+            this.status = "ACTIVE";
+        }
+        // EXPIRED 상태는 토글하지 않음
+        return this.status;
+    }
+
+    /**
      * 활성 상태 여부 확인
      */
     public boolean isActive() {
