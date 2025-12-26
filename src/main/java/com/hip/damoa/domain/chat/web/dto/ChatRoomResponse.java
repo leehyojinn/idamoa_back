@@ -1,6 +1,5 @@
 package com.hip.damoa.domain.chat.web.dto;
 
-import com.hip.damoa.core.util.ResponseUtils;
 import com.hip.damoa.domain.chat.model.ChatRoom;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -88,16 +87,16 @@ public class ChatRoomResponse {
         return ChatRoomResponse.builder()
                 .uuid(chatRoom.getUuid())
                 .estimateRequestUuid(chatRoom.getEstimateRequest().getUuid())
-                .estimateRequestTitle(ResponseUtils.safe(chatRoom.getEstimateRequest().getTitle()))
+                .estimateRequestTitle(chatRoom.getEstimateRequest().getTitle())
                 .userUuid(userUuid)
-                .userEmail(ResponseUtils.safe(userEmail))
-                .userName(ResponseUtils.safe(resolvedUserName))
+                .userEmail(userEmail)
+                .userName(resolvedUserName)
                 .companyUuid(chatRoom.getCompany().getUuid())
-                .companyName(ResponseUtils.safe(chatRoom.getCompany().getName()))
-                .lastMessage(ResponseUtils.safe(chatRoom.getLastMessage()))
+                .companyName(chatRoom.getCompany().getName())
+                .lastMessage(chatRoom.getLastMessage())
                 .lastMessageAt(chatRoom.getLastMessageAt())
-                .unreadCountUser(ResponseUtils.safe(chatRoom.getUnreadCountUser()))
-                .unreadCountCompany(ResponseUtils.safe(chatRoom.getUnreadCountCompany()))
+                .unreadCountUser(chatRoom.getUnreadCountUser())
+                .unreadCountCompany(chatRoom.getUnreadCountCompany())
                 .createdAt(chatRoom.getCreatedAt())
                 .build();
     }

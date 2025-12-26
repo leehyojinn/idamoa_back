@@ -1,6 +1,5 @@
 package com.hip.damoa.domain.inquiry.web.dto;
 
-import com.hip.damoa.core.util.ResponseUtils;
 import com.hip.damoa.domain.inquiry.model.Inquiry;
 import com.hip.damoa.domain.inquiry.model.InquiryStatus;
 import com.hip.damoa.domain.inquiry.model.InquiryType;
@@ -79,11 +78,11 @@ public class InquiryResponse {
         return InquiryResponse.builder()
                 .uuid(inquiry.getUuid())
                 .inquiryType(inquiry.getInquiryType())
-                .title(ResponseUtils.safe(inquiry.getTitle()))
-                .content(ResponseUtils.safe(inquiry.getContent()))
+                .title(inquiry.getTitle())
+                .content(inquiry.getContent())
                 .status(inquiry.getStatus())
-                .userEmail(ResponseUtils.safe(getUserEmail(inquiry)))
-                .isDeleted(ResponseUtils.safe(inquiry.getIsDeleted()))
+                .userEmail(getUserEmail(inquiry))
+                .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())
                 .updatedAt(inquiry.getUpdatedAt())
                 .build();
@@ -96,12 +95,12 @@ public class InquiryResponse {
         return InquiryResponse.builder()
                 .uuid(inquiry.getUuid())
                 .inquiryType(inquiry.getInquiryType())
-                .title(ResponseUtils.safe(inquiry.getTitle()))
-                .content(ResponseUtils.safe(inquiry.getContent()))
+                .title(inquiry.getTitle())
+                .content(inquiry.getContent())
                 .status(inquiry.getStatus())
-                .userEmail(ResponseUtils.safe(getUserEmail(inquiry)))
-                .attachments(ResponseUtils.safeList(attachments))
-                .isDeleted(ResponseUtils.safe(inquiry.getIsDeleted()))
+                .userEmail(getUserEmail(inquiry))
+                .attachments(attachments)
+                .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())
                 .updatedAt(inquiry.getUpdatedAt())
                 .build();
@@ -114,13 +113,13 @@ public class InquiryResponse {
         return InquiryResponse.builder()
                 .uuid(inquiry.getUuid())
                 .inquiryType(inquiry.getInquiryType())
-                .title(ResponseUtils.safe(inquiry.getTitle()))
-                .content(ResponseUtils.safe(inquiry.getContent()))
+                .title(inquiry.getTitle())
+                .content(inquiry.getContent())
                 .status(inquiry.getStatus())
-                .userEmail(ResponseUtils.safe(getUserEmail(inquiry)))
+                .userEmail(getUserEmail(inquiry))
                 .answer(answer)
-                .attachments(ResponseUtils.safeList(attachments))
-                .isDeleted(ResponseUtils.safe(inquiry.getIsDeleted()))
+                .attachments(attachments)
+                .isDeleted(inquiry.getIsDeleted())
                 .createdAt(inquiry.getCreatedAt())
                 .updatedAt(inquiry.getUpdatedAt())
                 .build();

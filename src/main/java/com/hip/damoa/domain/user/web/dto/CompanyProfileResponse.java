@@ -1,7 +1,6 @@
 package com.hip.damoa.domain.user.web.dto;
 
 import com.hip.damoa.core.jwt.TokenInfo;
-import com.hip.damoa.core.util.ResponseUtils;
 import com.hip.damoa.domain.company.model.Company;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,13 +34,13 @@ public class CompanyProfileResponse {
     public static CompanyProfileResponse from(Company company) {
         return CompanyProfileResponse.builder()
                 .uuid(company.getUuid())
-                .name(ResponseUtils.safe(company.getName()))
-                .description(ResponseUtils.safe(company.getDescription()))
-                .primaryPhone(ResponseUtils.safe(company.getPrimaryPhone()))
-                .email(ResponseUtils.safe(company.getEmail()))
-                .address(ResponseUtils.safe(company.getAddress()))
-                .postalCode(ResponseUtils.safe(company.getPostalCode()))
-                .status(ResponseUtils.safe(company.getStatus(), "ACTIVE"))
+                .name(company.getName())
+                .description(company.getDescription())
+                .primaryPhone(company.getPrimaryPhone())
+                .email(company.getEmail())
+                .address(company.getAddress())
+                .postalCode(company.getPostalCode())
+                .status(company.getStatus())
                 .build();
     }
 }

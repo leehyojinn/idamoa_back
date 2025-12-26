@@ -1,7 +1,6 @@
 package com.hip.damoa.domain.user.web.dto;
 
 import com.hip.damoa.core.jwt.TokenInfo;
-import com.hip.damoa.core.util.ResponseUtils;
 import com.hip.damoa.domain.user.model.UserProfile;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -74,7 +73,21 @@ public class UserProfileResponse {
      * Entity + Avatar 파일 정보 → DTO 변환
      */
     public static UserProfileResponse from(UserProfile profile, Long avatarFileId, java.util.UUID avatarFileUuid, String avatarUrl) {
-        return from(profile, avatarFileId, avatarFileUuid, avatarUrl, null);
+        return UserProfileResponse.builder()
+                .name(profile.getName())
+                .nickname(profile.getNickname())
+                .phone(profile.getPhone())
+                .bio(profile.getBio())
+                .avatarFileUuid(avatarFileUuid)
+                .avatarUrl(avatarUrl != null ? avatarUrl : profile.getAvatarUrl())
+                .address(profile.getAddress())
+                .postalCode(profile.getPostalCode())
+                .profileVisibility(profile.getProfileVisibility())
+                .socialLinks(profile.getSocialLinks())
+                .termsAgreed(profile.getUser().getTermsAgreed())
+                .privacyAgreed(profile.getUser().getPrivacyAgreed())
+                .marketingAgreed(profile.getUser().getMarketingAgreed())
+                .build();
     }
 
     /**
@@ -89,19 +102,19 @@ public class UserProfileResponse {
      */
     public static UserProfileResponse from(UserProfile profile, Long avatarFileId, java.util.UUID avatarFileUuid, String avatarUrl, TokenInfo tokenInfo) {
         return UserProfileResponse.builder()
-                .name(ResponseUtils.safe(profile.getName()))
-                .nickname(ResponseUtils.safe(profile.getNickname()))
-                .phone(ResponseUtils.safe(profile.getPhone()))
-                .bio(ResponseUtils.safe(profile.getBio()))
+                .name(profile.getName())
+                .nickname(profile.getNickname())
+                .phone(profile.getPhone())
+                .bio(profile.getBio())
                 .avatarFileUuid(avatarFileUuid)
-                .avatarUrl(ResponseUtils.safe(avatarUrl != null ? avatarUrl : profile.getAvatarUrl()))
-                .address(ResponseUtils.safe(profile.getAddress()))
-                .postalCode(ResponseUtils.safe(profile.getPostalCode()))
-                .profileVisibility(ResponseUtils.safe(profile.getProfileVisibility(), "PUBLIC"))
-                .socialLinks(ResponseUtils.safeMap(profile.getSocialLinks()))
-                .termsAgreed(ResponseUtils.safe(profile.getUser().getTermsAgreed()))
-                .privacyAgreed(ResponseUtils.safe(profile.getUser().getPrivacyAgreed()))
-                .marketingAgreed(ResponseUtils.safe(profile.getUser().getMarketingAgreed()))
+                .avatarUrl(avatarUrl != null ? avatarUrl : profile.getAvatarUrl())
+                .address(profile.getAddress())
+                .postalCode(profile.getPostalCode())
+                .profileVisibility(profile.getProfileVisibility())
+                .socialLinks(profile.getSocialLinks())
+                .termsAgreed(profile.getUser().getTermsAgreed())
+                .privacyAgreed(profile.getUser().getPrivacyAgreed())
+                .marketingAgreed(profile.getUser().getMarketingAgreed())
                 .tokenInfo(tokenInfo)
                 .build();
     }
