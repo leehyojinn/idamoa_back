@@ -3,8 +3,6 @@ package com.hip.damoa.domain.portfolio.repository;
 import com.hip.damoa.domain.company.model.Company;
 import com.hip.damoa.domain.company.model.CompanyPortfolio;
 import com.hip.damoa.domain.portfolio.model.PortfolioBookmark;
-import com.hip.damoa.domain.portfolio.model.PortfolioFilterOption;
-import com.hip.damoa.domain.user.model.User;
 import jakarta.persistence.criteria.*;
 import org.springframework.data.jpa.domain.Specification;
 

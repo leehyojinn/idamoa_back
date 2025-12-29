@@ -42,7 +42,6 @@ public class PortfolioService {
     private final UserRepository userRepository;
     private final FileRepository fileRepository;
     private final FilterOptionRepository filterOptionRepository;
-    private final PortfolioFilterOptionRepository portfolioFilterOptionRepository;
     private final PortfolioBookmarkRepository bookmarkRepository;
     private final PortfolioLikeRepository likeRepository;
     private final PortfolioPromotionRepository promotionRepository;
@@ -148,7 +147,7 @@ public class PortfolioService {
 
         log.info("포트폴리오 생성 완료: uuid={}", portfolio.getUuid());
 
-        List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+        List<FilterOption> filterOptions = getFilterOptionsFromJsonb(portfolio);
         List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
         List<PortfolioResponse.FileInfo> imageInfos = toFileInfos(imageAttachments);
 
@@ -172,7 +171,7 @@ public class PortfolioService {
         portfolioRepository.save(portfolio);
 
         // 필터 옵션 조회
-        List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+        List<FilterOption> filterOptions = getFilterOptionsFromJsonb(portfolio);
 
         // 첨부파일 조회 (중간 테이블에서)
         List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
@@ -233,7 +232,7 @@ public class PortfolioService {
 
         return portfolios.map(portfolio -> {
             // 필터 옵션 조회 추가
-            List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+            List<FilterOption> filterOptions = getFilterOptionsFromJsonb(portfolio);
 
             List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
             List<PortfolioAttachment> videoAttachments = attachmentRepository.findVideosByPortfolioId(portfolio.getId());
@@ -362,7 +361,7 @@ public class PortfolioService {
 
         log.info("포트폴리오 수정 완료: uuid={}", uuid);
 
-        List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+        List<FilterOption> filterOptions = getFilterOptionsFromJsonb(portfolio);
         List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
         List<PortfolioAttachment> videoAttachments = attachmentRepository.findVideosByPortfolioId(portfolio.getId());
 
@@ -425,7 +424,7 @@ public class PortfolioService {
                     CompanyPortfolio portfolio = promotion.getPortfolio();
 
                     // 필터 옵션 조회
-                    List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+                    List<FilterOption> filterOptions = getFilterOptionsFromJsonb(portfolio);
 
                     List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
                     List<PortfolioResponse.FileInfo> images = toFileInfos(imageAttachments);
@@ -490,7 +489,7 @@ public class PortfolioService {
      */
     private PortfolioResponse toSimpleResponseWithUser(CompanyPortfolio portfolio, User user) {
         // 필터 옵션 조회
-        List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+        List<FilterOption> filterOptions = getFilterOptionsFromJsonb(portfolio);
 
         List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
         List<PortfolioResponse.FileInfo> images = toFileInfos(imageAttachments);
@@ -658,7 +657,7 @@ public class PortfolioService {
      */
     private PortfolioResponse toSimpleResponse(CompanyPortfolio portfolio, String userEmail) {
         // 필터 옵션 조회
-        List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+        List<FilterOption> filterOptions = getFilterOptionsFromJsonb(portfolio);
 
         List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
         List<PortfolioResponse.FileInfo> images = toFileInfos(imageAttachments);
@@ -705,6 +704,17 @@ public class PortfolioService {
                 portfolio.getId(), validIds.size());
     }
 
+    /**
+     * JSONB 배열에서 필터 옵션 조회
+     */
+    private List<FilterOption> getFilterOptionsFromJsonb(CompanyPortfolio portfolio) {
+        List<Long> ids = portfolio.getFilterOptionIds();
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return filterOptionRepository.findByIdInAndIsDeletedFalse(ids);
+    }
+
     private PortfolioResponse.CompanySummary getCompanySummary(Company company) {
         if (company == null) {
             return null;
@@ -747,7 +757,7 @@ public class PortfolioService {
         CompanyPortfolio portfolio = portfolioRepository.findByUuidAndIsDeletedFalse(uuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_NOT_FOUND));
 
-        List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+        List<FilterOption> filterOptions = getFilterOptionsFromJsonb(portfolio);
         List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
         List<PortfolioAttachment> videoAttachments = attachmentRepository.findVideosByPortfolioId(portfolio.getId());
 
@@ -802,7 +812,7 @@ public class PortfolioService {
      */
     private PortfolioResponse toAdminResponse(CompanyPortfolio portfolio) {
         // 필터 옵션 조회
-        List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+        List<FilterOption> filterOptions = getFilterOptionsFromJsonb(portfolio);
 
         List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
         List<PortfolioResponse.FileInfo> images = toFileInfos(imageAttachments);
