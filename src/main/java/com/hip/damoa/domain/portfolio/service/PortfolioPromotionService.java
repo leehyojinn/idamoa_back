@@ -6,7 +6,6 @@ import com.hip.damoa.domain.company.model.CompanyPortfolio;
 import com.hip.damoa.domain.payment.model.CreditTransaction;
 import com.hip.damoa.domain.payment.service.CreditService;
 import com.hip.damoa.domain.portfolio.model.*;
-import com.hip.damoa.domain.portfolio.repository.PortfolioFilterOptionRepository;
 import com.hip.damoa.domain.portfolio.repository.PortfolioPromotionPaymentRepository;
 import com.hip.damoa.domain.portfolio.repository.PortfolioPromotionRepository;
 import com.hip.damoa.domain.user.model.User;
@@ -32,7 +31,6 @@ public class PortfolioPromotionService {
 
     private final PortfolioPromotionRepository promotionRepository;
     private final PortfolioPromotionPaymentRepository paymentRepository;
-    private final PortfolioFilterOptionRepository filterOptionRepository;
     private final CreditService creditService;
     private final PortfolioPromotionSettingsService settingsService;
 
@@ -258,11 +256,18 @@ public class PortfolioPromotionService {
 
         List<PortfolioPromotion> activePromotions = promotionRepository.findAllActive();
 
-        // 필터 적용
+        // 필터 적용 - JSONB 배열에서 직접 확인
         if (filterOptionIds != null && !filterOptionIds.isEmpty()) {
-            List<Long> portfolioIds = filterOptionRepository.findPortfolioIdsByAllFilterOptionIds(filterOptionIds, filterOptionIds.size());
+            Set<Long> filterSet = new HashSet<>(filterOptionIds);
             activePromotions = activePromotions.stream()
-                    .filter(p -> portfolioIds.contains(p.getPortfolio().getId()))
+                    .filter(p -> {
+                        List<Long> portfolioFilterIds = p.getPortfolio().getFilterOptionIds();
+                        if (portfolioFilterIds == null || portfolioFilterIds.isEmpty()) {
+                            return false;
+                        }
+                        // 요청된 필터 중 하나라도 포함되어 있는지 확인 (OR 조건)
+                        return portfolioFilterIds.stream().anyMatch(filterSet::contains);
+                    })
                     .toList();
         }
 
