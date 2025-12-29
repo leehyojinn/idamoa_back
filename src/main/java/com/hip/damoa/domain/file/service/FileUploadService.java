@@ -54,6 +54,9 @@ public class FileUploadService {
     @Value("${aws.s3.region}")
     private String region;
 
+    @Value("${aws.cloudfront.domain:}")
+    private String cloudFrontDomain;
+
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     private static final Duration PRESIGNED_URL_EXPIRATION = Duration.ofMinutes(15);
     private static final Duration UPLOAD_METADATA_TTL = Duration.ofMinutes(30);
@@ -327,9 +330,17 @@ public class FileUploadService {
     }
 
     /**
-     * 파일 URL 생성
+     * 파일 URL 생성 (CloudFront 우선, 없으면 S3 직접)
      */
     private String generateFileUrl(String s3Key) {
+        if (cloudFrontDomain != null && !cloudFrontDomain.isEmpty()) {
+            // CloudFront URL 사용 (CDN 캐싱으로 빠름)
+            String domain = cloudFrontDomain.endsWith("/")
+                ? cloudFrontDomain.substring(0, cloudFrontDomain.length() - 1)
+                : cloudFrontDomain;
+            return domain + "/" + s3Key;
+        }
+        // Fallback: S3 직접 URL
         return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, s3Key);
     }
 
