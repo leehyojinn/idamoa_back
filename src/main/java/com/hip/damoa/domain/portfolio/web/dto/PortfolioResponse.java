@@ -1,7 +1,7 @@
 package com.hip.damoa.domain.portfolio.web.dto;
 
 import com.hip.damoa.domain.company.model.CompanyPortfolio;
-import com.hip.damoa.domain.portfolio.model.PortfolioFilterOption;
+import com.hip.damoa.domain.filter.model.FilterOption;
 import com.hip.damoa.domain.portfolio.model.PortfolioPromotion;
 import lombok.*;
 
@@ -139,7 +139,7 @@ public class PortfolioResponse {
      * Entity → Response 변환
      */
     public static PortfolioResponse from(CompanyPortfolio portfolio,
-                                          List<PortfolioFilterOption> filterOptions,
+                                          List<FilterOption> filterOptions,
                                           List<FileInfo> images,
                                           List<FileInfo> videos,
                                           boolean isBookmarked,
@@ -149,13 +149,13 @@ public class PortfolioResponse {
                                           PortfolioPromotion promotion) {
 
         List<FilterOptionInfo> filterOptionInfos = null;
-        if (filterOptions != null) {
+        if (filterOptions != null && !filterOptions.isEmpty()) {
             filterOptionInfos = filterOptions.stream()
                     .map(fo -> FilterOptionInfo.builder()
-                            .id(fo.getFilterOption().getId())
-                            .filterKey(fo.getFilterOption().getCode())
-                            .value(fo.getFilterOption().getCode())
-                            .displayName(fo.getFilterOption().getName())
+                            .id(fo.getId())
+                            .filterKey(fo.getCode())
+                            .value(fo.getCode())
+                            .displayName(fo.getName())
                             .build())
                     .toList();
         }

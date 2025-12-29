@@ -280,10 +280,13 @@ public class BoardService {
      * 게시글의 모든 필터 옵션 조회 - JSONB 배열 방식
      */
     @Transactional(readOnly = true)
-    public List<BoardFilterOption> getBoardFilterOptions(UUID boardUuid) {
+    public List<FilterOption> getBoardFilterOptions(UUID boardUuid) {
         Board board = getBoard(boardUuid);
-        // 기존 호환성 유지를 위해 조인 테이블 조회 (점진적 마이그레이션)
-        return boardFilterOptionRepository.findByBoardId(board.getId());
+        List<Long> ids = board.getFilterOptionIds();
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return filterOptionRepository.findByIdInAndIsDeletedFalse(ids);
     }
 
     /**

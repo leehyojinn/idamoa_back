@@ -4,12 +4,12 @@ import com.hip.damoa.core.exception.BusinessException;
 import com.hip.damoa.core.exception.ErrorCode;
 import com.hip.damoa.domain.board.model.Board;
 import com.hip.damoa.domain.board.model.BoardAttachment;
-import com.hip.damoa.domain.board.model.BoardFilterOption;
 import com.hip.damoa.domain.board.model.BoardType;
 import com.hip.damoa.domain.board.repository.BoardAttachmentRepository;
 import com.hip.damoa.domain.board.repository.BoardBookmarkRepository;
-import com.hip.damoa.domain.board.repository.BoardFilterOptionRepository;
 import com.hip.damoa.domain.board.repository.BoardRepository;
+import com.hip.damoa.domain.filter.model.FilterOption;
+import com.hip.damoa.domain.filter.repository.FilterOptionRepository;
 import com.hip.damoa.domain.board.repository.BoardSpecifications;
 import com.hip.damoa.domain.board.web.dto.DocumentCreateRequest;
 import com.hip.damoa.domain.board.web.dto.DocumentResponse;
@@ -52,7 +52,7 @@ public class DocumentBoardService {
 
     private final BoardService boardService;
     private final BoardBookmarkService boardBookmarkService;
-    private final BoardFilterOptionRepository boardFilterOptionRepository;
+    private final FilterOptionRepository filterOptionRepository;
     private final BoardAttachmentRepository boardAttachmentRepository;
     private final BoardBookmarkRepository boardBookmarkRepository;
     private final BoardRepository boardRepository;
@@ -106,7 +106,7 @@ public class DocumentBoardService {
         log.info("Document 게시글 생성 완료: uuid={}", board.getUuid());
 
         // Response 생성
-        List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
+        List<FilterOption> filterOptions = getFilterOptionsFromJsonb(board);
         List<FileInfo> files = getDocumentFileInfos(board);
         FileInfo thumbnail = getThumbnailFileInfo(board);
         String userName = getUserName(board);
@@ -130,8 +130,8 @@ public class DocumentBoardService {
         // 조회수 증가
         boardService.incrementViewCount(uuid);
 
-        // 필터 옵션 조회
-        List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
+        // 필터 옵션 조회 - JSONB 방식
+        List<FilterOption> filterOptions = getFilterOptionsFromJsonb(board);
 
         // 북마크 여부 확인
         boolean isBookmarked = false;
@@ -176,7 +176,7 @@ public class DocumentBoardService {
         DocumentBulkData bulkData = prepareBulkData(boards.getContent(), null);
 
         return boards.map(board -> {
-            List<BoardFilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
+            List<FilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
             List<FileInfo> files = getFileInfosFromMap(board, bulkData.attachmentMap(), bulkData.fileMap(), bulkData.pricingMap());
             FileInfo thumbnail = getThumbnailFromMap(board, bulkData.attachmentMap(), bulkData.fileMap());
             long downloadCount = getDownloadCountFromMap(board, bulkData.attachmentMap(), bulkData.downloadCountMap());
@@ -196,7 +196,7 @@ public class DocumentBoardService {
         DocumentBulkData bulkData = prepareBulkData(boards.getContent(), null);
 
         return boards.map(board -> {
-            List<BoardFilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
+            List<FilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
             List<FileInfo> files = getFileInfosFromMap(board, bulkData.attachmentMap(), bulkData.fileMap(), bulkData.pricingMap());
             FileInfo thumbnail = getThumbnailFromMap(board, bulkData.attachmentMap(), bulkData.fileMap());
             long downloadCount = getDownloadCountFromMap(board, bulkData.attachmentMap(), bulkData.downloadCountMap());
@@ -258,7 +258,7 @@ public class DocumentBoardService {
 
         final Long finalUserId = userId;
         return boards.map(board -> {
-            List<BoardFilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
+            List<FilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
             List<FileInfo> files = getFileInfosFromMap(board, bulkData.attachmentMap(), bulkData.fileMap(), bulkData.pricingMap());
             FileInfo thumbnail = getThumbnailFromMap(board, bulkData.attachmentMap(), bulkData.fileMap());
             long downloadCount = getDownloadCountFromMap(board, bulkData.attachmentMap(), bulkData.downloadCountMap());
@@ -322,7 +322,8 @@ public class DocumentBoardService {
 
         log.info("Document 게시글 수정 완료: uuid={}", uuid);
 
-        List<BoardFilterOption> filterOptions = boardFilterOptionRepository.findByBoardId(board.getId());
+        // 필터 옵션 조회 - JSONB 방식
+        List<FilterOption> filterOptions = getFilterOptionsFromJsonb(board);
         List<FileInfo> files = getDocumentFileInfos(board);
         FileInfo thumbnail = getThumbnailFileInfo(board);
         boolean isBookmarked = boardBookmarkService.isBookmarked(uuid, userEmail);
@@ -372,7 +373,7 @@ public class DocumentBoardService {
 
         return documentBoards.stream()
                 .map(board -> {
-                    List<BoardFilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
+                    List<FilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
                     List<FileInfo> files = getFileInfosFromMap(board, bulkData.attachmentMap(), bulkData.fileMap(), bulkData.pricingMap());
                     FileInfo thumbnail = getThumbnailFromMap(board, bulkData.attachmentMap(), bulkData.fileMap());
                     long downloadCount = getDownloadCountFromMap(board, bulkData.attachmentMap(), bulkData.downloadCountMap());
@@ -394,7 +395,7 @@ public class DocumentBoardService {
 
         return boards.stream()
                 .map(board -> {
-                    List<BoardFilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
+                    List<FilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
                     List<FileInfo> files = getFileInfosFromMap(board, bulkData.attachmentMap(), bulkData.fileMap(), bulkData.pricingMap());
                     FileInfo thumbnail = getThumbnailFromMap(board, bulkData.attachmentMap(), bulkData.fileMap());
                     long downloadCount = getDownloadCountFromMap(board, bulkData.attachmentMap(), bulkData.downloadCountMap());
@@ -435,7 +436,7 @@ public class DocumentBoardService {
 
         final Long finalUserId = userId;
         return boards.map(board -> {
-            List<BoardFilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
+            List<FilterOption> filterOptions = bulkData.filterOptionMap().getOrDefault(board.getId(), Collections.emptyList());
             List<FileInfo> files = getFileInfosFromMap(board, bulkData.attachmentMap(), bulkData.fileMap(), bulkData.pricingMap());
             FileInfo thumbnail = getThumbnailFromMap(board, bulkData.attachmentMap(), bulkData.fileMap());
             long downloadCount = getDownloadCountFromMap(board, bulkData.attachmentMap(), bulkData.downloadCountMap());
@@ -686,10 +687,38 @@ public class DocumentBoardService {
         // 1. Board ID 목록
         List<Long> boardIds = boards.stream().map(Board::getId).toList();
 
-        // 2. 필터 옵션 일괄 조회
-        List<BoardFilterOption> allFilterOptions = boardFilterOptionRepository.findByBoardIdIn(boardIds);
-        Map<Long, List<BoardFilterOption>> filterOptionMap = allFilterOptions.stream()
-                .collect(Collectors.groupingBy(bfo -> bfo.getBoard().getId()));
+        // 2. 필터 옵션 일괄 조회 (JSONB 방식)
+        // 모든 Board의 filterOptionIds를 수집
+        Set<Long> allFilterOptionIds = new HashSet<>();
+        Map<Long, List<Long>> boardFilterIdMap = new HashMap<>();
+        for (Board board : boards) {
+            List<Long> ids = board.getFilterOptionIds();
+            if (ids != null && !ids.isEmpty()) {
+                allFilterOptionIds.addAll(ids);
+                boardFilterIdMap.put(board.getId(), ids);
+            }
+        }
+
+        // FilterOption을 한 번에 조회
+        Map<Long, FilterOption> filterOptionById = Collections.emptyMap();
+        if (!allFilterOptionIds.isEmpty()) {
+            List<FilterOption> filterOptions = filterOptionRepository.findByIdInAndIsDeletedFalse(new ArrayList<>(allFilterOptionIds));
+            filterOptionById = filterOptions.stream()
+                    .collect(Collectors.toMap(FilterOption::getId, fo -> fo));
+        }
+
+        // Board별 FilterOption 목록 구성
+        Map<Long, List<FilterOption>> filterOptionMap = new HashMap<>();
+        for (Map.Entry<Long, List<Long>> entry : boardFilterIdMap.entrySet()) {
+            Long boardId = entry.getKey();
+            List<Long> filterIds = entry.getValue();
+            Map<Long, FilterOption> finalFilterOptionById = filterOptionById;
+            List<FilterOption> options = filterIds.stream()
+                    .map(finalFilterOptionById::get)
+                    .filter(fo -> fo != null)
+                    .toList();
+            filterOptionMap.put(boardId, options);
+        }
 
         // 3. 첨부파일 일괄 조회 (DOCUMENT + THUMBNAIL)
         List<BoardAttachment> allAttachments = boardAttachmentRepository.findByBoardIdIn(boardIds);
@@ -759,7 +788,7 @@ public class DocumentBoardService {
      * Bulk 데이터 홀더 클래스
      */
     private record DocumentBulkData(
-            Map<Long, List<BoardFilterOption>> filterOptionMap,
+            Map<Long, List<FilterOption>> filterOptionMap,
             Map<Long, List<BoardAttachment>> attachmentMap,
             Map<Long, File> fileMap,
             Map<Long, FilePricing> pricingMap,
@@ -844,5 +873,16 @@ public class DocumentBoardService {
                 .findFirst()
                 .map(att -> downloadedFileIds.contains(att.getFileId()))
                 .orElse(false);
+    }
+
+    /**
+     * JSONB 컬럼에서 필터 옵션 조회
+     */
+    private List<FilterOption> getFilterOptionsFromJsonb(Board board) {
+        List<Long> ids = board.getFilterOptionIds();
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return filterOptionRepository.findByIdInAndIsDeletedFalse(ids);
     }
 }

@@ -1,7 +1,6 @@
 package com.hip.damoa.domain.board.web.dto;
 
 import com.hip.damoa.domain.board.model.Board;
-import com.hip.damoa.domain.board.model.BoardFilterOption;
 import com.hip.damoa.domain.filter.model.FilterOption;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -179,7 +178,7 @@ public class DocumentResponse {
      * Entity to DTO (전체 정보 포함)
      * 삭제된 User의 경우 안전하게 처리
      */
-    public static DocumentResponse from(Board board, List<BoardFilterOption> filterOptions,
+    public static DocumentResponse from(Board board, List<FilterOption> filterOptions,
                                         List<FileInfo> files, FileInfo thumbnail,
                                         boolean isBookmarked, boolean hasDownloaded, Long downloadCount, String userName) {
         Map<String, Object> typeData = board.getTypeData();
@@ -216,22 +215,19 @@ public class DocumentResponse {
                 .isFeatured(board.getIsFeatured())
                 .isPublished(board.getIsPublished())
                 .publishedAt(board.getPublishedAt())
-                .filterOptions(filterOptions.stream()
-                        .map(bfo -> {
-                            FilterOption fo = bfo.getFilterOption();
-                            return FilterOptionSummary.builder()
+                .filterOptions(filterOptions != null ? filterOptions.stream()
+                        .map(fo -> FilterOptionSummary.builder()
                                     .id(fo.getId())
                                     .uuid(fo.getUuid())
-                                    .categoryCode(fo.getCategory().getCode())
-                                    .categoryName(fo.getCategory().getName())
+                                    .categoryCode(fo.getCategory() != null ? fo.getCategory().getCode() : null)
+                                    .categoryName(fo.getCategory() != null ? fo.getCategory().getName() : null)
                                     .code(fo.getCode())
                                     .name(fo.getName())
                                     .shortName(fo.getShortName())
                                     .color(fo.getColor())
                                     .icon(fo.getIcon())
-                                    .build();
-                        })
-                        .collect(Collectors.toList()))
+                                    .build())
+                        .collect(Collectors.toList()) : List.of())
                 .tags(board.getTags())
                 .userUuid(userUuid)
                 .userEmail(userEmail)

@@ -851,14 +851,20 @@ public class CompanyService {
     }
 
     /**
-     * 업체의 필터 옵션 조회
+     * 업체의 필터 옵션 조회 - JSONB 배열 방식
      */
     @Transactional(readOnly = true)
     public List<com.hip.damoa.domain.company.web.dto.FilterOptionDto> getCompanyFilterOptions(Company company) {
-        List<CompanyFilterOption> companyFilterOptions = companyFilterOptionRepository.findByCompany(company);
+        List<Long> filterOptionIds = company.getFilterOptionIds();
 
-        return companyFilterOptions.stream()
-                .map(cfo -> com.hip.damoa.domain.company.web.dto.FilterOptionDto.from(cfo.getFilterOption()))
+        if (filterOptionIds == null || filterOptionIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<FilterOption> filterOptions = filterOptionRepository.findByIdInAndIsDeletedFalse(filterOptionIds);
+
+        return filterOptions.stream()
+                .map(fo -> com.hip.damoa.domain.company.web.dto.FilterOptionDto.from(fo))
                 .collect(Collectors.toList());
     }
 
