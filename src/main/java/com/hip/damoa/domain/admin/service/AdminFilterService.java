@@ -429,6 +429,9 @@ public class AdminFilterService {
         if (request.getIsRequired() != null) {
             category.setIsRequired(request.getIsRequired());
         }
+        if (request.getIsExpanded() != null) {
+            category.setIsExpanded(request.getIsExpanded());
+        }
         if (request.getMetadata() != null) {
             // BOARD 타입일 경우 메타데이터 검증
             validateBoardTypeMetadata(category.getEntityType(), request.getMetadata());
@@ -471,6 +474,9 @@ public class AdminFilterService {
             } else {
                 option.unsetDefault();
             }
+        }
+        if (request.getIsExpanded() != null) {
+            option.setIsExpanded(request.getIsExpanded());
         }
         if (request.getMetadata() != null) {
             option.setMetadata(request.getMetadata());

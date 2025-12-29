@@ -151,4 +151,8 @@ public class FilterCategory extends BaseEntity {
     public void setIsRequired(Boolean isRequired) {
         this.isRequired = isRequired;
     }
+
+    public void setIsExpanded(Boolean isExpanded) {
+        this.isExpanded = isExpanded;
+    }
 }

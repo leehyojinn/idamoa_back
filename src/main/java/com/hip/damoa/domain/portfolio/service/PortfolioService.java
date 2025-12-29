@@ -232,8 +232,13 @@ public class PortfolioService {
         Page<CompanyPortfolio> portfolios = portfolioRepository.findByOwnerId(user.getId(), pageable);
 
         return portfolios.map(portfolio -> {
+            // 필터 옵션 조회 추가
+            List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+
             List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
+            List<PortfolioAttachment> videoAttachments = attachmentRepository.findVideosByPortfolioId(portfolio.getId());
             List<PortfolioResponse.FileInfo> images = toFileInfos(imageAttachments);
+            List<PortfolioResponse.FileInfo> videos = toFileInfos(videoAttachments);
 
             PortfolioPromotion promotion = promotionRepository.findActiveByPortfolioId(portfolio.getId()).orElse(null);
             PortfolioResponse.CompanySummary company = getCompanySummary(portfolio.getCompany());
@@ -241,7 +246,7 @@ public class PortfolioService {
             boolean isBookmarked = bookmarkRepository.existsByPortfolioIdAndUserId(portfolio.getId(), user.getId());
             boolean isLiked = likeRepository.existsByPortfolioIdAndUserId(portfolio.getId(), user.getId());
 
-            return PortfolioResponse.simpleFrom(portfolio, images, isBookmarked, isLiked, company, promotion);
+            return PortfolioResponse.from(portfolio, filterOptions, images, videos, isBookmarked, isLiked, company, null, promotion);
         });
     }
 
@@ -418,6 +423,10 @@ public class PortfolioService {
         return promotions.stream()
                 .map(promotion -> {
                     CompanyPortfolio portfolio = promotion.getPortfolio();
+
+                    // 필터 옵션 조회
+                    List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+
                     List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
                     List<PortfolioResponse.FileInfo> images = toFileInfos(imageAttachments);
                     PortfolioResponse.CompanySummary company = getCompanySummary(portfolio.getCompany());
@@ -429,7 +438,7 @@ public class PortfolioService {
                         isLiked = likeRepository.existsByPortfolioIdAndUserId(portfolio.getId(), user.getId());
                     }
 
-                    return PortfolioResponse.simpleFrom(portfolio, images, isBookmarked, isLiked, company, promotion);
+                    return PortfolioResponse.from(portfolio, filterOptions, images, null, isBookmarked, isLiked, company, null, promotion);
                 })
                 .toList();
     }
@@ -477,9 +486,12 @@ public class PortfolioService {
     }
 
     /**
-     * 간단 Response 변환 (User 객체 재사용)
+     * 간단 Response 변환 (User 객체 재사용) - filterOptions 포함
      */
     private PortfolioResponse toSimpleResponseWithUser(CompanyPortfolio portfolio, User user) {
+        // 필터 옵션 조회
+        List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+
         List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
         List<PortfolioResponse.FileInfo> images = toFileInfos(imageAttachments);
 
@@ -493,7 +505,7 @@ public class PortfolioService {
             isLiked = likeRepository.existsByPortfolioIdAndUserId(portfolio.getId(), user.getId());
         }
 
-        return PortfolioResponse.simpleFrom(portfolio, images, isBookmarked, isLiked, company, promotion);
+        return PortfolioResponse.from(portfolio, filterOptions, images, null, isBookmarked, isLiked, company, null, promotion);
     }
 
     // ===== Helper Methods =====
@@ -642,9 +654,12 @@ public class PortfolioService {
     }
 
     /**
-     * 간단 Response 변환 (목록용)
+     * 간단 Response 변환 (목록용) - filterOptions 포함
      */
     private PortfolioResponse toSimpleResponse(CompanyPortfolio portfolio, String userEmail) {
+        // 필터 옵션 조회
+        List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+
         List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
         List<PortfolioResponse.FileInfo> images = toFileInfos(imageAttachments);
 
@@ -661,7 +676,7 @@ public class PortfolioService {
             }
         }
 
-        return PortfolioResponse.simpleFrom(portfolio, images, isBookmarked, isLiked, company, promotion);
+        return PortfolioResponse.from(portfolio, filterOptions, images, null, isBookmarked, isLiked, company, null, promotion);
     }
 
     /**
@@ -783,15 +798,18 @@ public class PortfolioService {
     }
 
     /**
-     * 관리자용 Response 변환
+     * 관리자용 Response 변환 - filterOptions 포함
      */
     private PortfolioResponse toAdminResponse(CompanyPortfolio portfolio) {
+        // 필터 옵션 조회
+        List<PortfolioFilterOption> filterOptions = portfolioFilterOptionRepository.findByPortfolioId(portfolio.getId());
+
         List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
         List<PortfolioResponse.FileInfo> images = toFileInfos(imageAttachments);
 
         PortfolioPromotion promotion = promotionRepository.findActiveByPortfolioId(portfolio.getId()).orElse(null);
         PortfolioResponse.CompanySummary company = getCompanySummary(portfolio.getCompany());
 
-        return PortfolioResponse.simpleFrom(portfolio, images, false, false, company, promotion);
+        return PortfolioResponse.from(portfolio, filterOptions, images, null, false, false, company, null, promotion);
     }
 }

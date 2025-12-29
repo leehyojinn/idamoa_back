@@ -189,4 +189,8 @@ public class FilterOption extends BaseEntity {
     public void setUsageCount(Integer usageCount) {
         this.usageCount = usageCount;
     }
+
+    public void setIsExpanded(Boolean isExpanded) {
+        this.isExpanded = isExpanded;
+    }
 }

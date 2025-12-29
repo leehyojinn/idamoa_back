@@ -56,6 +56,9 @@ public class FilterCategoryCreateRequest {
     @Builder.Default
     private Boolean isRequired = false;
 
+    @Builder.Default
+    private Boolean isExpanded = false;
+
     private Map<String, Object> metadata;
 
     public FilterCategory toEntity() {
@@ -71,6 +74,7 @@ public class FilterCategoryCreateRequest {
                 .icon(icon)
                 .isActive(isActive)
                 .isRequired(isRequired)
+                .isExpanded(isExpanded)
                 .build();
     }
 }
