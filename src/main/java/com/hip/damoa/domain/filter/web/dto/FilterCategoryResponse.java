@@ -28,6 +28,7 @@ public class FilterCategoryResponse {
     private String description;
     private Integer displayOrder;
     private Boolean isRequired;
+    private Boolean isExpanded;
     private String icon;
     private Boolean isActive;
     private Map<String, Object> metadata;  // BOARD_TYPE: "GALLERY" 등 확장 데이터
@@ -45,6 +46,7 @@ public class FilterCategoryResponse {
                 .description(category.getDescription())
                 .displayOrder(category.getDisplayOrder())
                 .isRequired(category.getIsRequired())
+                .isExpanded(category.getIsExpanded())
                 .icon(category.getIcon())
                 .isActive(category.getIsActive())
                 .metadata(category.getMetadata())

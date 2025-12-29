@@ -60,6 +60,9 @@ public class FilterCategory extends BaseEntity {
     @Column(name = "is_required", nullable = false)
     private Boolean isRequired = false;
 
+    @Column(name = "is_expanded", nullable = false)
+    private Boolean isExpanded = false;
+
     // metadata is inherited from BaseEntity as Map<String, Object>
 
     @Column(name = "is_deleted", nullable = false)
@@ -75,7 +78,8 @@ public class FilterCategory extends BaseEntity {
     @Builder
     public FilterCategory(String code, String name, String description, String entityType,
                          String filterType, Boolean supportsHierarchy, Integer maxDepth,
-                         Integer displayOrder, String icon, Boolean isActive, Boolean isRequired) {
+                         Integer displayOrder, String icon, Boolean isActive, Boolean isRequired,
+                         Boolean isExpanded) {
         this.uuid = UUID.randomUUID();
         this.code = code;
         this.name = name;
@@ -88,6 +92,7 @@ public class FilterCategory extends BaseEntity {
         this.icon = icon;
         this.isActive = isActive != null ? isActive : true;
         this.isRequired = isRequired != null ? isRequired : false;
+        this.isExpanded = isExpanded != null ? isExpanded : false;
         // metadata initialized by BaseEntity
         this.isDeleted = false;
     }

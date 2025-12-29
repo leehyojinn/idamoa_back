@@ -77,6 +77,9 @@ public class FilterOption extends BaseEntity {
     @Column(name = "is_default", nullable = false)
     private Boolean isDefault = false;
 
+    @Column(name = "is_expanded", nullable = false)
+    private Boolean isExpanded = false;
+
     @Column(name = "usage_count", nullable = false)
     private Integer usageCount = 0;
 
@@ -90,7 +93,7 @@ public class FilterOption extends BaseEntity {
     public FilterOption(FilterCategory category, String code, String name, String shortName,
                        String description, FilterOption parent, Integer depth, String path,
                        Integer displayOrder, String icon, String color,
-                       Boolean isActive, Boolean isDefault) {
+                       Boolean isActive, Boolean isDefault, Boolean isExpanded) {
         this.uuid = UUID.randomUUID();
         this.category = category;
         this.code = code;
@@ -106,6 +109,7 @@ public class FilterOption extends BaseEntity {
         this.color = color;
         this.isActive = isActive != null ? isActive : true;
         this.isDefault = isDefault != null ? isDefault : false;
+        this.isExpanded = isExpanded != null ? isExpanded : false;
         this.usageCount = 0;
         this.isDeleted = false;
     }
