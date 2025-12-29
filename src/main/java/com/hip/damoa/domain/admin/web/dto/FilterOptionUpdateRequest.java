@@ -40,4 +40,6 @@ public class FilterOptionUpdateRequest {
     private Boolean isActive;
 
     private Boolean isDefault;
+
+    private Boolean isExpanded;
 }

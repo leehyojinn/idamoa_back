@@ -36,5 +36,7 @@ public class FilterCategoryUpdateRequest {
 
     private Boolean isRequired;
 
+    private Boolean isExpanded;
+
     private Map<String, Object> metadata;
 }

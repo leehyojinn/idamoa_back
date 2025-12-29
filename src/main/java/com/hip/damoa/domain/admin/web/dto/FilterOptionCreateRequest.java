@@ -63,6 +63,9 @@ public class FilterOptionCreateRequest {
     @Builder.Default
     private Boolean isDefault = false;
 
+    @Builder.Default
+    private Boolean isExpanded = false;
+
     public FilterOption toEntity(FilterCategory category, FilterOption parent) {
         FilterOption.FilterOptionBuilder builder = FilterOption.builder()
                 .category(category)
@@ -76,7 +79,8 @@ public class FilterOptionCreateRequest {
                 .icon(icon)
                 .color(color)
                 .isActive(isActive)
-                .isDefault(isDefault);
+                .isDefault(isDefault)
+                .isExpanded(isExpanded);
 
         if (parent != null) {
             builder.parent(parent);
