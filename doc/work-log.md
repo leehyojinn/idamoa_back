@@ -3531,3 +3531,93 @@ After (정규화된 중간 테이블):
 **빌드 상태**: ✅ 컴파일 성공
 
 **계획 문서**: `C:\Users\USER\.claude\plans\snoopy-stirring-kurzweil.md`
+
+---
+
+**[DIRECTCHAT-002] Direct Chat 코드 리뷰 수정** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-30
+- **작업 내용**: 코드 리뷰에서 발견된 이슈 수정
+
+**수정 사항**:
+
+1. **N+1 쿼리 수정 - getTotalUnreadCount()**
+   - DirectChatRoomRepository에 네이티브 쿼리 추가: `getTotalUnreadCountByUserId()`
+   - 기존: 채팅방 N개 × 2개 쿼리 = 최대 2N개 쿼리
+   - 개선: 단일 네이티브 쿼리로 전체 미읽음 수 조회
+
+2. **채팅방 목록 N+1 수정**
+   - `findByUserIdWithParticipants()`: user1, user2 Fetch Join
+   - `getUnreadCountsByUserId()`: 채팅방별 미읽음 수 일괄 조회
+   - `getOnlineStatuses()`: 온라인 상태 일괄 조회
+   - DirectChatController.getRooms() 최적화
+
+3. **OutboxWorker 동시성 문제 수정**
+   - `SELECT FOR UPDATE SKIP LOCKED` 쿼리 추가
+   - 다중 인스턴스에서 동일 알림 중복 처리 방지
+
+4. **시스템 메시지 sender null 허용**
+   - V82 마이그레이션: sender_id DROP NOT NULL
+   - DirectChatMessage 엔티티 수정: `@JoinColumn(nullable=true)`
+
+5. **예외 처리 개선**
+   - WebSocket 컨트롤러: Principal null 체크
+   - BusinessException vs 일반 Exception 분리
+   - 내부 오류 메시지 숨김 (보안)
+
+6. **트랜잭션 경계 수정**
+   - OutboxWorker: saveAndFlush() 사용
+   - 외부 API 호출 전 상태 저장 보장
+
+7. **입력 검증 강화**
+   - DirectChatMessageRequest: @Size(max=10000) content
+   - DirectChatMessageRequest: @Size(max=10) fileUuids
+
+**생성/수정 파일**:
+- `V82__Allow_null_sender_in_direct_chat_messages.sql` (신규)
+- `DirectChatRoomRepository.java` (수정)
+- `DirectChatMessageRepository.java` (수정)
+- `DirectChatService.java` (수정)
+- `DirectChatPresenceService.java` (수정)
+- `DirectChatController.java` (수정)
+- `DirectChatWebSocketController.java` (수정)
+- `DirectChatMessage.java` (수정)
+- `DirectChatMessageRequest.java` (수정)
+- `NotificationOutboxRepository.java` (수정)
+- `NotificationOutboxWorker.java` (수정)
+
+**문서**:
+- `doc/direct-chat-architecture.md` (신규)
+- `doc/direct-chat-code-review.md` (신규)
+
+**빌드 상태**: ✅ 컴파일 성공
+
+---
+
+**[DIRECTCHAT-003] 채팅 메시지 30일 보관 스케줄러** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-30
+- **작업 내용**: 30일이 지난 채팅 메시지와 첨부파일을 soft delete 처리하는 스케줄러 구현
+
+**생성 파일**:
+- `infra/scheduler/DirectChatCleanupScheduler.java` (신규)
+
+**수정 파일**:
+- `DirectChatMessageRepository.java`: `findOldMessagesForCleanup()` 추가
+- `DirectChatAttachmentRepository.java`: `findByMessageIdAndIsDeletedFalse()` 추가
+
+**스케줄러 동작**:
+1. 매일 새벽 3시 자동 실행 (`@Scheduled(cron = "0 0 3 * * *")`)
+2. 30일 이전 메시지를 100개씩 배치 처리
+3. 각 메시지에 대해:
+   - 첨부파일(DirectChatAttachment) soft delete
+   - 연결된 파일(File) soft delete
+   - 메시지(DirectChatMessage) soft delete
+4. 처리 결과 로깅
+
+**주요 특징**:
+- 배치 처리로 메모리 효율화 (BATCH_SIZE = 100)
+- 수동 실행 메서드 제공 (`cleanupOldMessagesNow(retentionDays)`)
+- 처리 결과를 CleanupResult record로 반환
+
+**빌드 상태**: ✅ 컴파일 성공
