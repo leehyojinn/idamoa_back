@@ -181,6 +181,24 @@ public class AdminFilterController {
         return ApiResponse.success(category);
     }
 
+    @Operation(summary = "필터 카테고리 확장 상태 토글",
+            description = """
+            필터 카테고리의 기본 확장(펼침) 상태를 변경합니다.
+
+            **확장 상태 (isExpanded)**
+            - true: 카테고리가 기본적으로 펼쳐진 상태로 표시됩니다
+            - false: 카테고리가 기본적으로 접힌 상태로 표시됩니다
+            """)
+    @PatchMapping("/categories/{categoryId}/expanded")
+    public ApiResponse<FilterCategoryResponse> toggleFilterCategoryExpanded(
+            @Parameter(description = "상태 변경할 카테고리 ID") @PathVariable Long categoryId,
+            @Parameter(description = "확장 여부 (true: 펼침, false: 접힘)") @RequestParam boolean isExpanded) {
+
+        log.info("필터 카테고리 확장 상태 변경: categoryId={}, isExpanded={}", categoryId, isExpanded);
+        FilterCategoryResponse category = adminFilterService.toggleFilterCategoryExpanded(categoryId, isExpanded);
+        return ApiResponse.success(category);
+    }
+
     // ==================== 필터 옵션 관리 ====================
 
     @Operation(summary = "필터 옵션 목록 조회",
@@ -333,6 +351,24 @@ public class AdminFilterController {
 
         log.info("필터 옵션 활성화 상태 변경: optionId={}, isActive={}", optionId, isActive);
         FilterOptionResponse option = adminFilterService.toggleFilterOptionActive(optionId, isActive);
+        return ApiResponse.success(option);
+    }
+
+    @Operation(summary = "필터 옵션 확장 상태 토글",
+            description = """
+            필터 옵션의 기본 확장(펼침) 상태를 변경합니다.
+
+            **확장 상태 (isExpanded)**
+            - true: 옵션이 기본적으로 펼쳐진 상태로 표시됩니다 (자식 옵션 노출)
+            - false: 옵션이 기본적으로 접힌 상태로 표시됩니다 (자식 옵션 숨김)
+            """)
+    @PatchMapping("/options/{optionId}/expanded")
+    public ApiResponse<FilterOptionResponse> toggleFilterOptionExpanded(
+            @Parameter(description = "상태 변경할 옵션 ID") @PathVariable Long optionId,
+            @Parameter(description = "확장 여부 (true: 펼침, false: 접힘)") @RequestParam boolean isExpanded) {
+
+        log.info("필터 옵션 확장 상태 변경: optionId={}, isExpanded={}", optionId, isExpanded);
+        FilterOptionResponse option = adminFilterService.toggleFilterOptionExpanded(optionId, isExpanded);
         return ApiResponse.success(option);
     }
 

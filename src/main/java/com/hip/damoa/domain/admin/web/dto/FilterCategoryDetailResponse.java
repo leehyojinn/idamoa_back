@@ -30,6 +30,7 @@ public class FilterCategoryDetailResponse {
     private String icon;
     private Boolean isActive;
     private Boolean isRequired;
+    private Boolean isExpanded;
     private Map<String, Object> metadata;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -51,6 +52,7 @@ public class FilterCategoryDetailResponse {
                 .icon(category.getIcon())
                 .isActive(category.getIsActive())
                 .isRequired(category.getIsRequired())
+                .isExpanded(category.getIsExpanded())
                 .metadata(category.getMetadata())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())

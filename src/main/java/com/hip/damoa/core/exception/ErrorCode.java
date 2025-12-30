@@ -260,12 +260,20 @@ public enum ErrorCode {
     POPUP_CANNOT_BE_UPDATED(HttpStatus.BAD_REQUEST, "POP002", "팝업을 수정할 수 없습니다"),
     POPUP_CANNOT_BE_DELETED(HttpStatus.BAD_REQUEST, "POP003", "팝업을 삭제할 수 없습니다"),
 
-    // Chat
+    // Chat (EstimateRequest 기반)
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CH001", "채팅방을 찾을 수 없습니다"),
     CHAT_MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CH002", "채팅 메시지를 찾을 수 없습니다"),
     CHAT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CH003", "채팅방에 접근할 권한이 없습니다"),
     CHAT_MESSAGE_EMPTY(HttpStatus.BAD_REQUEST, "CH004", "메시지 내용이 비어있습니다"),
     CHAT_COMPANY_UUID_REQUIRED(HttpStatus.BAD_REQUEST, "CH005", "채팅방 생성 시 업체 UUID가 필요합니다"),
+
+    // Direct Chat (범용 1:1 채팅)
+    DIRECT_CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "DC001", "채팅방을 찾을 수 없습니다"),
+    DIRECT_CHAT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "DC002", "채팅방에 접근할 권한이 없습니다"),
+    DIRECT_CHAT_SELF_CHAT_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "DC003", "자기 자신과 채팅할 수 없습니다"),
+    DIRECT_CHAT_MESSAGE_EMPTY(HttpStatus.BAD_REQUEST, "DC004", "메시지 내용이 비어있습니다"),
+    DIRECT_CHAT_TARGET_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "DC005", "대상 사용자를 찾을 수 없습니다"),
+    DIRECT_CHAT_ROOM_INACTIVE(HttpStatus.BAD_REQUEST, "DC006", "비활성화된 채팅방입니다"),
 
     // Inquiry
     INQUIRY_NOT_FOUND(HttpStatus.NOT_FOUND, "IQ001", "문의를 찾을 수 없습니다"),
