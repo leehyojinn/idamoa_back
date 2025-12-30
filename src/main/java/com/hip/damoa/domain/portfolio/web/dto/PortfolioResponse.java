@@ -98,6 +98,7 @@ public class PortfolioResponse {
     @AllArgsConstructor
     public static class CompanySummary {
         private UUID companyUuid;
+        private UUID ownerUuid;  // 1:1 채팅용
         private String companyName;
         private String phone;
         private Double averageRating;

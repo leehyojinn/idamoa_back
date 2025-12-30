@@ -110,6 +110,7 @@ public interface FileRepository extends JpaRepository<File, Long> {
 
     // Find orphaned files (entity_id is null = not connected to any entity)
     // entityType can be set (e.g., "COMPANY_IMAGE") but entityId is null when upload succeeds but entity creation fails
+    // Note: Chat attachments now set entityId = message.id, so they won't be orphaned
     @Query("SELECT f FROM File f WHERE " +
            "f.entityId IS NULL AND " +
            "f.createdAt < :threshold AND " +

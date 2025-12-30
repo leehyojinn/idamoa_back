@@ -726,6 +726,7 @@ public class PortfolioService {
 
         return PortfolioResponse.CompanySummary.builder()
                 .companyUuid(company.getUuid())
+                .ownerUuid(company.getOwner() != null ? company.getOwner().getUuid() : null)
                 .companyName(company.getName())
                 .phone(company.getPrimaryPhone())
                 .averageRating(avgRating)
