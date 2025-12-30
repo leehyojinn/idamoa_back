@@ -3433,3 +3433,101 @@ After (정규화된 중간 테이블):
 ```
 
 **빌드 상태**: ✅ 컴파일 성공
+
+---
+
+**[DIRECTCHAT-001] 범용 1:1 채팅 기능 구현** ✅
+- **작업자**: Claude
+- **작업 시간**: 2025-12-30
+- **작업 내용**:
+  - 기존 chat 도메인(EstimateRequest 기반)과 별개로 새로운 directchat 도메인 생성
+  - 실시간 채팅 (WebSocket/STOMP)
+  - 온라인/오프라인 Presence (Redis)
+  - 파일/이미지 첨부 (기존 File 도메인 활용)
+  - 카카오 알림톡 (Outbox 패턴 + 디바운스)
+
+**생성 파일**:
+
+1. **DB 마이그레이션**:
+   - `V81__Create_direct_chat_tables.sql`
+     - direct_chat_rooms (1:1 채팅방)
+     - direct_chat_messages (메시지)
+     - direct_chat_attachments (첨부파일)
+     - direct_chat_read_states (읽음 상태)
+     - notification_outbox (알림 Outbox)
+
+2. **Entity (domain/directchat/model/)**:
+   - DirectChatRoom.java (user1_id < user2_id 규칙으로 중복 방지)
+   - DirectChatMessage.java
+   - DirectChatAttachment.java
+   - DirectChatReadState.java
+   - MessageType.java (TEXT, IMAGE, FILE, SYSTEM)
+
+3. **Notification Entity (domain/notification/model/)**:
+   - NotificationOutbox.java (Transactional Outbox 패턴)
+   - OutboxStatus.java (PENDING, PROCESSING, SENT, FAILED, CANCELLED)
+   - NotificationChannel.java (KAKAO, SMS, PUSH, EMAIL)
+   - NotificationType.java (CHAT_MESSAGE, SYSTEM 등)
+
+4. **Repository (domain/directchat/repository/)**:
+   - DirectChatRoomRepository.java
+   - DirectChatMessageRepository.java
+   - DirectChatReadStateRepository.java
+   - DirectChatAttachmentRepository.java
+
+5. **Repository (domain/notification/repository/)**:
+   - NotificationOutboxRepository.java
+
+6. **Service (domain/directchat/service/)**:
+   - DirectChatService.java (채팅방/메시지 CRUD)
+   - DirectChatPresenceService.java (Redis 기반 온라인 상태)
+   - DirectChatNotificationService.java (알림 예약 + 디바운스)
+
+7. **Service (domain/notification/service/)**:
+   - NotificationOutboxWorker.java (스케줄러 기반 알림 발송)
+
+8. **DTO (domain/directchat/web/dto/)**:
+   - DirectChatRoomCreateRequest.java
+   - DirectChatMessageRequest.java
+   - DirectChatRoomResponse.java
+   - DirectChatMessageResponse.java
+   - AttachmentResponse.java
+   - ParticipantInfo.java
+   - UnreadCountResponse.java
+   - TypingIndicator.java
+
+9. **Controller (domain/directchat/web/)**:
+   - DirectChatController.java (REST API)
+   - DirectChatWebSocketController.java (WebSocket)
+
+**수정 파일**:
+- ErrorCode.java: Direct Chat 에러 코드 추가 (DC001-DC006)
+
+**REST API 엔드포인트**:
+- POST /api/direct-chats/rooms - 채팅방 생성/조회
+- GET /api/direct-chats/rooms - 채팅방 목록
+- GET /api/direct-chats/rooms/{roomUuid} - 채팅방 상세
+- GET /api/direct-chats/rooms/{roomUuid}/messages - 메시지 목록
+- POST /api/direct-chats/rooms/{roomUuid}/messages - 메시지 전송 (REST)
+- POST /api/direct-chats/rooms/{roomUuid}/read - 읽음 처리
+- GET /api/direct-chats/rooms/{roomUuid}/unread-count - 미읽음 수
+- GET /api/direct-chats/unread-count - 전체 미읽음 수
+- DELETE /api/direct-chats/rooms/{roomUuid} - 채팅방 나가기
+
+**WebSocket 엔드포인트**:
+- /app/direct-chats/rooms/{roomUuid}/messages - 메시지 전송
+- /app/direct-chats/rooms/{roomUuid}/typing - 타이핑 인디케이터
+- /app/direct-chats/rooms/{roomUuid}/read - 읽음 처리
+- /app/direct-chats/rooms/{roomUuid}/enter - 채팅방 입장
+- /app/direct-chats/rooms/{roomUuid}/leave - 채팅방 퇴장
+- /app/direct-chats/heartbeat - Heartbeat
+
+**주요 특징**:
+- Transactional Outbox 패턴으로 알림 안정성 보장
+- Redis setNX + TTL로 5분 디바운스 구현
+- 채팅방 입장 시 대기 중인 알림 자동 취소
+- 지수 백오프 재시도 (1분, 2분, 4분...)
+
+**빌드 상태**: ✅ 컴파일 성공
+
+**계획 문서**: `C:\Users\USER\.claude\plans\snoopy-stirring-kurzweil.md`

@@ -38,6 +38,7 @@ public class FilterOptionDetailResponse {
     private String color;
     private Boolean isActive;
     private Boolean isDefault;
+    private Boolean isExpanded;
     private Integer usageCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -63,6 +64,7 @@ public class FilterOptionDetailResponse {
                 .color(option.getColor())
                 .isActive(option.getIsActive())
                 .isDefault(option.getIsDefault())
+                .isExpanded(option.getIsExpanded())
                 .usageCount(option.getUsageCount())
                 .createdAt(option.getCreatedAt())
                 .updatedAt(option.getUpdatedAt());

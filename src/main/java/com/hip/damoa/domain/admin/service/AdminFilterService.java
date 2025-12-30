@@ -212,6 +212,25 @@ public class AdminFilterService {
         return FilterCategoryResponse.from(category, optionCount);
     }
 
+    /**
+     * 필터 카테고리 확장 상태 토글
+     */
+    @Transactional
+    public FilterCategoryResponse toggleFilterCategoryExpanded(Long categoryId, boolean isExpanded) {
+        log.info("필터 카테고리 확장 상태 변경: categoryId={}, isExpanded={}", categoryId, isExpanded);
+
+        FilterCategory category = filterCategoryRepository.findById(categoryId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILTER_CATEGORY_NOT_FOUND));
+
+        category.setIsExpanded(isExpanded);
+        category = filterCategoryRepository.save(category);
+
+        int optionCount = filterOptionRepository
+                .findByCategoryAndIsActiveTrueAndIsDeletedFalse(category).size();
+
+        return FilterCategoryResponse.from(category, optionCount);
+    }
+
     // ==================== 필터 옵션 관리 ====================
 
     /**
@@ -355,6 +374,21 @@ public class AdminFilterService {
         return FilterOptionResponse.from(option, option.getChildren().size());
     }
 
+    /**
+     * 필터 옵션 확장 상태 토글
+     */
+    @Transactional
+    public FilterOptionResponse toggleFilterOptionExpanded(Long optionId, boolean isExpanded) {
+        log.info("필터 옵션 확장 상태 변경: optionId={}, isExpanded={}", optionId, isExpanded);
+
+        FilterOption option = filterOptionRepository.findById(optionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILTER_OPTION_NOT_FOUND));
+
+        option.setIsExpanded(isExpanded);
+        option = filterOptionRepository.save(option);
+
+        return FilterOptionResponse.from(option, option.getChildren().size());
+    }
 
     /**
      * 필터 옵션 순서 변경
