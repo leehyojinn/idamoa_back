@@ -348,6 +348,65 @@ public class DocumentBoardService {
     }
 
     /**
+     * Document 게시글 수정 (관리자용 - 권한 검증 없이)
+     */
+    @Transactional
+    public DocumentResponse updateDocumentByAdmin(UUID uuid, DocumentUpdateRequest request) {
+        log.info("[관리자] Document 게시글 수정 시작: uuid={}", uuid);
+
+        Board board = boardService.updateBoardByAdmin(
+                uuid,
+                request.getTitle(),
+                request.getContent(),
+                request.toTypeData(),
+                request.getTags()
+        );
+
+        // 필터 옵션 업데이트 - JSONB 배열 방식
+        if (request.getFilterOptionIds() != null) {
+            boardService.addFilterOptions(uuid, request.getFilterOptionIds());
+        }
+
+        // 문서 첨부파일 업데이트
+        List<String> effectiveFileUuids = request.getEffectiveFileUuids();
+        if (effectiveFileUuids != null) {
+            // 기존 첨부파일 Soft delete
+            List<BoardAttachment> existingAttachments = boardAttachmentRepository.findByBoardOrderByDisplayOrder(board);
+            existingAttachments.forEach(attachment -> attachment.softDelete());
+
+            // 새 첨부파일 추가
+            if (!effectiveFileUuids.isEmpty()) {
+                processDocumentFiles(board, effectiveFileUuids, request.getThumbnailUuid());
+            }
+        }
+
+        // 유료 파일 가격 업데이트
+        if (effectiveFileUuids != null || request.getIsPaid() != null || request.getPrice() != null || request.hasIndividualPricing()) {
+            // 관리자는 게시글 소유자의 ID 사용 (소유자가 없으면 null 처리)
+            Long ownerId = board.getUser() != null ? board.getUser().getId() : null;
+
+            @SuppressWarnings("unchecked")
+            List<String> currentFileUuids = effectiveFileUuids != null ? effectiveFileUuids :
+                    (List<String>) board.getTypeData().get("files");
+            if (currentFileUuids != null && !currentFileUuids.isEmpty() && ownerId != null) {
+                Map<String, Integer> filePriceMap = request.getFilePriceMap();
+                processFilePricingWithMap(currentFileUuids, filePriceMap, ownerId);
+            }
+        }
+
+        log.info("[관리자] Document 게시글 수정 완료: uuid={}", uuid);
+
+        // Response 생성
+        List<FilterOption> filterOptions = getFilterOptionsFromJsonb(board);
+        List<FileInfo> files = getDocumentFileInfos(board);
+        FileInfo thumbnail = getThumbnailFileInfo(board);
+        long downloadCount = getTotalDownloadCount(board);
+        String userName = getUserName(board);
+
+        return DocumentResponse.from(board, filterOptions, files, thumbnail, false, false, downloadCount, userName);
+    }
+
+    /**
      * Document 게시글 삭제
      */
     @Transactional

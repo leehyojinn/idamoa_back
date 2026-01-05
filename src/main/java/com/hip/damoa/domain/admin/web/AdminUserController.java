@@ -83,6 +83,35 @@ public class AdminUserController {
     }
 
     /**
+     * 회원 정보 수정
+     */
+    @Operation(summary = "[관리자] 회원 정보 수정",
+            description = """
+                    회원의 정보를 수정합니다.
+
+                    ## 수정 가능 항목
+                    - name: 이름
+                    - nickname: 닉네임
+                    - phone: 전화번호
+                    - bio: 소개
+                    - address: 주소
+                    - postalCode: 우편번호
+                    - profileVisibility: 공개 설정 (PUBLIC, PRIVATE, FRIENDS_ONLY)
+                    - status: 상태 (ACTIVE, INACTIVE, SUSPENDED, PENDING)
+                    - roles: 역할 목록 (USER, COMPANY, ADMIN)
+                    """)
+    @PutMapping("/{userUuid}")
+    public ApiResponse<AdminUserDetailResponse> updateUser(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable UUID userUuid,
+            @Valid @RequestBody AdminUserUpdateRequest request) {
+        log.info("[관리자] 회원 정보 수정: adminEmail={}, userUuid={}",
+                userDetails.getUsername(), userUuid);
+        AdminUserDetailResponse response = adminUserService.updateUser(userUuid, request);
+        return ApiResponse.success(response);
+    }
+
+    /**
      * 회원 상태 변경
      */
     @Operation(summary = "[관리자] 회원 상태 변경",

@@ -4,10 +4,12 @@ import com.hip.damoa.core.response.ApiResponse;
 import com.hip.damoa.domain.estimate.model.EstimateProposal;
 import com.hip.damoa.domain.estimate.service.ProposalService;
 import com.hip.damoa.domain.estimate.web.dto.ProposalResponse;
+import com.hip.damoa.domain.estimate.web.dto.ProposalUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -64,6 +66,57 @@ public class AdminProposalController {
             @Parameter(description = "제안 UUID") @PathVariable UUID proposalUuid) {
         log.info("[관리자] 제안 상세 조회: adminEmail={}, proposalUuid={}", userDetails.getUsername(), proposalUuid);
         EstimateProposal proposal = proposalService.getProposalByUuidForAdmin(userDetails.getUsername(), proposalUuid);
+        return ApiResponse.success(ProposalResponse.from(proposal));
+    }
+
+    /**
+     * 관리자 - 제안 수정
+     */
+    @Operation(summary = "제안 수정 (관리자)",
+            description = """
+                    제안을 수정합니다. 권한 검증 없이 모든 제안을 수정할 수 있습니다.
+
+                    ## 수정 가능 항목
+                    - title: 제안 제목
+                    - description: 제안 설명
+                    - price: 제안 가격
+                    - validUntil: 유효 기간
+                    - pricingDetails: 가격 상세
+                    - timeline: 일정 정보
+                    - attachments: 첨부파일
+                    """)
+    @PutMapping("/{proposalUuid}")
+    public ApiResponse<ProposalResponse> updateProposal(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Parameter(description = "제안 UUID") @PathVariable UUID proposalUuid,
+            @Valid @RequestBody ProposalUpdateRequest request) {
+        log.info("[관리자] 제안 수정: adminEmail={}, proposalUuid={}", userDetails.getUsername(), proposalUuid);
+        EstimateProposal proposal = proposalService.updateProposalByAdmin(proposalUuid, request);
+        return ApiResponse.success(ProposalResponse.from(proposal));
+    }
+
+    /**
+     * 관리자 - 제안 상태 변경
+     */
+    @Operation(summary = "제안 상태 변경 (관리자)",
+            description = """
+                    제안의 상태를 변경합니다.
+
+                    ## 상태 종류
+                    - SUBMITTED: 제출됨
+                    - VIEWED: 확인됨
+                    - SELECTED: 수락됨
+                    - REJECTED: 거절됨
+                    - WITHDRAWN: 철회됨
+                    """)
+    @PatchMapping("/{proposalUuid}/status")
+    public ApiResponse<ProposalResponse> updateProposalStatus(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Parameter(description = "제안 UUID") @PathVariable UUID proposalUuid,
+            @Parameter(description = "변경할 상태") @RequestParam String status) {
+        log.info("[관리자] 제안 상태 변경: adminEmail={}, proposalUuid={}, status={}",
+                userDetails.getUsername(), proposalUuid, status);
+        EstimateProposal proposal = proposalService.updateProposalStatusByAdmin(proposalUuid, status);
         return ApiResponse.success(ProposalResponse.from(proposal));
     }
 

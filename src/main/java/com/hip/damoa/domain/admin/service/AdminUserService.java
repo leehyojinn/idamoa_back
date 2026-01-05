@@ -145,6 +145,70 @@ public class AdminUserService {
     }
 
     /**
+     * 회원 정보 수정 (관리자용)
+     */
+    @Transactional
+    public AdminUserDetailResponse updateUser(UUID userUuid, AdminUserUpdateRequest request) {
+        log.info("[관리자] 회원 정보 수정 시작: userUuid={}", userUuid);
+
+        User user = userRepository.findByUuidAndIsDeletedFalse(userUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 상태 변경
+        if (request.getStatus() != null && VALID_STATUSES.contains(request.getStatus())) {
+            user.updateStatus(request.getStatus());
+        }
+
+        // 역할 변경
+        if (request.getRoles() != null && request.getRoles().length > 0) {
+            for (String role : request.getRoles()) {
+                if (!VALID_ROLES.contains(role)) {
+                    throw new BusinessException(ErrorCode.INVALID_USER_ROLE);
+                }
+            }
+            Set<String> uniqueRoles = new HashSet<>(Arrays.asList(request.getRoles()));
+            user.updateRoles(uniqueRoles.toArray(new String[0]));
+        }
+
+        userRepository.save(user);
+
+        // 프로필 수정
+        UserProfile profile = userProfileRepository.findByUser(user).orElse(null);
+        if (profile != null) {
+            profile.updateByAdmin(
+                    request.getName(),
+                    request.getNickname(),
+                    request.getPhone(),
+                    request.getBio(),
+                    request.getAddress(),
+                    request.getPostalCode(),
+                    request.getProfileVisibility()
+            );
+            userProfileRepository.save(profile);
+        } else if (request.getName() != null || request.getPhone() != null) {
+            // 프로필이 없으면 생성
+            profile = UserProfile.builder()
+                    .user(user)
+                    .name(request.getName())
+                    .phone(request.getPhone())
+                    .nickname(request.getNickname())
+                    .bio(request.getBio())
+                    .address(request.getAddress())
+                    .postalCode(request.getPostalCode())
+                    .profileVisibility(request.getProfileVisibility() != null ? request.getProfileVisibility() : "PUBLIC")
+                    .build();
+            userProfileRepository.save(profile);
+        }
+
+        log.info("[관리자] 회원 정보 수정 완료: userUuid={}", userUuid);
+
+        String name = getUserName(user);
+        String phoneNumber = getUserPhoneNumber(user);
+
+        return AdminUserDetailResponse.from(user, name, phoneNumber);
+    }
+
+    /**
      * 회원 삭제 (Soft Delete)
      */
     @Transactional
