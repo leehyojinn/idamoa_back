@@ -126,4 +126,36 @@ public class PortfolioPromotion extends BaseEntity {
         return this.endDate.isBefore(LocalDate.now().plusDays(7)) ||
                this.endDate.isEqual(LocalDate.now().plusDays(7));
     }
+
+    /**
+     * 관리자용 프로모션 정보 수정
+     */
+    public void updateByAdmin(String promotionType, Integer weight, LocalDate startDate,
+                               LocalDate endDate, BigDecimal monthlyPrice, Boolean autoRenew) {
+        if (promotionType != null) {
+            this.promotionType = promotionType;
+        }
+        if (weight != null) {
+            this.weight = weight;
+        }
+        if (startDate != null) {
+            this.startDate = startDate;
+        }
+        if (endDate != null) {
+            this.endDate = endDate;
+        }
+        if (monthlyPrice != null) {
+            this.monthlyPrice = monthlyPrice;
+        }
+        if (autoRenew != null) {
+            this.autoRenew = autoRenew;
+        }
+    }
+
+    /**
+     * 상태 변경 (관리자용)
+     */
+    public void updateStatus(PortfolioPromotionStatus status) {
+        this.status = status;
+    }
 }

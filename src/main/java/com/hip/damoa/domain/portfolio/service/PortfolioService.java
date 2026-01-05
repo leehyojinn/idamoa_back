@@ -14,6 +14,7 @@ import com.hip.damoa.domain.payment.service.CreditService;
 import com.hip.damoa.domain.portfolio.model.*;
 import com.hip.damoa.domain.portfolio.repository.*;
 import static com.hip.damoa.domain.portfolio.repository.PortfolioSpecifications.*;
+import com.hip.damoa.domain.admin.web.dto.AdminPortfolioUpdateRequest;
 import com.hip.damoa.domain.portfolio.web.dto.*;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.repository.UserRepository;
@@ -822,5 +823,164 @@ public class PortfolioService {
         PortfolioResponse.CompanySummary company = getCompanySummary(portfolio.getCompany());
 
         return PortfolioResponse.from(portfolio, filterOptions, images, null, false, false, company, null, promotion);
+    }
+
+    /**
+     * 관리자용 포트폴리오 수정 (권한 체크 없음, 프로모션 직접 관리 가능)
+     */
+    @Transactional
+    public PortfolioResponse updatePortfolioByAdmin(UUID uuid, AdminPortfolioUpdateRequest request) {
+        log.info("[관리자] 포트폴리오 수정 시작: uuid={}", uuid);
+
+        CompanyPortfolio portfolio = portfolioRepository.findByUuidAndIsDeletedFalse(uuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_NOT_FOUND));
+
+        // 1. 썸네일 처리
+        String thumbnailUrl = null;
+        File thumbnailFile = null;
+        if (request.getThumbnailUuid() != null && !request.getThumbnailUuid().isBlank()) {
+            UUID thumbnailUuid = UUID.fromString(request.getThumbnailUuid());
+            thumbnailFile = fileRepository.findByUuidAndIsDeletedFalse(thumbnailUuid)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+            thumbnailUrl = thumbnailFile.getFileUrl();
+        }
+
+        // 2. 기본 정보 수정
+        portfolio.update(
+                request.getTitle(),
+                request.getDescription(),
+                request.getContent(),
+                request.getCategory(),
+                request.getProjectType(),
+                request.getProjectScale(),
+                request.getProjectDuration(),
+                request.getProjectDate(),
+                request.getBudgetRange(),
+                request.getActualCost(),
+                thumbnailUrl,
+                request.getTags(),
+                request.getRelatedLink(),
+                request.getCopyrightOwner(),
+                request.getCopyrightLicense(),
+                request.getCopyrightAttribution(),
+                request.getIsPublic(),
+                request.getDisplayOrder()
+        );
+
+        portfolio = portfolioRepository.save(portfolio);
+
+        // 썸네일 파일에 엔티티 정보 연결
+        if (thumbnailFile != null) {
+            thumbnailFile.updateEntityInfo(ENTITY_TYPE_PORTFOLIO, portfolio.getId());
+            fileRepository.save(thumbnailFile);
+        }
+
+        // 3. 이미지 첨부파일 업데이트
+        if (request.getImageUuids() != null) {
+            updateAttachments(portfolio, request.getImageUuids(), PortfolioAttachment.AttachmentType.IMAGE);
+        }
+
+        // 4. 비디오 첨부파일 업데이트
+        if (request.getVideoUuids() != null) {
+            updateAttachments(portfolio, request.getVideoUuids(), PortfolioAttachment.AttachmentType.VIDEO);
+        }
+
+        // 5. 필터 옵션 업데이트
+        if (request.getFilterOptionIds() != null) {
+            addFilterOptions(portfolio, request.getFilterOptionIds());
+        }
+
+        // 6. 추천(Featured) 설정 (관리자 전용)
+        if (request.getIsFeatured() != null) {
+            portfolio.setFeatured(request.getIsFeatured());
+            portfolioRepository.save(portfolio);
+        }
+
+        // 7. 프로모션 처리
+        PortfolioPromotion promotion = promotionRepository.findActiveByPortfolioId(portfolio.getId()).orElse(null);
+
+        // 7-1. 프로모션 취소
+        if (Boolean.TRUE.equals(request.getCancelPromotion()) && promotion != null) {
+            promotion.cancel();
+            promotionRepository.save(promotion);
+            promotion = null;
+            log.info("[관리자] 프로모션 취소: portfolioUuid={}", uuid);
+        }
+        // 7-2. 프로모션 신규 생성 또는 수정
+        else if (request.getPromotionType() != null && !request.getPromotionType().isBlank()) {
+            PortfolioPromotionType requestedType = PortfolioPromotionType.fromString(request.getPromotionType());
+            if (requestedType == null) {
+                throw new BusinessException(ErrorCode.INVALID_PROMOTION_TYPE);
+            }
+
+            if (promotion == null) {
+                // 신규 생성 (관리자는 크레딧 차감 없음)
+                var setting = settingsService.getSettingByType(requestedType.name());
+                java.time.LocalDate startDate = request.getPromotionStartDate() != null
+                        ? request.getPromotionStartDate() : java.time.LocalDate.now();
+                java.time.LocalDate endDate = request.getPromotionEndDate() != null
+                        ? request.getPromotionEndDate() : startDate.plusMonths(1);
+                Integer weight = request.getPromotionWeight() != null
+                        ? request.getPromotionWeight() : setting.getWeight();
+                java.math.BigDecimal monthlyPrice = request.getPromotionMonthlyPrice() != null
+                        ? request.getPromotionMonthlyPrice() : setting.getPrice();
+                Boolean autoRenew = request.getAutoRenew() != null ? request.getAutoRenew() : false;
+
+                promotion = PortfolioPromotion.builder()
+                        .portfolio(portfolio)
+                        .user(portfolio.getCompany().getOwner())
+                        .promotionType(requestedType.name())
+                        .weight(weight)
+                        .monthlyPrice(monthlyPrice)
+                        .startDate(startDate)
+                        .endDate(endDate)
+                        .autoRenew(autoRenew)
+                        .status(PortfolioPromotionStatus.ACTIVE)
+                        .build();
+                promotion = promotionRepository.save(promotion);
+                log.info("[관리자] 프로모션 신규 생성: portfolioUuid={}, type={}", uuid, requestedType);
+            } else {
+                // 기존 프로모션 수정
+                promotion.updateByAdmin(
+                        requestedType.name(),
+                        request.getPromotionWeight(),
+                        request.getPromotionStartDate(),
+                        request.getPromotionEndDate(),
+                        request.getPromotionMonthlyPrice(),
+                        request.getAutoRenew()
+                );
+                promotionRepository.save(promotion);
+                log.info("[관리자] 프로모션 수정: portfolioUuid={}", uuid);
+            }
+        }
+        // 7-3. 프로모션 기간/가중치만 수정 (타입 변경 없이)
+        else if (promotion != null && (request.getPromotionStartDate() != null || request.getPromotionEndDate() != null
+                || request.getPromotionWeight() != null || request.getPromotionMonthlyPrice() != null
+                || request.getAutoRenew() != null)) {
+            promotion.updateByAdmin(
+                    null,
+                    request.getPromotionWeight(),
+                    request.getPromotionStartDate(),
+                    request.getPromotionEndDate(),
+                    request.getPromotionMonthlyPrice(),
+                    request.getAutoRenew()
+            );
+            promotionRepository.save(promotion);
+            log.info("[관리자] 프로모션 세부 정보 수정: portfolioUuid={}", uuid);
+        }
+
+        log.info("[관리자] 포트폴리오 수정 완료: uuid={}", uuid);
+
+        // Response 생성
+        List<FilterOption> filterOptions = getFilterOptionsFromJsonb(portfolio);
+        List<PortfolioAttachment> imageAttachments = attachmentRepository.findImagesByPortfolioId(portfolio.getId());
+        List<PortfolioAttachment> videoAttachments = attachmentRepository.findVideosByPortfolioId(portfolio.getId());
+
+        List<PortfolioResponse.FileInfo> imageInfos = toFileInfos(imageAttachments);
+        List<PortfolioResponse.FileInfo> videoInfos = toFileInfos(videoAttachments);
+        PortfolioResponse.CompanySummary company = getCompanySummary(portfolio.getCompany());
+
+        // 관리자는 북마크/좋아요 정보 불필요
+        return PortfolioResponse.from(portfolio, filterOptions, imageInfos, videoInfos, false, false, company, null, promotion);
     }
 }
