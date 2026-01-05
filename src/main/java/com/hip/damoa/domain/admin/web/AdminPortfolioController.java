@@ -1,8 +1,10 @@
 package com.hip.damoa.domain.admin.web;
 
 import com.hip.damoa.core.response.ApiResponse;
+import com.hip.damoa.domain.admin.web.dto.AdminPortfolioUpdateRequest;
 import com.hip.damoa.domain.portfolio.service.PortfolioService;
 import com.hip.damoa.domain.portfolio.web.dto.PortfolioResponse;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -79,6 +81,30 @@ public class AdminPortfolioController {
             @PathVariable UUID uuid) {
         log.info("[관리자] 포트폴리오 조회: adminEmail={}, uuid={}", userDetails.getUsername(), uuid);
         PortfolioResponse response = portfolioService.getPortfolioForAdmin(uuid);
+        return ApiResponse.success(response);
+    }
+
+    /**
+     * 포트폴리오 수정 (관리자용)
+     */
+    @Operation(
+            summary = "포트폴리오 수정 (관리자)",
+            description = "관리자가 포트폴리오를 수정합니다.\n\n" +
+                    "**관리자 전용 기능**:\n" +
+                    "- `isFeatured`: 추천 포트폴리오 설정\n" +
+                    "- `promotionType`: STANDARD, PREMIUM (크레딧 차감 없음)\n" +
+                    "- `promotionStartDate`, `promotionEndDate`: 프로모션 기간 직접 지정\n" +
+                    "- `promotionWeight`: 가중치 직접 지정\n" +
+                    "- `promotionMonthlyPrice`: 가격 직접 지정 (0 = 무료)\n" +
+                    "- `cancelPromotion`: true로 설정 시 프로모션 취소"
+    )
+    @PutMapping("/{uuid}")
+    public ApiResponse<PortfolioResponse> updatePortfolio(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable UUID uuid,
+            @Valid @RequestBody AdminPortfolioUpdateRequest request) {
+        log.info("[관리자] 포트폴리오 수정: adminEmail={}, uuid={}", userDetails.getUsername(), uuid);
+        PortfolioResponse response = portfolioService.updatePortfolioByAdmin(uuid, request);
         return ApiResponse.success(response);
     }
 
