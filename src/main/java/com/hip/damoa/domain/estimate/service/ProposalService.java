@@ -729,6 +729,74 @@ public class ProposalService {
     }
 
     /**
+     * 관리자 - 제안 수정 (UUID 사용, 권한 검증 없이)
+     */
+    @Transactional
+    public EstimateProposal updateProposalByAdmin(UUID proposalUuid, ProposalUpdateRequest request) {
+        log.info("[관리자] 제안 수정 시작: proposalUuid={}", proposalUuid);
+
+        EstimateProposal proposal = proposalRepository.findByUuidAndIsDeletedFalse(proposalUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROPOSAL_NOT_FOUND));
+
+        // 일정 정보를 timeline Map으로 구성 (선택사항)
+        Map<String, Object> timeline = request.getTimeline();
+        if (timeline == null && (request.getProposedStartDate() != null || request.getProposedEndDate() != null)) {
+            timeline = new HashMap<>();
+            if (request.getProposedStartDate() != null) {
+                timeline.put("startDate", request.getProposedStartDate().toString());
+            }
+            if (request.getProposedEndDate() != null) {
+                timeline.put("endDate", request.getProposedEndDate().toString());
+            }
+        }
+
+        // Entity의 update 메서드 사용 (JPA dirty checking으로 UPDATE 쿼리 실행)
+        proposal.update(
+                request.getTitle(),
+                request.getDescription(),
+                request.getPrice(),
+                request.getValidUntil(),
+                request.getPricingDetails(),
+                timeline
+        );
+
+        // 첨부파일 처리 (V30: 조인 테이블)
+        if (request.getAttachments() != null) {
+            processAttachments(proposal, request.getAttachments());
+        }
+
+        log.info("[관리자] 제안 수정 완료: proposalUuid={}", proposalUuid);
+
+        return proposal;
+    }
+
+    /**
+     * 관리자 - 제안 상태 변경 (UUID 사용)
+     */
+    @Transactional
+    public EstimateProposal updateProposalStatusByAdmin(UUID proposalUuid, String status) {
+        log.info("[관리자] 제안 상태 변경: proposalUuid={}, status={}", proposalUuid, status);
+
+        EstimateProposal proposal = proposalRepository.findByUuidAndIsDeletedFalse(proposalUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROPOSAL_NOT_FOUND));
+
+        // 상태 변경
+        switch (status.toUpperCase()) {
+            case "SUBMITTED" -> proposal.resubmit();
+            case "VIEWED" -> proposal.markAsViewed();
+            case "SELECTED" -> proposal.select();
+            case "REJECTED" -> proposal.reject(null);
+            case "WITHDRAWN" -> proposal.withdraw();
+            default -> throw new BusinessException(ErrorCode.INVALID_ESTIMATE_STATUS);
+        }
+
+        proposalRepository.save(proposal);
+
+        log.info("[관리자] 제안 상태 변경 완료: proposalUuid={}, status={}", proposalUuid, status);
+        return proposal;
+    }
+
+    /**
      * 관리자 - 제안 삭제 (UUID 사용)
      */
     @Transactional

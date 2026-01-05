@@ -240,7 +240,7 @@ public class AdminDocumentBoardController {
             @Valid @RequestBody DocumentUpdateRequest request) {
         log.info("[관리자] 자료실 게시글 수정: adminEmail={}, documentUuid={}",
                 userDetails.getUsername(), documentUuid);
-        DocumentResponse response = documentBoardService.updateDocument(documentUuid, userDetails.getUsername(), request);
+        DocumentResponse response = documentBoardService.updateDocumentByAdmin(documentUuid, request);
         return ApiResponse.success(response);
     }
 

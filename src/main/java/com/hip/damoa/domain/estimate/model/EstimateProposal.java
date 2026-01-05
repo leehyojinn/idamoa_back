@@ -121,6 +121,14 @@ public class EstimateProposal extends BaseEntity {
     }
 
     /**
+     * 제안 재제출 (관리자용)
+     */
+    public void resubmit() {
+        this.status = "SUBMITTED";
+        this.isSelected = false;
+    }
+
+    /**
      * 제안이 유효한지 확인
      */
     public boolean isValid() {

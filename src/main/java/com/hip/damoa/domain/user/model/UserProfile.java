@@ -100,4 +100,18 @@ public class UserProfile extends BaseEntity {
     public void changeVisibility(String visibility) {
         this.profileVisibility = visibility;
     }
+
+    /**
+     * 관리자용 전체 프로필 업데이트
+     */
+    public void updateByAdmin(String name, String nickname, String phone, String bio,
+                               String address, String postalCode, String profileVisibility) {
+        if (name != null) this.name = name;
+        if (nickname != null) this.nickname = nickname;
+        if (phone != null) this.phone = phone;
+        if (bio != null) this.bio = bio;
+        if (address != null) this.address = address;
+        if (postalCode != null) this.postalCode = postalCode;
+        if (profileVisibility != null) this.profileVisibility = profileVisibility;
+    }
 }

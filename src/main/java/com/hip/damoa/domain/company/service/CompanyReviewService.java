@@ -572,4 +572,138 @@ public class CompanyReviewService {
                 .filter(Objects::nonNull)
                 .toArray(String[]::new);
     }
+
+    // ===== 관리자용 메서드 =====
+
+    /**
+     * 전체 리뷰 목록 조회 (관리자용)
+     */
+    @Transactional(readOnly = true)
+    public Page<CompanyReviewResponse> getAllReviewsForAdmin(String keyword, String status, org.springframework.data.domain.Pageable pageable) {
+        log.info("[관리자] 전체 리뷰 조회: keyword={}, status={}", keyword, status);
+
+        Page<CompanyReview> reviews;
+        if (keyword != null && !keyword.isEmpty()) {
+            reviews = reviewRepository.searchByKeyword(keyword, pageable);
+        } else if (status != null && !status.isEmpty()) {
+            reviews = reviewRepository.findByStatusAndIsDeletedFalseOrderByCreatedAtDesc(status, pageable);
+        } else {
+            reviews = reviewRepository.findByIsDeletedFalseOrderByCreatedAtDesc(pageable);
+        }
+
+        return reviews.map(this::toResponse);
+    }
+
+    /**
+     * 리뷰 상세 조회 (관리자용 - 모든 상태 조회 가능)
+     */
+    @Transactional(readOnly = true)
+    public CompanyReviewResponse getReviewForAdmin(UUID reviewUuid) {
+        CompanyReview review = reviewRepository.findByUuid(reviewUuid)
+                .filter(r -> !r.getIsDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
+
+        return toResponse(review);
+    }
+
+    /**
+     * 리뷰 상태 변경 (관리자용)
+     */
+    @Transactional
+    public CompanyReviewResponse updateReviewStatusByAdmin(UUID reviewUuid, String status) {
+        log.info("[관리자] 리뷰 상태 변경: reviewUuid={}, status={}", reviewUuid, status);
+
+        CompanyReview review = reviewRepository.findByUuid(reviewUuid)
+                .filter(r -> !r.getIsDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
+
+        review.changeStatus(status);
+        reviewRepository.save(review);
+
+        // 업체 평균 평점 업데이트 (PUBLISHED 상태 변경 시)
+        updateCompanyRating(review.getCompany().getId());
+
+        log.info("[관리자] 리뷰 상태 변경 완료: reviewUuid={}, status={}", reviewUuid, status);
+        return toResponse(review);
+    }
+
+    /**
+     * 리뷰 수정 (관리자용 - 권한 검증 없이)
+     */
+    @Transactional
+    public CompanyReviewResponse updateReviewByAdmin(UUID reviewUuid, CompanyReviewCreateRequest request) {
+        log.info("[관리자] 리뷰 수정 시작: reviewUuid={}", reviewUuid);
+
+        CompanyReview review = reviewRepository.findByUuid(reviewUuid)
+                .filter(r -> !r.getIsDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
+
+        // UUID 배열을 File ID 배열로 변환
+        Long[] imageFileIds = convertUuidsToFileIds(request.getImageUuids());
+
+        review.updateReview(request.getRating(), request.getTitle(), request.getContent(), imageFileIds);
+        review = reviewRepository.save(review);
+
+        // 이미지 업데이트
+        if (request.getImageUuids() != null) {
+            updateReviewImages(review, request.getImageUuids());
+        }
+
+        // 업체 평균 평점 업데이트
+        updateCompanyRating(review.getCompany().getId());
+
+        log.info("[관리자] 리뷰 수정 완료: reviewUuid={}", reviewUuid);
+        return toResponse(review);
+    }
+
+    /**
+     * 리뷰 삭제 (관리자용 - 권한 검증 없이)
+     */
+    @Transactional
+    public void deleteReviewByAdmin(UUID reviewUuid) {
+        log.info("[관리자] 리뷰 삭제 시작: reviewUuid={}", reviewUuid);
+
+        CompanyReview review = reviewRepository.findByUuid(reviewUuid)
+                .filter(r -> !r.getIsDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
+
+        Long companyId = review.getCompany().getId();
+
+        // 리뷰 이미지 soft delete 처리
+        reviewImageRepository.softDeleteByReviewId(review.getId(), java.time.LocalDateTime.now());
+
+        review.softDelete();
+        reviewRepository.save(review);
+
+        // 업체 평균 평점 업데이트
+        updateCompanyRating(companyId);
+
+        log.info("[관리자] 리뷰 삭제 완료: reviewUuid={}", reviewUuid);
+    }
+
+    /**
+     * 업체 답변 수정 (관리자용 - 권한 검증 없이)
+     */
+    @Transactional
+    public CompanyReviewResponse updateReplyByAdmin(UUID reviewUuid, String reply) {
+        log.info("[관리자] 업체 답변 수정 시작: reviewUuid={}", reviewUuid);
+
+        CompanyReview review = reviewRepository.findByUuid(reviewUuid)
+                .filter(r -> !r.getIsDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
+
+        if (reply != null && !reply.isEmpty()) {
+            if (review.getReply() == null) {
+                review.addReply(reply);
+            } else {
+                review.updateReply(reply);
+            }
+        } else {
+            review.deleteReply();
+        }
+        reviewRepository.save(review);
+
+        log.info("[관리자] 업체 답변 수정 완료: reviewUuid={}", reviewUuid);
+        return toResponse(review);
+    }
 }

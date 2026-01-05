@@ -338,6 +338,34 @@ public class BoardService {
     }
 
     /**
+     * 게시글 수정 (관리자용 - 권한 검증 없이)
+     */
+    @Transactional
+    public Board updateBoardByAdmin(UUID uuid, String title, String content,
+                                     Map<String, Object> typeData, String[] tags) {
+        log.info("[관리자] 게시글 수정 시작: uuid={}", uuid);
+
+        Board board = getBoard(uuid);
+
+        // 수정 (권한 검증 없이)
+        if (title != null) {
+            board.updateTitle(title);
+        }
+        if (content != null) {
+            board.updateContent(content);
+        }
+        if (typeData != null) {
+            board.updateTypeData(typeData);
+        }
+        if (tags != null) {
+            board.updateTags(tags);
+        }
+
+        log.info("[관리자] 게시글 수정 완료: uuid={}", uuid);
+        return board;
+    }
+
+    /**
      * 게시글 게시/게시 취소
      */
     @Transactional

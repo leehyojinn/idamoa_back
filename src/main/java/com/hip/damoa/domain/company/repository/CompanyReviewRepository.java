@@ -50,4 +50,31 @@ public interface CompanyReviewRepository extends JpaRepository<CompanyReview, Lo
            "AND r.isDeleted = false AND r.status = 'PUBLISHED' " +
            "GROUP BY r.company.id")
     List<Object[]> getReviewCountsRaw(@Param("companyIds") List<Long> companyIds);
+
+    // ===== 관리자용 메서드 =====
+
+    /**
+     * 전체 리뷰 조회 (관리자용 - 삭제된 것 제외)
+     */
+    Page<CompanyReview> findByIsDeletedFalseOrderByCreatedAtDesc(Pageable pageable);
+
+    /**
+     * 상태별 리뷰 조회 (관리자용)
+     */
+    Page<CompanyReview> findByStatusAndIsDeletedFalseOrderByCreatedAtDesc(String status, Pageable pageable);
+
+    /**
+     * 키워드 검색 (관리자용 - 제목, 내용)
+     */
+    @Query("SELECT r FROM CompanyReview r " +
+           "WHERE r.isDeleted = false " +
+           "AND (LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "     OR LOWER(r.content) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "ORDER BY r.createdAt DESC")
+    Page<CompanyReview> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    /**
+     * UUID로 리뷰 조회 (관리자용 - 삭제된 것 제외, status 무관)
+     */
+    Optional<CompanyReview> findByUuid(UUID uuid);
 }
