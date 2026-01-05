@@ -124,7 +124,7 @@ public class BoardSpecifications {
     }
 
     /**
-     * 키워드 통합 검색 (제목, 내용, 태그, 회사 이름에서 검색)
+     * 키워드 통합 검색 (제목, 내용, 태그에서 검색)
      */
     public static Specification<Board> hasKeyword(String keyword) {
         return (root, query, cb) -> {
@@ -132,11 +132,22 @@ public class BoardSpecifications {
                 return cb.conjunction();
             }
 
-            return Specification
-                .where(hasKeywordInTitleOrContent(keyword))
-                .or(hasKeywordInTags(keyword))
-                .or(hasKeywordInCompanyName(keyword))
-                .toPredicate(root, query, cb);
+            String pattern = "%" + keyword.toLowerCase() + "%";
+
+            // 제목 또는 내용에서 검색
+            Predicate titleOrContent = cb.or(
+                cb.like(cb.lower(root.get("title")), pattern),
+                cb.like(cb.lower(root.get("content")), pattern)
+            );
+
+            // 태그에서 검색 (배열을 텍스트로 변환하여 검색)
+            Predicate tags = cb.like(
+                cb.lower(cb.function("text", String.class, root.get("tags"))),
+                pattern
+            );
+
+            // 제목, 내용, 태그 중 하나라도 일치하면 검색
+            return cb.or(titleOrContent, tags);
         };
     }
 
