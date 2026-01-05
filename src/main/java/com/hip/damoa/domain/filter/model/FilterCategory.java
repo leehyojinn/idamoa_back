@@ -155,4 +155,8 @@ public class FilterCategory extends BaseEntity {
     public void setIsExpanded(Boolean isExpanded) {
         this.isExpanded = isExpanded;
     }
+
+    public void setEntityType(String entityType) {
+        this.entityType = entityType;
+    }
 }
