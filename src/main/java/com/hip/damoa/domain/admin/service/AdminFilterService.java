@@ -466,6 +466,9 @@ public class AdminFilterService {
         if (request.getIsExpanded() != null) {
             category.setIsExpanded(request.getIsExpanded());
         }
+        if (StringUtils.hasText(request.getEntityType())) {
+            category.setEntityType(request.getEntityType());
+        }
         if (request.getMetadata() != null) {
             // BOARD 타입일 경우 메타데이터 검증
             validateBoardTypeMetadata(category.getEntityType(), request.getMetadata());

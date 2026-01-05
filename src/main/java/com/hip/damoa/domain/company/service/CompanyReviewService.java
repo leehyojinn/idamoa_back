@@ -628,7 +628,7 @@ public class CompanyReviewService {
     }
 
     /**
-     * 리뷰 수정 (관리자용 - 권한 검증 없이)
+     * 리뷰 수정 (관리자용 - 권한 검증 없이, 부분 수정 지원)
      */
     @Transactional
     public CompanyReviewResponse updateReviewByAdmin(UUID reviewUuid, CompanyReviewCreateRequest request) {
@@ -638,13 +638,16 @@ public class CompanyReviewService {
                 .filter(r -> !r.getIsDeleted())
                 .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
 
-        // UUID 배열을 File ID 배열로 변환
-        Long[] imageFileIds = convertUuidsToFileIds(request.getImageUuids());
+        // 부분 수정: null이 아닌 값만 업데이트 (기존 값 유지)
+        BigDecimal rating = request.getRating() != null ? request.getRating() : review.getRating();
+        String title = request.getTitle() != null ? request.getTitle() : review.getTitle();
+        String content = request.getContent() != null ? request.getContent() : review.getContent();
+        Long[] imageFileIds = request.getImageUuids() != null ? convertUuidsToFileIds(request.getImageUuids()) : review.getImages();
 
-        review.updateReview(request.getRating(), request.getTitle(), request.getContent(), imageFileIds);
+        review.updateReview(rating, title, content, imageFileIds);
         review = reviewRepository.save(review);
 
-        // 이미지 업데이트
+        // 이미지 업데이트 (요청에 이미지가 있는 경우만)
         if (request.getImageUuids() != null) {
             updateReviewImages(review, request.getImageUuids());
         }

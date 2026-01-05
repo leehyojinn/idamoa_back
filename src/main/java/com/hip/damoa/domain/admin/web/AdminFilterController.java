@@ -118,6 +118,7 @@ public class AdminFilterController {
             **수정 가능 항목**
             - name: 표시 이름
             - description: 설명
+            - entityType: 엔티티 타입 (COMPANY, BOARD 등)
             - filterType: 필터 타입
             - supportsHierarchy: 계층구조 지원 여부
             - maxDepth: 최대 깊이
@@ -127,7 +128,7 @@ public class AdminFilterController {
             - isRequired: 필수 여부
 
             **주의사항**
-            - code와 entityType은 수정할 수 없습니다
+            - code는 수정할 수 없습니다
             - 이미 옵션이 있는 카테고리의 일부 설정은 변경이 제한될 수 있습니다
             """)
     @PutMapping("/categories/{categoryId}")

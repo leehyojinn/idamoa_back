@@ -195,10 +195,8 @@ public class CompanyPortfolio extends BaseEntity {
     }
 
     /**
-     * 포트폴리오 수정 (전체 교체 방식)
-     *
-     * - title: 필수 필드이므로 null이면 기존값 유지
-     * - 기타 필드: null, 0, 빈 문자열 모두 그대로 저장
+     * 포트폴리오 수정 (부분 수정 지원)
+     * - null인 필드는 기존값 유지
      */
     public void update(String title, String description, String content, String category,
                        String projectType, String projectScale, Integer projectDuration,
@@ -206,29 +204,25 @@ public class CompanyPortfolio extends BaseEntity {
                        String thumbnailUrl, String[] tags,
                        String relatedLink, String copyrightOwner, String copyrightLicense,
                        String copyrightAttribution, Boolean isPublic, Integer displayOrder) {
-        // title만 필수 - null이면 기존값 유지
-        if (title != null && !title.isBlank()) {
-            this.title = title;
-        }
-
-        // 나머지 필드는 전부 업데이트 (null, 0, "" 허용)
-        this.description = description;
-        this.content = content;
-        this.category = category;
-        this.projectType = projectType;
-        this.projectScale = projectScale;
-        this.projectDuration = projectDuration;
-        this.projectDate = projectDate;
-        this.budgetRange = budgetRange;
-        this.actualCost = actualCost;
-        this.thumbnailUrl = thumbnailUrl;
-        this.tags = tags;
-        this.relatedLink = relatedLink;
-        this.copyrightOwner = copyrightOwner;
-        this.copyrightLicense = copyrightLicense;
-        this.copyrightAttribution = copyrightAttribution;
-        this.isPublic = isPublic != null ? isPublic : true;
-        this.displayOrder = displayOrder != null ? displayOrder : 0;
+        // 부분 수정: null이 아닌 값만 업데이트 (기존 값 유지)
+        if (title != null) this.title = title;
+        if (description != null) this.description = description;
+        if (content != null) this.content = content;
+        if (category != null) this.category = category;
+        if (projectType != null) this.projectType = projectType;
+        if (projectScale != null) this.projectScale = projectScale;
+        if (projectDuration != null) this.projectDuration = projectDuration;
+        if (projectDate != null) this.projectDate = projectDate;
+        if (budgetRange != null) this.budgetRange = budgetRange;
+        if (actualCost != null) this.actualCost = actualCost;
+        if (thumbnailUrl != null) this.thumbnailUrl = thumbnailUrl;
+        if (tags != null) this.tags = tags;
+        if (relatedLink != null) this.relatedLink = relatedLink;
+        if (copyrightOwner != null) this.copyrightOwner = copyrightOwner;
+        if (copyrightLicense != null) this.copyrightLicense = copyrightLicense;
+        if (copyrightAttribution != null) this.copyrightAttribution = copyrightAttribution;
+        if (isPublic != null) this.isPublic = isPublic;
+        if (displayOrder != null) this.displayOrder = displayOrder;
     }
 
     /**

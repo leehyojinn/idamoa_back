@@ -20,6 +20,9 @@ public class FilterCategoryUpdateRequest {
 
     private String description;
 
+    @Size(max = 100, message = "엔티티 타입은 100자를 초과할 수 없습니다")
+    private String entityType;
+
     @Pattern(regexp = "^(SINGLE_SELECT|MULTI_SELECT|HIERARCHICAL)$", message = "유효하지 않은 필터 타입입니다")
     private String filterType;
 
