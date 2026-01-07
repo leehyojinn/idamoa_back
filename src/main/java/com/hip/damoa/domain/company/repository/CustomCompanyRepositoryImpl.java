@@ -46,13 +46,14 @@ public class CustomCompanyRepositoryImpl implements CustomCompanyRepository {
         }
 
         if (hasFilters && filterOptionIds != null && !filterOptionIds.isEmpty()) {
+            // JSONB 배열에서 필터 옵션을 검색 (V77 마이그레이션 이후)
+            // 각 카테고리에서 최소 1개의 옵션이 매칭되어야 함
             whereClause.append("""
                  AND (
                     SELECT COUNT(DISTINCT fo.category_id)
-                    FROM company_filter_options cfo
-                    JOIN filter_options fo ON cfo.filter_option_id = fo.id
-                    WHERE cfo.company_id = c.id
-                    AND cfo.filter_option_id IN (:filterOptionIds)
+                    FROM filter_options fo
+                    WHERE fo.id IN (:filterOptionIds)
+                    AND jsonb_contains_id(c.filter_option_ids, fo.id)
                 ) = :categoryCount
                 """);
         }
