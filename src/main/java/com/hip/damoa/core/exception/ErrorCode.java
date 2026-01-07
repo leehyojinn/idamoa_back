@@ -305,7 +305,20 @@ public enum ErrorCode {
     PARTNERSHIP_ALREADY_EXISTS(HttpStatus.CONFLICT, "PS002", "해당 업체에 이미 활성 제휴가 존재합니다"),
     INVALID_PARTNERSHIP_DATES(HttpStatus.BAD_REQUEST, "PS003", "만료일은 시작일보다 이후여야 합니다"),
     INVALID_PARTNERSHIP_END_DATE(HttpStatus.BAD_REQUEST, "PS004", "새 만료일은 현재 만료일보다 이후여야 합니다"),
-    PARTNERSHIP_EXPIRED_CANNOT_TOGGLE(HttpStatus.BAD_REQUEST, "PS005", "만료된 제휴는 상태 변경이 불가합니다");
+    PARTNERSHIP_EXPIRED_CANNOT_TOGGLE(HttpStatus.BAD_REQUEST, "PS005", "만료된 제휴는 상태 변경이 불가합니다"),
+
+    // Community
+    COMMUNITY_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CM001", "커뮤니티 카테고리를 찾을 수 없습니다"),
+    COMMUNITY_CATEGORY_SLUG_DUPLICATE(HttpStatus.CONFLICT, "CM002", "이미 존재하는 카테고리 슬러그입니다"),
+    COMMUNITY_POST_NOT_FOUND(HttpStatus.NOT_FOUND, "CM003", "게시글을 찾을 수 없습니다"),
+    COMMUNITY_POST_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CM004", "게시글에 대한 권한이 없습니다"),
+    COMMUNITY_COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CM005", "댓글을 찾을 수 없습니다"),
+    COMMUNITY_COMMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CM006", "댓글에 대한 권한이 없습니다"),
+    COMMUNITY_ANONYMOUS_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "CM007", "이 카테고리에서는 익명 글쓰기가 허용되지 않습니다"),
+    COMMUNITY_ATTACHMENTS_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "CM008", "이 카테고리에서는 파일 첨부가 허용되지 않습니다"),
+    COMMUNITY_MAX_ATTACHMENTS_EXCEEDED(HttpStatus.BAD_REQUEST, "CM009", "최대 첨부파일 개수를 초과했습니다"),
+    COMMUNITY_ALREADY_LIKED(HttpStatus.CONFLICT, "CM010", "이미 좋아요한 게시글입니다"),
+    COMMUNITY_ALREADY_DISLIKED(HttpStatus.CONFLICT, "CM011", "이미 싫어요한 게시글입니다");
 
     private final HttpStatus status;
     private final String code;
