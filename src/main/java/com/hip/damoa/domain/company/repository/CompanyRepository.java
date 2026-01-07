@@ -39,7 +39,7 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
     Page<Company> findByStatusAndIsDeletedFalse(String status, Pageable pageable);
 
     /**
-     * 업체 검색 (PostgreSQL 배열 필터 + 필터 옵션 지원)
+     * 업체 검색 (PostgreSQL 배열 필터 + 필터 옵션 지원) - JSONB 배열 방식
      *
      * @param keyword 검색 키워드 (업체명, 설명)
      * @param serviceAreas 서비스 지역 배열 (OR 조건)
@@ -52,7 +52,6 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
      */
     @Query(value = """
         SELECT DISTINCT c.* FROM companies c
-        LEFT JOIN company_filter_options cfo ON c.id = cfo.company_id
         WHERE c.is_deleted = false
         AND c.status = 'ACTIVE'
         AND (:keyword IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -60,11 +59,15 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         AND (:minRating IS NULL OR c.avg_rating >= :minRating)
         AND (CAST(:serviceAreasSize AS INTEGER) = 0 OR c.service_areas && CAST(:serviceAreas AS text[]))
         AND (CAST(:tagsSize AS INTEGER) = 0 OR c.tags && CAST(:tags AS text[]))
-        AND (CAST(:filterCount AS INTEGER) = 0 OR cfo.filter_option_id IN (:filterOptionIds))
+        AND (CAST(:filterCount AS INTEGER) = 0 OR (
+            SELECT COUNT(DISTINCT fo.category_id)
+            FROM filter_options fo
+            WHERE fo.id = ANY(CAST(:filterOptionIds AS BIGINT[]))
+            AND jsonb_contains_id(c.filter_option_ids, fo.id)
+        ) > 0)
         """,
         countQuery = """
         SELECT COUNT(DISTINCT c.id) FROM companies c
-        LEFT JOIN company_filter_options cfo ON c.id = cfo.company_id
         WHERE c.is_deleted = false
         AND c.status = 'ACTIVE'
         AND (:keyword IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -72,7 +75,12 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         AND (:minRating IS NULL OR c.avg_rating >= :minRating)
         AND (CAST(:serviceAreasSize AS INTEGER) = 0 OR c.service_areas && CAST(:serviceAreas AS text[]))
         AND (CAST(:tagsSize AS INTEGER) = 0 OR c.tags && CAST(:tags AS text[]))
-        AND (CAST(:filterCount AS INTEGER) = 0 OR cfo.filter_option_id IN (:filterOptionIds))
+        AND (CAST(:filterCount AS INTEGER) = 0 OR (
+            SELECT COUNT(DISTINCT fo.category_id)
+            FROM filter_options fo
+            WHERE fo.id = ANY(CAST(:filterOptionIds AS BIGINT[]))
+            AND jsonb_contains_id(c.filter_option_ids, fo.id)
+        ) > 0)
         """,
         nativeQuery = true)
     Page<Company> searchCompaniesWithFilters(
@@ -176,7 +184,7 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
     );
 
     /**
-     * 필터와 키워드를 모두 적용한 통합 검색
+     * 필터와 키워드를 모두 적용한 통합 검색 - JSONB 배열 방식
      * 필터가 1순위로 적용되고, 키워드는 필터링된 결과 내에서 검색
      */
     @Query(value = """
@@ -186,10 +194,9 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         AND (:minRating IS NULL OR c.avg_rating >= :minRating)
         AND (:hasFilters = false OR (
             SELECT COUNT(DISTINCT fo.category_id)
-            FROM company_filter_options cfo
-            JOIN filter_options fo ON cfo.filter_option_id = fo.id
-            WHERE cfo.company_id = c.id
-            AND cfo.filter_option_id IN (:filterOptionIds)
+            FROM filter_options fo
+            WHERE fo.id = ANY(CAST(:filterOptionIds AS BIGINT[]))
+            AND jsonb_contains_id(c.filter_option_ids, fo.id)
         ) = :categoryCount)
         AND (:keyword IS NULL OR :keyword = '' OR (
             LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -212,10 +219,9 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         AND (:minRating IS NULL OR c.avg_rating >= :minRating)
         AND (:hasFilters = false OR (
             SELECT COUNT(DISTINCT fo.category_id)
-            FROM company_filter_options cfo
-            JOIN filter_options fo ON cfo.filter_option_id = fo.id
-            WHERE cfo.company_id = c.id
-            AND cfo.filter_option_id IN (:filterOptionIds)
+            FROM filter_options fo
+            WHERE fo.id = ANY(CAST(:filterOptionIds AS BIGINT[]))
+            AND jsonb_contains_id(c.filter_option_ids, fo.id)
         ) = :categoryCount)
         AND (:keyword IS NULL OR :keyword = '' OR (
             LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -274,7 +280,7 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
     Page<Company> findAllWithAdPriority(Pageable pageable);
 
     /**
-     * 업체 목록 조회 (광고 우선순위 + 필터 + 키워드 검색)
+     * 업체 목록 조회 (광고 우선순위 + 필터 + 키워드 검색) - JSONB 배열 방식
      * 정렬 순서: 1. 광고 우선순위 (DESC) → 2. 좋아요 (DESC) → 3. 리뷰 수 (DESC) → 4. 조회수 (DESC)
      */
     @Query(value = """
@@ -288,10 +294,9 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         AND (:minRating IS NULL OR c.avg_rating >= :minRating)
         AND (:hasFilters = false OR (
             SELECT COUNT(DISTINCT fo.category_id)
-            FROM company_filter_options cfo
-            JOIN filter_options fo ON cfo.filter_option_id = fo.id
-            WHERE cfo.company_id = c.id
-            AND cfo.filter_option_id IN (:filterOptionIds)
+            FROM filter_options fo
+            WHERE fo.id = ANY(CAST(:filterOptionIds AS BIGINT[]))
+            AND jsonb_contains_id(c.filter_option_ids, fo.id)
         ) = :categoryCount)
         AND (:keyword IS NULL OR :keyword = '' OR (
             LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -318,10 +323,9 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         AND (:minRating IS NULL OR c.avg_rating >= :minRating)
         AND (:hasFilters = false OR (
             SELECT COUNT(DISTINCT fo.category_id)
-            FROM company_filter_options cfo
-            JOIN filter_options fo ON cfo.filter_option_id = fo.id
-            WHERE cfo.company_id = c.id
-            AND cfo.filter_option_id IN (:filterOptionIds)
+            FROM filter_options fo
+            WHERE fo.id = ANY(CAST(:filterOptionIds AS BIGINT[]))
+            AND jsonb_contains_id(c.filter_option_ids, fo.id)
         ) = :categoryCount)
         AND (:keyword IS NULL OR :keyword = '' OR (
             LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
