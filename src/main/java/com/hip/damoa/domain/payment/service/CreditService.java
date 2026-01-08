@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,13 @@ public class CreditService {
     public static final String ENTITY_FILE_DOWNLOAD = "FILE_DOWNLOAD";
     public static final String ENTITY_AD_CAMPAIGN = "AD_CAMPAIGN";
     public static final String ENTITY_REFUND = "REFUND";
+    public static final String ENTITY_USER_PROFILE_BONUS = "USER_PROFILE_BONUS";
+    public static final String ENTITY_COMPANY_PROFILE_BONUS = "COMPANY_PROFILE_BONUS";
+
+    // 프로필 등록 이벤트 보너스 상수
+    private static final LocalDate EVENT_END_DATE = LocalDate.of(2026, 3, 31);
+    private static final BigDecimal USER_PROFILE_BONUS = BigDecimal.valueOf(50000);
+    private static final BigDecimal COMPANY_PROFILE_BONUS = BigDecimal.valueOf(50000);
 
     // ========== 크레딧 조회 ==========
 
@@ -496,6 +504,67 @@ public class CreditService {
                 .collect(Collectors.toList());
     }
 
+    // ========== 프로필 등록 이벤트 보너스 ==========
+
+    /**
+     * 일반 유저 프로필 등록 이벤트 보너스 지급 (5만 포인트)
+     * 이벤트 기간: 2026년 3월 31일까지
+     */
+    @Transactional
+    public void grantUserProfileBonus(User user) {
+        if (LocalDate.now().isAfter(EVENT_END_DATE)) {
+            log.info("유저 프로필 보너스 이벤트 종료: userId={}", user.getId());
+            return;
+        }
+
+        Credit credit = getOrCreateCredit(user);
+        credit.earn(USER_PROFILE_BONUS);
+        creditRepository.save(credit);
+
+        CreditTransaction transaction = CreditTransaction.builder()
+                .user(user)
+                .credit(credit)
+                .transactionType(TX_EARN)
+                .amount(USER_PROFILE_BONUS)
+                .balanceAfter(credit.getAvailableCredits())
+                .reason("회원가입 이벤트 보너스 (일반회원)")
+                .entityType(ENTITY_USER_PROFILE_BONUS)
+                .entityId(user.getId())
+                .build();
+        transactionRepository.save(transaction);
+
+        log.info("유저 프로필 보너스 지급 완료: userId={}, amount={}", user.getId(), USER_PROFILE_BONUS);
+    }
+
+    /**
+     * 업체 프로필 등록 이벤트 보너스 지급 (5만 포인트)
+     * 이벤트 기간: 2026년 3월 31일까지
+     */
+    @Transactional
+    public void grantCompanyProfileBonus(User user) {
+        if (LocalDate.now().isAfter(EVENT_END_DATE)) {
+            log.info("업체 프로필 보너스 이벤트 종료: userId={}", user.getId());
+            return;
+        }
+
+        Credit credit = getOrCreateCredit(user);
+        credit.earn(COMPANY_PROFILE_BONUS);
+        creditRepository.save(credit);
+
+        CreditTransaction transaction = CreditTransaction.builder()
+                .user(user)
+                .credit(credit)
+                .transactionType(TX_EARN)
+                .amount(COMPANY_PROFILE_BONUS)
+                .balanceAfter(credit.getAvailableCredits())
+                .reason("회원가입 이벤트 보너스 (업체회원)")
+                .entityType(ENTITY_COMPANY_PROFILE_BONUS)
+                .entityId(user.getId())
+                .build();
+        transactionRepository.save(transaction);
+
+        log.info("업체 프로필 보너스 지급 완료: userId={}, amount={}", user.getId(), COMPANY_PROFILE_BONUS);
+    }
 
     // ========== Private 헬퍼 메서드 ==========
 
