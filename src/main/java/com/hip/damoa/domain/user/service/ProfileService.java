@@ -8,6 +8,7 @@ import com.hip.damoa.domain.company.model.Company;
 import com.hip.damoa.domain.company.repository.CompanyRepository;
 import com.hip.damoa.domain.file.model.File;
 import com.hip.damoa.domain.file.repository.FileRepository;
+import com.hip.damoa.domain.payment.service.CreditService;
 import com.hip.damoa.domain.user.model.User;
 import com.hip.damoa.domain.user.model.UserProfile;
 import com.hip.damoa.domain.user.repository.UserProfileRepository;
@@ -33,6 +34,7 @@ public class ProfileService {
     private final CompanyRepository companyRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final FileRepository fileRepository;
+    private final CreditService creditService;
 
     /**
      * Avatar 파일 정보 추출 헬퍼 메서드 (프로필 조회용)
@@ -141,6 +143,9 @@ public class ProfileService {
         userProfile = userProfileRepository.save(userProfile);
         log.info("UserProfile 생성 완료: id={}, userId={}", userProfile.getId(), user.getId());
 
+        // 일반 유저 프로필 등록 이벤트 보너스 지급
+        creditService.grantUserProfileBonus(user);
+
         // User의 role을 USER로 설정 (이전에 COMPANY였을 수 있으므로)
         if (!user.hasRole("USER") || user.hasRole("COMPANY")) {
             user.setRoles(new String[]{"USER"});
@@ -202,6 +207,9 @@ public class ProfileService {
         companyProfile = userProfileRepository.save(companyProfile);
         log.info("COMPANY 프로필 생성 완료: id={}, userId={}, profileType=COMPANY",
                 companyProfile.getId(), user.getId());
+
+        // 업체 프로필 등록 이벤트 보너스 지급
+        creditService.grantCompanyProfileBonus(user);
 
         // User의 role을 COMPANY로 변경 (이전에 USER였을 수 있으므로)
         if (!user.hasRole("COMPANY") || user.hasRole("USER")) {
