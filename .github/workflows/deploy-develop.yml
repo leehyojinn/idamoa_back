@@ -1,10 +1,10 @@
-name: Deploy to EC2 (Develop)
+name: Deploy to Development (Blue-Green)
 
 on:
   push:
     branches:
       - develop
-  workflow_dispatch:  # 수동 실행 가능
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -19,6 +19,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+
+    outputs:
+      version: ${{ steps.meta.outputs.VERSION }}
 
     steps:
       - name: Checkout code
@@ -61,10 +64,8 @@ jobs:
         run: |
           VERSION=$(grep "version = " build.gradle.kts | head -n 1 | cut -d '"' -f 2)
           TIMESTAMP=$(date +%Y%m%d.%H%M%S)
-          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_OUTPUT
-          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -74,16 +75,12 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev.${{ steps.meta.outputs.TIMESTAMP }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
-          labels: |
-            org.opencontainers.image.source=${{ github.event.repository.html_url }}
-            org.opencontainers.image.revision=${{ github.sha }}
 
   deploy:
-    name: Deploy to EC2
+    name: Deploy to Dev EC2 (Blue-Green)
     needs: build-and-push
     runs-on: ubuntu-latest
 
@@ -99,18 +96,19 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             mkdir -p ~/damoa/app
-            mkdir -p ~/damoa/infra
+            mkdir -p ~/damoa/nginx/config
 
-      - name: Copy docker-compose.dev.yml to EC2
+      - name: Copy Blue-Green deployment files to EC2
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.dev.yml"
+          source: "deploy/dev/*"
           target: "~/damoa/app"
+          strip_components: 2
 
-      - name: Deploy to EC2
+      - name: Deploy with Blue-Green strategy
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -119,34 +117,20 @@ jobs:
           script: |
             cd ~/damoa/app
 
+            # 배포 스크립트 권한 설정
+            chmod +x deploy.sh
+
             # GitHub Container Registry 로그인
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # 최신 이미지 Pull (dev 태그)
+            # 최신 이미지 Pull
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev
 
-            # 기존 App 컨테이너 중지 및 제거
-            docker compose -f docker-compose.dev.yml down || true
+            # Blue-Green 배포 실행
+            ./deploy.sh deploy
 
-            # App 컨테이너 시작
-            docker compose -f docker-compose.dev.yml up -d
-
-            # 이전 이미지 정리
-            docker image prune -f
-
-            # 헬스체크 대기 (최대 60초)
-            echo "⏳ 애플리케이션 헬스체크 대기 중..."
-            for i in {1..20}; do
-              if curl -f http://localhost:8080/api/health > /dev/null 2>&1; then
-                echo "✅ Application is healthy!"
-                break
-              fi
-              echo "Waiting... ($i/20)"
-              sleep 3
-            done
-
-            # 로그 확인
-            docker compose -f docker-compose.dev.yml logs --tail=50 app
+            # 상태 확인
+            ./deploy.sh status
 
       - name: Send Slack notification (Success)
         if: success()
@@ -155,13 +139,13 @@ jobs:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
           payload: |
             {
-              "text": "✅ i-Damoa Backend Develop 배포 성공!",
+              "text": "🧪 i-Damoa Backend DEV 배포 성공! (Blue-Green)",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*배포 성공* :rocket:\n*환경:* Develop (개발)\n*브랜치:* ${{ github.ref_name }}\n*커밋:* ${{ github.event.head_commit.message }}\n*작성자:* ${{ github.actor }}\n*이미지:* ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+                    "text": "*🧪 DEV 배포 성공 (Blue-Green 무중단)*\n*버전:* ${{ needs.build-and-push.outputs.version }}\n*작성자:* ${{ github.actor }}"
                   }
                 }
               ]
@@ -177,16 +161,7 @@ jobs:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
           payload: |
             {
-              "text": "❌ i-Damoa Backend Develop 배포 실패!",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*배포 실패* :x:\n*환경:* Develop (개발)\n*브랜치:* ${{ github.ref_name }}\n*커밋:* ${{ github.event.head_commit.message }}\n*작성자:* ${{ github.actor }}\n*로그:* https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                  }
-                }
-              ]
+              "text": "❌ i-Damoa Backend DEV 배포 실패!"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

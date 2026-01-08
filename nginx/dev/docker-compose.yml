@@ -1,0 +1,25 @@
+# ===========================================
+# Nginx (Dev) - HTTP Only
+# ===========================================
+# No SSL, just for Blue-Green testing
+# ===========================================
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx-core
+    volumes:
+      - ./config:/etc/nginx/conf.d:ro
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "1m"
+        max-file: "3"
+    networks:
+      - nginx-network
+
+networks:
+  nginx-network:
+    name: nginx-network

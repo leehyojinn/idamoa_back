@@ -1,0 +1,19 @@
+# ===========================================
+# Blue-Green Upstream Configuration (Production)
+# ===========================================
+# 이 파일은 deploy.sh에 의해 자동으로 수정됩니다.
+# 수동으로 수정하지 마세요.
+# ===========================================
+
+# 현재 Active: blue
+# 마지막 배포: 초기 설정
+
+upstream idamoa_api {
+    zone idamoa_api 64k;
+    server damoa-app-blue:8080;
+}
+
+upstream idamoa_frontend {
+    zone idamoa_frontend 64k;
+    server damoa-frontend-prod:3000;
+}
