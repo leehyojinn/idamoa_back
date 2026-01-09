@@ -51,6 +51,50 @@ public class Popup extends BaseEntity {
     @Column(name = "offset_y")
     private Integer offsetY = 0;
 
+    // 단위 필드 (px, %, vw, vh, em, rem 지원)
+    @Column(name = "width_unit", length = 10)
+    private String widthUnit = "px";
+
+    @Column(name = "height_unit", length = 10)
+    private String heightUnit = "px";
+
+    @Column(name = "offset_x_unit", length = 10)
+    private String offsetXUnit = "px";
+
+    @Column(name = "offset_y_unit", length = 10)
+    private String offsetYUnit = "px";
+
+    // 모바일 설정
+    @Column(name = "mobile_enabled")
+    private Boolean mobileEnabled = true;
+
+    @Column(name = "mobile_width")
+    private Integer mobileWidth;
+
+    @Column(name = "mobile_width_unit", length = 10)
+    private String mobileWidthUnit = "px";
+
+    @Column(name = "mobile_height")
+    private Integer mobileHeight;
+
+    @Column(name = "mobile_height_unit", length = 10)
+    private String mobileHeightUnit = "px";
+
+    @Column(name = "mobile_position", length = 20)
+    private String mobilePosition = "CENTER";
+
+    @Column(name = "mobile_offset_x")
+    private Integer mobileOffsetX = 0;
+
+    @Column(name = "mobile_offset_x_unit", length = 10)
+    private String mobileOffsetXUnit = "px";
+
+    @Column(name = "mobile_offset_y")
+    private Integer mobileOffsetY = 0;
+
+    @Column(name = "mobile_offset_y_unit", length = 10)
+    private String mobileOffsetYUnit = "px";
+
     @Column(name = "display_start_date")
     private LocalDateTime displayStartDate;
 
@@ -77,7 +121,11 @@ public class Popup extends BaseEntity {
 
     @Builder
     public Popup(String title, String content, UUID imageUuid, String linkUrl,
-                 Integer width, Integer height, String position, Integer offsetX, Integer offsetY,
+                 Integer width, String widthUnit, Integer height, String heightUnit,
+                 String position, Integer offsetX, String offsetXUnit, Integer offsetY, String offsetYUnit,
+                 Boolean mobileEnabled, Integer mobileWidth, String mobileWidthUnit,
+                 Integer mobileHeight, String mobileHeightUnit, String mobilePosition,
+                 Integer mobileOffsetX, String mobileOffsetXUnit, Integer mobileOffsetY, String mobileOffsetYUnit,
                  LocalDateTime displayStartDate, LocalDateTime displayEndDate,
                  Integer displayOrder, Boolean isActive, String createdBy) {
         this.title = title;
@@ -85,10 +133,24 @@ public class Popup extends BaseEntity {
         this.imageUuid = imageUuid;
         this.linkUrl = linkUrl;
         this.width = width;
+        this.widthUnit = widthUnit != null ? widthUnit : "px";
         this.height = height;
+        this.heightUnit = heightUnit != null ? heightUnit : "px";
         this.position = position != null ? position : "CENTER";
         this.offsetX = offsetX != null ? offsetX : 0;
+        this.offsetXUnit = offsetXUnit != null ? offsetXUnit : "px";
         this.offsetY = offsetY != null ? offsetY : 0;
+        this.offsetYUnit = offsetYUnit != null ? offsetYUnit : "px";
+        this.mobileEnabled = mobileEnabled != null ? mobileEnabled : true;
+        this.mobileWidth = mobileWidth;
+        this.mobileWidthUnit = mobileWidthUnit != null ? mobileWidthUnit : "px";
+        this.mobileHeight = mobileHeight;
+        this.mobileHeightUnit = mobileHeightUnit != null ? mobileHeightUnit : "px";
+        this.mobilePosition = mobilePosition != null ? mobilePosition : "CENTER";
+        this.mobileOffsetX = mobileOffsetX != null ? mobileOffsetX : 0;
+        this.mobileOffsetXUnit = mobileOffsetXUnit != null ? mobileOffsetXUnit : "px";
+        this.mobileOffsetY = mobileOffsetY != null ? mobileOffsetY : 0;
+        this.mobileOffsetYUnit = mobileOffsetYUnit != null ? mobileOffsetYUnit : "px";
         this.displayStartDate = displayStartDate;
         this.displayEndDate = displayEndDate;
         this.displayOrder = displayOrder != null ? displayOrder : 0;
@@ -104,7 +166,11 @@ public class Popup extends BaseEntity {
      * 팝업 기본 정보 수정
      */
     public void update(String title, String content, UUID imageUuid, String linkUrl,
-                      Integer width, Integer height, String position, Integer offsetX, Integer offsetY,
+                      Integer width, String widthUnit, Integer height, String heightUnit,
+                      String position, Integer offsetX, String offsetXUnit, Integer offsetY, String offsetYUnit,
+                      Boolean mobileEnabled, Integer mobileWidth, String mobileWidthUnit,
+                      Integer mobileHeight, String mobileHeightUnit, String mobilePosition,
+                      Integer mobileOffsetX, String mobileOffsetXUnit, Integer mobileOffsetY, String mobileOffsetYUnit,
                       LocalDateTime displayStartDate, LocalDateTime displayEndDate,
                       Integer displayOrder, String updatedBy) {
         this.title = title;
@@ -112,10 +178,24 @@ public class Popup extends BaseEntity {
         this.imageUuid = imageUuid;
         this.linkUrl = linkUrl;
         this.width = width;
+        this.widthUnit = widthUnit != null ? widthUnit : "px";
         this.height = height;
+        this.heightUnit = heightUnit != null ? heightUnit : "px";
         this.position = position != null ? position : "CENTER";
         this.offsetX = offsetX != null ? offsetX : 0;
+        this.offsetXUnit = offsetXUnit != null ? offsetXUnit : "px";
         this.offsetY = offsetY != null ? offsetY : 0;
+        this.offsetYUnit = offsetYUnit != null ? offsetYUnit : "px";
+        this.mobileEnabled = mobileEnabled != null ? mobileEnabled : true;
+        this.mobileWidth = mobileWidth;
+        this.mobileWidthUnit = mobileWidthUnit != null ? mobileWidthUnit : "px";
+        this.mobileHeight = mobileHeight;
+        this.mobileHeightUnit = mobileHeightUnit != null ? mobileHeightUnit : "px";
+        this.mobilePosition = mobilePosition != null ? mobilePosition : "CENTER";
+        this.mobileOffsetX = mobileOffsetX != null ? mobileOffsetX : 0;
+        this.mobileOffsetXUnit = mobileOffsetXUnit != null ? mobileOffsetXUnit : "px";
+        this.mobileOffsetY = mobileOffsetY != null ? mobileOffsetY : 0;
+        this.mobileOffsetYUnit = mobileOffsetYUnit != null ? mobileOffsetYUnit : "px";
         this.displayStartDate = displayStartDate;
         this.displayEndDate = displayEndDate;
         this.displayOrder = displayOrder != null ? displayOrder : 0;

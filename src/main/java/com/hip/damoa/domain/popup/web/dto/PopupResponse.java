@@ -38,20 +38,63 @@ public class PopupResponse {
     @Schema(description = "클릭 시 이동할 URL", example = "https://example.com/event")
     private String linkUrl;
 
-    @Schema(description = "팝업 너비 (px)", example = "600")
+    @Schema(description = "팝업 너비", example = "600")
     private Integer width;
 
-    @Schema(description = "팝업 높이 (px)", example = "800")
+    @Schema(description = "너비 단위", example = "px")
+    private String widthUnit;
+
+    @Schema(description = "팝업 높이", example = "800")
     private Integer height;
+
+    @Schema(description = "높이 단위", example = "px")
+    private String heightUnit;
 
     @Schema(description = "팝업 위치", example = "CENTER")
     private String position;
 
-    @Schema(description = "X축 오프셋 (px)", example = "0")
+    @Schema(description = "X축 오프셋", example = "0")
     private Integer offsetX;
 
-    @Schema(description = "Y축 오프셋 (px)", example = "0")
+    @Schema(description = "X축 오프셋 단위", example = "px")
+    private String offsetXUnit;
+
+    @Schema(description = "Y축 오프셋", example = "0")
     private Integer offsetY;
+
+    @Schema(description = "Y축 오프셋 단위", example = "px")
+    private String offsetYUnit;
+
+    // 모바일 설정
+    @Schema(description = "모바일 설정 활성화 여부", example = "true")
+    private Boolean mobileEnabled;
+
+    @Schema(description = "모바일 너비", example = "90")
+    private Integer mobileWidth;
+
+    @Schema(description = "모바일 너비 단위", example = "%")
+    private String mobileWidthUnit;
+
+    @Schema(description = "모바일 높이", example = "80")
+    private Integer mobileHeight;
+
+    @Schema(description = "모바일 높이 단위", example = "%")
+    private String mobileHeightUnit;
+
+    @Schema(description = "모바일 팝업 위치", example = "CENTER")
+    private String mobilePosition;
+
+    @Schema(description = "모바일 X축 오프셋", example = "0")
+    private Integer mobileOffsetX;
+
+    @Schema(description = "모바일 X축 오프셋 단위", example = "px")
+    private String mobileOffsetXUnit;
+
+    @Schema(description = "모바일 Y축 오프셋", example = "0")
+    private Integer mobileOffsetY;
+
+    @Schema(description = "모바일 Y축 오프셋 단위", example = "px")
+    private String mobileOffsetYUnit;
 
     @Schema(description = "노출 시작일시", example = "2025-01-01T00:00:00")
     private LocalDateTime displayStartDate;
@@ -105,10 +148,24 @@ public class PopupResponse {
                 .imageUrl(imageUrl)
                 .linkUrl(popup.getLinkUrl())
                 .width(popup.getWidth())
+                .widthUnit(popup.getWidthUnit())
                 .height(popup.getHeight())
+                .heightUnit(popup.getHeightUnit())
                 .position(popup.getPosition())
                 .offsetX(popup.getOffsetX())
+                .offsetXUnit(popup.getOffsetXUnit())
                 .offsetY(popup.getOffsetY())
+                .offsetYUnit(popup.getOffsetYUnit())
+                .mobileEnabled(popup.getMobileEnabled())
+                .mobileWidth(popup.getMobileWidth())
+                .mobileWidthUnit(popup.getMobileWidthUnit())
+                .mobileHeight(popup.getMobileHeight())
+                .mobileHeightUnit(popup.getMobileHeightUnit())
+                .mobilePosition(popup.getMobilePosition())
+                .mobileOffsetX(popup.getMobileOffsetX())
+                .mobileOffsetXUnit(popup.getMobileOffsetXUnit())
+                .mobileOffsetY(popup.getMobileOffsetY())
+                .mobileOffsetYUnit(popup.getMobileOffsetYUnit())
                 .displayStartDate(popup.getDisplayStartDate())
                 .displayEndDate(popup.getDisplayEndDate())
                 .displayOrder(popup.getDisplayOrder())

@@ -37,21 +37,65 @@ public class PopupUpdateRequest {
     @Size(max = 500, message = "링크 URL은 500자 이내여야 합니다")
     private String linkUrl;
 
-    @Schema(description = "팝업 너비 (px)", example = "600")
+    @Schema(description = "팝업 너비", example = "600")
     private Integer width;
 
-    @Schema(description = "팝업 높이 (px)", example = "800")
+    @Schema(description = "너비 단위", example = "px", allowableValues = {"px", "%", "vw", "vh", "em", "rem"})
+    private String widthUnit;
+
+    @Schema(description = "팝업 높이", example = "800")
     private Integer height;
+
+    @Schema(description = "높이 단위", example = "px", allowableValues = {"px", "%", "vw", "vh", "em", "rem"})
+    private String heightUnit;
 
     @Schema(description = "팝업 위치", example = "CENTER",
             allowableValues = {"CENTER", "TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CUSTOM"})
     private String position;
 
-    @Schema(description = "X축 오프셋 (px, CUSTOM 위치일 때 사용)", example = "0")
+    @Schema(description = "X축 오프셋 (CUSTOM 위치일 때 사용)", example = "0")
     private Integer offsetX;
 
-    @Schema(description = "Y축 오프셋 (px, CUSTOM 위치일 때 사용)", example = "0")
+    @Schema(description = "X축 오프셋 단위", example = "px", allowableValues = {"px", "%", "vw", "vh", "em", "rem"})
+    private String offsetXUnit;
+
+    @Schema(description = "Y축 오프셋 (CUSTOM 위치일 때 사용)", example = "0")
     private Integer offsetY;
+
+    @Schema(description = "Y축 오프셋 단위", example = "px", allowableValues = {"px", "%", "vw", "vh", "em", "rem"})
+    private String offsetYUnit;
+
+    // 모바일 설정
+    @Schema(description = "모바일 설정 활성화 여부", example = "true")
+    private Boolean mobileEnabled;
+
+    @Schema(description = "모바일 너비", example = "90")
+    private Integer mobileWidth;
+
+    @Schema(description = "모바일 너비 단위", example = "%", allowableValues = {"px", "%", "vw", "vh", "em", "rem"})
+    private String mobileWidthUnit;
+
+    @Schema(description = "모바일 높이", example = "80")
+    private Integer mobileHeight;
+
+    @Schema(description = "모바일 높이 단위", example = "%", allowableValues = {"px", "%", "vw", "vh", "em", "rem"})
+    private String mobileHeightUnit;
+
+    @Schema(description = "모바일 팝업 위치", example = "CENTER",
+            allowableValues = {"CENTER", "TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CUSTOM"})
+    private String mobilePosition;
+
+    @Schema(description = "모바일 X축 오프셋", example = "0")
+    private Integer mobileOffsetX;
+
+    @Schema(description = "모바일 X축 오프셋 단위", example = "px", allowableValues = {"px", "%", "vw", "vh", "em", "rem"})
+    private String mobileOffsetXUnit;
+
+    @Schema(description = "모바일 Y축 오프셋", example = "0")
+    private Integer mobileOffsetY;
+
+    @Schema(description = "모바일 Y축 오프셋 단위", example = "px", allowableValues = {"px", "%", "vw", "vh", "em", "rem"})
+    private String mobileOffsetYUnit;
 
     @Schema(description = "노출 시작일시 (null이면 제한 없음)", example = "2025-01-01T00:00:00")
     private LocalDateTime displayStartDate;

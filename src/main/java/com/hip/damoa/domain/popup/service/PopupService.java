@@ -57,10 +57,24 @@ public class PopupService {
                 .imageUuid(request.getImageUuid())
                 .linkUrl(request.getLinkUrl())
                 .width(request.getWidth())
+                .widthUnit(request.getWidthUnit())
                 .height(request.getHeight())
+                .heightUnit(request.getHeightUnit())
                 .position(request.getPosition())
                 .offsetX(request.getOffsetX())
+                .offsetXUnit(request.getOffsetXUnit())
                 .offsetY(request.getOffsetY())
+                .offsetYUnit(request.getOffsetYUnit())
+                .mobileEnabled(request.getMobileEnabled())
+                .mobileWidth(request.getMobileWidth())
+                .mobileWidthUnit(request.getMobileWidthUnit())
+                .mobileHeight(request.getMobileHeight())
+                .mobileHeightUnit(request.getMobileHeightUnit())
+                .mobilePosition(request.getMobilePosition())
+                .mobileOffsetX(request.getMobileOffsetX())
+                .mobileOffsetXUnit(request.getMobileOffsetXUnit())
+                .mobileOffsetY(request.getMobileOffsetY())
+                .mobileOffsetYUnit(request.getMobileOffsetYUnit())
                 .displayStartDate(request.getDisplayStartDate())
                 .displayEndDate(request.getDisplayEndDate())
                 .displayOrder(request.getDisplayOrder())
@@ -112,10 +126,24 @@ public class PopupService {
                 request.getImageUuid(),
                 request.getLinkUrl(),
                 request.getWidth(),
+                request.getWidthUnit(),
                 request.getHeight(),
+                request.getHeightUnit(),
                 request.getPosition(),
                 request.getOffsetX(),
+                request.getOffsetXUnit(),
                 request.getOffsetY(),
+                request.getOffsetYUnit(),
+                request.getMobileEnabled(),
+                request.getMobileWidth(),
+                request.getMobileWidthUnit(),
+                request.getMobileHeight(),
+                request.getMobileHeightUnit(),
+                request.getMobilePosition(),
+                request.getMobileOffsetX(),
+                request.getMobileOffsetXUnit(),
+                request.getMobileOffsetY(),
+                request.getMobileOffsetYUnit(),
                 request.getDisplayStartDate(),
                 request.getDisplayEndDate(),
                 request.getDisplayOrder(),
