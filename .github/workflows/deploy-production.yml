@@ -99,8 +99,7 @@ jobs:
         run: |
           mkdir -p ~/damoa/app
 
-          # deploy/prod 폴더에서 복사
-          cp deploy/prod/docker-compose.yml ~/damoa/app/docker-compose.yml
+          # deploy/prod 폴더에서 Blue-Green 파일만 복사
           cp deploy/prod/docker-compose.blue.yml ~/damoa/app/docker-compose.blue.yml
           cp deploy/prod/docker-compose.green.yml ~/damoa/app/docker-compose.green.yml
           cp deploy/prod/deploy.sh ~/damoa/app/deploy.sh
