@@ -110,8 +110,8 @@ public class PortfolioPromotionService {
         PortfolioPromotion promotion = promotionRepository.findActiveByPortfolioId(portfolio.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_PROMOTION_NOT_FOUND));
 
-        // 소유자 확인
-        if (promotion.getUser() == null || !promotion.getUser().getId().equals(user.getId())) {
+        // 소유자 확인 (관리자 생성 프로모션은 user가 null일 수 있음)
+        if (promotion.getUser() != null && !promotion.getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.PORTFOLIO_ACCESS_DENIED);
         }
 
@@ -135,8 +135,8 @@ public class PortfolioPromotionService {
         PortfolioPromotion promotion = promotionRepository.findActiveByPortfolioId(portfolio.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_PROMOTION_NOT_FOUND));
 
-        // 소유자 확인
-        if (promotion.getUser() == null || !promotion.getUser().getId().equals(user.getId())) {
+        // 소유자 확인 (관리자 생성 프로모션은 user가 null일 수 있음)
+        if (promotion.getUser() != null && !promotion.getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.PORTFOLIO_ACCESS_DENIED);
         }
 
@@ -192,8 +192,8 @@ public class PortfolioPromotionService {
         PortfolioPromotion promotion = promotionRepository.findActiveByPortfolioId(portfolio.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PORTFOLIO_PROMOTION_NOT_FOUND));
 
-        // 소유자 확인
-        if (promotion.getUser() == null || !promotion.getUser().getId().equals(user.getId())) {
+        // 소유자 확인 (관리자 생성 프로모션은 user가 null일 수 있음)
+        if (promotion.getUser() != null && !promotion.getUser().getId().equals(user.getId())) {
             throw new BusinessException(ErrorCode.PORTFOLIO_ACCESS_DENIED);
         }
 
@@ -358,6 +358,14 @@ public class PortfolioPromotionService {
 
         User user = promotion.getUser();
         BigDecimal price = promotion.getMonthlyPrice();
+
+        // 관리자 생성 프로모션 (user가 없는 경우) - 자동갱신 불가
+        if (user == null) {
+            log.warn("관리자 생성 프로모션은 자동갱신 불가: promotionId={}", promotion.getId());
+            promotion.setAutoRenew(false);
+            promotionRepository.save(promotion);
+            return false;
+        }
 
         // 크레딧 잔액 확인
         if (!creditService.hasEnoughCredits(user.getEmail(), price)) {

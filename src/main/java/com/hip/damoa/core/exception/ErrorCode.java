@@ -318,7 +318,8 @@ public enum ErrorCode {
     COMMUNITY_ATTACHMENTS_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "CM008", "이 카테고리에서는 파일 첨부가 허용되지 않습니다"),
     COMMUNITY_MAX_ATTACHMENTS_EXCEEDED(HttpStatus.BAD_REQUEST, "CM009", "최대 첨부파일 개수를 초과했습니다"),
     COMMUNITY_ALREADY_LIKED(HttpStatus.CONFLICT, "CM010", "이미 좋아요한 게시글입니다"),
-    COMMUNITY_ALREADY_DISLIKED(HttpStatus.CONFLICT, "CM011", "이미 싫어요한 게시글입니다");
+    COMMUNITY_ALREADY_DISLIKED(HttpStatus.CONFLICT, "CM011", "이미 싫어요한 게시글입니다"),
+    COMMUNITY_CATEGORY_HAS_CHILDREN(HttpStatus.BAD_REQUEST, "CM012", "하위 카테고리가 있어 삭제할 수 없습니다");
 
     private final HttpStatus status;
     private final String code;

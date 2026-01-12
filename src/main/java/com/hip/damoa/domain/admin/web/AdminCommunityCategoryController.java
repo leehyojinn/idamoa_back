@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -35,7 +36,7 @@ public class AdminCommunityCategoryController {
 
     private final CommunityCategoryService categoryService;
 
-    @Operation(summary = "카테고리 목록 조회", description = "전체 커뮤니티 카테고리 목록을 조회합니다 (비활성 포함)")
+    @Operation(summary = "카테고리 목록 조회", description = "전체 커뮤니티 카테고리 목록을 조회합니다 (비활성 포함, 플랫 리스트)")
     @GetMapping
     public ApiResponse<Page<CommunityCategoryResponse>> getCategories(
             @RequestParam(required = false) String keyword,
@@ -46,7 +47,14 @@ public class AdminCommunityCategoryController {
         return ApiResponse.success(categoryService.getAllCategories(keyword, pageable));
     }
 
-    @Operation(summary = "카테고리 상세 조회", description = "특정 카테고리 정보를 조회합니다")
+    @Operation(summary = "카테고리 트리 조회", description = "전체 커뮤니티 카테고리를 트리 구조로 조회합니다 (비활성 포함)")
+    @GetMapping("/tree")
+    public ApiResponse<List<CommunityCategoryResponse>> getCategoriesTree() {
+        log.info("[관리자] 커뮤니티 카테고리 트리 조회");
+        return ApiResponse.success(categoryService.getAllCategoriesTree());
+    }
+
+    @Operation(summary = "카테고리 상세 조회", description = "특정 카테고리 정보를 조회합니다 (하위 카테고리 포함)")
     @GetMapping("/{uuid}")
     public ApiResponse<CommunityCategoryResponse> getCategory(@PathVariable UUID uuid) {
         log.info("[관리자] 커뮤니티 카테고리 상세 조회: uuid={}", uuid);
