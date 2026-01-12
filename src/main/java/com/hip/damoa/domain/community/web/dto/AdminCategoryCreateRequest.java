@@ -5,6 +5,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
+import java.util.UUID;
+
 @Getter
 @Builder
 @NoArgsConstructor
@@ -36,4 +38,7 @@ public class AdminCategoryCreateRequest {
     private Boolean allowAttachments;
 
     private Integer maxAttachments;
+
+    // 부모 카테고리 UUID (null이면 최상위 카테고리)
+    private UUID parentUuid;
 }

@@ -4,10 +4,12 @@ import com.hip.damoa.domain.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * 커뮤니티 카테고리 엔티티
+ * 커뮤니티 카테고리 엔티티 (계층 구조 지원)
  */
 @Entity
 @Table(name = "community_categories")
@@ -52,10 +54,23 @@ public class CommunityCategory extends BaseEntity {
     @Column(name = "max_attachments", nullable = false)
     private Integer maxAttachments = 10;
 
+    // 계층 구조 지원
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private CommunityCategory parent;
+
+    @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
+    @OrderBy("displayOrder ASC")
+    private List<CommunityCategory> children = new ArrayList<>();
+
+    @Column(name = "depth", nullable = false)
+    private Integer depth = 0;
+
     @Builder
     public CommunityCategory(String name, String slug, String description, String icon,
                              Integer displayOrder, Boolean isActive, Boolean allowAnonymous,
-                             Boolean requireLogin, Boolean allowAttachments, Integer maxAttachments) {
+                             Boolean requireLogin, Boolean allowAttachments, Integer maxAttachments,
+                             CommunityCategory parent) {
         this.uuid = UUID.randomUUID();
         this.name = name;
         this.slug = slug;
@@ -67,6 +82,8 @@ public class CommunityCategory extends BaseEntity {
         this.requireLogin = requireLogin != null ? requireLogin : true;
         this.allowAttachments = allowAttachments != null ? allowAttachments : true;
         this.maxAttachments = maxAttachments != null ? maxAttachments : 10;
+        this.parent = parent;
+        this.depth = parent != null ? parent.getDepth() + 1 : 0;
     }
 
     public void update(String name, String description, String icon, Integer displayOrder,
@@ -83,11 +100,24 @@ public class CommunityCategory extends BaseEntity {
         if (maxAttachments != null) this.maxAttachments = maxAttachments;
     }
 
+    public void updateParent(CommunityCategory newParent) {
+        this.parent = newParent;
+        this.depth = newParent != null ? newParent.getDepth() + 1 : 0;
+    }
+
     public void activate() {
         this.isActive = true;
     }
 
     public void deactivate() {
         this.isActive = false;
+    }
+
+    public boolean isRoot() {
+        return this.parent == null;
+    }
+
+    public boolean hasChildren() {
+        return this.children != null && !this.children.isEmpty();
     }
 }

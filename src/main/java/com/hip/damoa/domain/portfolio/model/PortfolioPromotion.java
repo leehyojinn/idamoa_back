@@ -32,7 +32,7 @@ public class PortfolioPromotion extends BaseEntity {
     private CompanyPortfolio portfolio;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)  // 관리자가 생성한 프로모션은 user가 없을 수 있음
     private User user;
 
     @Column(name = "promotion_type", nullable = false, length = 30)
