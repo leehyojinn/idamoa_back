@@ -147,8 +147,9 @@ public class CustomCompanyRepositoryImpl implements CustomCompanyRepository {
             sortBy = "AD_PRIORITY";
         }
 
-        // 기본 정렬 (2순위 이후): 광고 → 우선순위 → 좋아요 → 리뷰수 → 조회수 → 평점
+        // 기본 정렬: owner_id 유무 → 광고 → 우선순위 → 좋아요 → 리뷰수 → 조회수 → 평점
         String defaultSort = """
+            CASE WHEN c.owner_id IS NOT NULL THEN 0 ELSE 1 END,
             CASE WHEN ac.ad_id IS NOT NULL THEN 0 ELSE 1 END,
             COALESCE(ac.priority_score, 0) DESC,
             c.like_count DESC,
