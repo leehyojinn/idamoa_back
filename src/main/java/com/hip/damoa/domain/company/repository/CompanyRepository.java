@@ -264,6 +264,7 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
         WHERE c.is_deleted = false
         AND c.status = 'ACTIVE'
         ORDER BY
+            CASE WHEN c.owner_id IS NOT NULL THEN 0 ELSE 1 END,
             CASE WHEN ac.id IS NOT NULL THEN 0 ELSE 1 END,
             COALESCE(ac.priority_score, 0) DESC,
             COALESCE(ac.secondary_score, 0) DESC,
@@ -309,6 +310,7 @@ public interface CompanyRepository extends JpaRepository<Company, Long>, JpaSpec
             )
         ))
         ORDER BY
+            CASE WHEN c.owner_id IS NOT NULL THEN 0 ELSE 1 END,
             CASE WHEN ac.id IS NOT NULL THEN 0 ELSE 1 END,
             COALESCE(ac.priority_score, 0) DESC,
             COALESCE(ac.secondary_score, 0) DESC,
