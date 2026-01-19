@@ -23,7 +23,8 @@ public interface CommunityPostRepository extends JpaRepository<CommunityPost, Lo
 
     // 카테고리별 게시글 목록 (공개된 것만) - 부모 카테고리 조회 시 자식 카테고리 게시글 포함
     @Query("SELECT p FROM CommunityPost p " +
-           "WHERE (p.category.slug = :categorySlug OR p.category.parent.slug = :categorySlug) " +
+           "LEFT JOIN p.category.parent parent " +
+           "WHERE (p.category.slug = :categorySlug OR parent.slug = :categorySlug) " +
            "AND p.isPublished = true AND p.isDeleted = false " +
            "ORDER BY p.isPinned DESC, p.isNotice DESC, p.createdAt DESC")
     Page<CommunityPost> findByCategorySlug(@Param("categorySlug") String categorySlug, Pageable pageable);
@@ -44,7 +45,8 @@ public interface CommunityPostRepository extends JpaRepository<CommunityPost, Lo
 
     // 카테고리 + 키워드 검색 - 부모 카테고리 조회 시 자식 카테고리 게시글 포함
     @Query("SELECT p FROM CommunityPost p " +
-           "WHERE (p.category.slug = :categorySlug OR p.category.parent.slug = :categorySlug) " +
+           "LEFT JOIN p.category.parent parent " +
+           "WHERE (p.category.slug = :categorySlug OR parent.slug = :categorySlug) " +
            "AND p.isPublished = true AND p.isDeleted = false " +
            "AND (LOWER(CAST(p.title AS string)) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) " +
            "     OR LOWER(CAST(p.content AS string)) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))) " +
