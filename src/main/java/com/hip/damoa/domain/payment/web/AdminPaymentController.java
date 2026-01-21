@@ -25,7 +25,7 @@ import java.util.UUID;
  * 관리자용 결제 관리 컨트롤러
  */
 @Slf4j
-@Tag(name = "1924. Admin Payment", description = "관리자 결제 관리 API")
+@Tag(name = "9924. Admin Payment", description = "관리자 결제 관리 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

@@ -27,7 +27,7 @@ import java.util.UUID;
  * 포트폴리오 컨트롤러
  */
 @Slf4j
-@Tag(name = "06-1. Portfolio", description = "포트폴리오 API")
+@Tag(name = "1006-1. Portfolio", description = "포트폴리오 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/portfolios")

@@ -28,7 +28,7 @@ import java.util.UUID;
  * - 프로모션 관리는 AdminPortfolioPromotionSettingsController 참조
  */
 @Slf4j
-@Tag(name = "1903. Admin - Portfolio", description = "포트폴리오 관리 API (관리자용)")
+@Tag(name = "9903. Admin - Portfolio", description = "포트폴리오 관리 API (관리자용)")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

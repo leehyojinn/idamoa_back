@@ -25,7 +25,7 @@ import java.util.UUID;
  * 제휴/광고 문의 관리자 컨트롤러
  */
 @Slf4j
-@Tag(name = "1912. Admin Partnership Inquiry", description = "제휴/광고 문의 관리자 API")
+@Tag(name = "9912. Admin Partnership Inquiry", description = "제휴/광고 문의 관리자 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

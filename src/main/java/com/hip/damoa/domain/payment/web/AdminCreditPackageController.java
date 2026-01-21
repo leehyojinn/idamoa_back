@@ -28,7 +28,7 @@ import java.util.UUID;
  * 관리자용 크레딧 패키지 관리 컨트롤러
  */
 @Slf4j
-@Tag(name = "1921. Admin Credit Package", description = "관리자 크레딧 패키지 관리 API")
+@Tag(name = "9921. Admin Credit Package", description = "관리자 크레딧 패키지 관리 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

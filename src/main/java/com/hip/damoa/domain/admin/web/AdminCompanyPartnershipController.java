@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 /**
  * 제휴업체 관리 Controller (관리자 전용)
  */
-@Tag(name = "1950. Admin - Company Partnership", description = "제휴업체 관리 API (관리자 전용)")
+@Tag(name = "9950. Admin - Company Partnership", description = "제휴업체 관리 API (관리자 전용)")
 @SecurityRequirement(name = "bearerAuth")
 @PreAuthorize("hasRole('ADMIN')")
 @Slf4j

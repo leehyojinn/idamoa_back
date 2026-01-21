@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 /**
  * 제휴업체 조회 Controller (퍼블릭)
  */
-@Tag(name = "0330. Partnerships", description = "제휴업체 조회 API")
+@Tag(name = "1030. Partnerships", description = "제휴업체 조회 API")
 @Slf4j
 @RestController
 @RequiredArgsConstructor

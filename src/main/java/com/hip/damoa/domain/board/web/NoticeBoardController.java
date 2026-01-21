@@ -23,7 +23,7 @@ import java.util.UUID;
  *
  * 공지사항 및 이벤트 조회 API
  */
-@Tag(name = "12. Notice/Event Board", description = "공지사항 및 이벤트 API (BoardType: NOTICE, EVENT, FAQ) - 조회 전용")
+@Tag(name = "1012. Notice/Event Board", description = "공지사항 및 이벤트 API (BoardType: NOTICE, EVENT, FAQ) - 조회 전용")
 @Slf4j
 @RestController
 @RequiredArgsConstructor

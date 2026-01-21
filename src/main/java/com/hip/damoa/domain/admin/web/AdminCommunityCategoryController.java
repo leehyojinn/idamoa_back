@@ -25,7 +25,7 @@ import java.util.UUID;
 /**
  * 커뮤니티 카테고리 관리 Controller (관리자용)
  */
-@Tag(name = "1920. Admin - Community Category", description = "커뮤니티 카테고리 관리 API (관리자 전용)")
+@Tag(name = "9920. Admin - Community Category", description = "커뮤니티 카테고리 관리 API (관리자 전용)")
 @SecurityRequirement(name = "bearerAuth")
 @Slf4j
 @RestController

@@ -21,7 +21,7 @@ import java.util.List;
  * 관리자 - Google Analytics API
  * google.analytics.enabled=true일 때만 활성화됩니다.
  */
-@Tag(name = "1900. Admin - Dashboard Analytics", description = "관리자 - Google Analytics 통계 API")
+@Tag(name = "9900. Admin - Dashboard Analytics", description = "관리자 - Google Analytics 통계 API")
 @SecurityRequirement(name = "bearerAuth")
 @Slf4j
 @RestController

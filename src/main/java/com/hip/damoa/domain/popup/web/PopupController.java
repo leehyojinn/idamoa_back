@@ -17,7 +17,7 @@ import java.util.UUID;
  *
  * 홈페이지 팝업 조회 및 통계 API
  */
-@Tag(name = "15. Popup", description = "팝업 API - 조회 및 통계")
+@Tag(name = "1015. Popup", description = "팝업 API - 조회 및 통계")
 @Slf4j
 @RestController
 @RequiredArgsConstructor

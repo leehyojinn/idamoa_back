@@ -35,7 +35,7 @@ import java.util.UUID;
  *
  * 자료실 API
  */
-@Tag(name = "11. Document Board", description = "자료실 API (BoardType: DOCUMENT) - 파일 업로드/다운로드, 필터 기능, 북마크 지원, 유료 파일 지원")
+@Tag(name = "1011. Document Board", description = "자료실 API (BoardType: DOCUMENT) - 파일 업로드/다운로드, 필터 기능, 북마크 지원, 유료 파일 지원")
 @Slf4j
 @RestController
 @RequiredArgsConstructor

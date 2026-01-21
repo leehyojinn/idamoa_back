@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
  * 제휴/광고 문의 컨트롤러 (공개 API)
  */
 @Slf4j
-@Tag(name = "18. Partnership Inquiry", description = "제휴/광고 문의 API")
+@Tag(name = "1018. Partnership Inquiry", description = "제휴/광고 문의 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/partnership-inquiries")

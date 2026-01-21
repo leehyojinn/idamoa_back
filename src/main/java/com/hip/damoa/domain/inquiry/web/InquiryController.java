@@ -24,7 +24,7 @@ import java.util.UUID;
  * 일반 문의 API (사용자용)
  */
 @Slf4j
-@Tag(name = "17. Inquiry", description = "일반 문의 API")
+@Tag(name = "1017. Inquiry", description = "일반 문의 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

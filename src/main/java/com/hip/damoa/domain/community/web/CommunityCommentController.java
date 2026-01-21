@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-@Tag(name = "Community Comment", description = "커뮤니티 댓글 API")
+@Tag(name = "1032. Community Comment", description = "커뮤니티 댓글 API")
 @Slf4j
 @RestController
 @RequiredArgsConstructor

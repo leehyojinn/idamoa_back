@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
-@Tag(name = "1926. Admin - Ad Campaign", description = "관리자 광고 캠페인 관리 API")
+@Tag(name = "9926. Admin - Ad Campaign", description = "관리자 광고 캠페인 관리 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

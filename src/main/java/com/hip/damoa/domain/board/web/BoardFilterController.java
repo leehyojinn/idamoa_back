@@ -19,7 +19,7 @@ import java.util.List;
  *
  * Note: 사진 게시판(Gallery) 필터 기능은 Portfolio 도메인으로 이관됨
  */
-@Tag(name = "10-1. Board Filter", description = "게시판 필터 조회 API (동적 필터 제공)")
+@Tag(name = "1010-1. Board Filter", description = "게시판 필터 조회 API (동적 필터 제공)")
 @Slf4j
 @RestController
 @RequiredArgsConstructor

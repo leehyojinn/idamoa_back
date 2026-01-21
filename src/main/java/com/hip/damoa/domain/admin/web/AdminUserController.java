@@ -23,7 +23,7 @@ import java.util.UUID;
 /**
  * 관리자 회원 관리 API
  */
-@Tag(name = "1901. Admin - User", description = "관리자 회원 관리 API")
+@Tag(name = "9901. Admin - User", description = "관리자 회원 관리 API")
 @SecurityRequirement(name = "bearerAuth")
 @Slf4j
 @RestController

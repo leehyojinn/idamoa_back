@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-@Tag(name = "Admin - File", description = "관리자 파일 가격 관리 API")
+@Tag(name = "9931. Admin - File", description = "관리자 파일 가격 관리 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

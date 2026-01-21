@@ -24,7 +24,7 @@ import java.util.UUID;
  * 관리자용 환불 관리 컨트롤러
  */
 @Slf4j
-@Tag(name = "1923. Admin Refund", description = "관리자 환불 관리 API")
+@Tag(name = "9923. Admin Refund", description = "관리자 환불 관리 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

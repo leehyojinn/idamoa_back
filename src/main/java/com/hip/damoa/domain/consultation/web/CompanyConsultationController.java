@@ -24,7 +24,7 @@ import java.util.UUID;
 /**
  * 포트폴리오 상담신청 - 업체 API
  */
-@Tag(name = "19. Company Consultation", description = "업체용 포트폴리오 상담신청 관리 API")
+@Tag(name = "1019. Company Consultation", description = "업체용 포트폴리오 상담신청 관리 API")
 @SecurityRequirement(name = "bearerAuth")
 @Slf4j
 @RestController

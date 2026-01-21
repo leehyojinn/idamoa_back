@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * 필터 조회 API (공개)
  */
-@Tag(name = "14. Filter", description = "필터 카테고리 및 옵션 조회 API")
+@Tag(name = "1014. Filter", description = "필터 카테고리 및 옵션 조회 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/filters")
