@@ -139,25 +139,6 @@ springdoc:
 
 
 
-# CORS Configuration for Production
+# CORS Configuration for Production (uses environment variable)
 cors:
-  allowed-origins:
-    - https://www.damoa.com
-    - https://damoa.com
-    - https://admin.damoa.com
-  allowed-methods:
-    - GET
-    - POST
-    - PUT
-    - DELETE
-    - OPTIONS
-  allowed-headers:
-    - Authorization
-    - Content-Type
-    - Accept
-    - Origin
-    - X-Requested-With
-  exposed-headers:
-    - Content-Type
-    - Authorization
-  max-age: 3600
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://h-damoa.com,https://www.h-damoa.com}

@@ -319,7 +319,14 @@ public enum ErrorCode {
     COMMUNITY_MAX_ATTACHMENTS_EXCEEDED(HttpStatus.BAD_REQUEST, "CM009", "최대 첨부파일 개수를 초과했습니다"),
     COMMUNITY_ALREADY_LIKED(HttpStatus.CONFLICT, "CM010", "이미 좋아요한 게시글입니다"),
     COMMUNITY_ALREADY_DISLIKED(HttpStatus.CONFLICT, "CM011", "이미 싫어요한 게시글입니다"),
-    COMMUNITY_CATEGORY_HAS_CHILDREN(HttpStatus.BAD_REQUEST, "CM012", "하위 카테고리가 있어 삭제할 수 없습니다");
+    COMMUNITY_CATEGORY_HAS_CHILDREN(HttpStatus.BAD_REQUEST, "CM012", "하위 카테고리가 있어 삭제할 수 없습니다"),
+
+    // Portfolio Consultation
+    PORTFOLIO_CONSULTATION_NOT_FOUND(HttpStatus.NOT_FOUND, "PC001", "상담신청을 찾을 수 없습니다"),
+    PORTFOLIO_CONSULTATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "PC002", "상담신청에 대한 권한이 없습니다"),
+    PORTFOLIO_CONSULTATION_NOT_EDITABLE(HttpStatus.BAD_REQUEST, "PC003", "대기중 상태의 상담신청만 수정할 수 있습니다"),
+    PORTFOLIO_CONSULTATION_NOT_DELETABLE(HttpStatus.BAD_REQUEST, "PC004", "답변완료 또는 완료 상태의 상담신청은 삭제할 수 없습니다"),
+    INVALID_PORTFOLIO_CONSULTATION_STATUS(HttpStatus.BAD_REQUEST, "PC005", "유효하지 않은 상담신청 상태입니다");
 
     private final HttpStatus status;
     private final String code;
