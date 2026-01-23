@@ -77,4 +77,36 @@ public interface CompanyReviewRepository extends JpaRepository<CompanyReview, Lo
      * UUID로 리뷰 조회 (관리자용 - 삭제된 것 제외, status 무관)
      */
     Optional<CompanyReview> findByUuid(UUID uuid);
+
+    // ===== Dashboard 통계용 메서드 =====
+
+    /**
+     * 업체별 점수 분포 조회
+     */
+    @Query("SELECT r.rating, COUNT(r) FROM CompanyReview r " +
+           "WHERE r.company.id = :companyId AND r.isDeleted = false AND r.status = 'PUBLISHED' " +
+           "GROUP BY r.rating")
+    List<Object[]> getScoreDistributionByCompanyId(@Param("companyId") Long companyId);
+
+    /**
+     * 업체별 최근 리뷰 목록
+     */
+    @Query("SELECT r FROM CompanyReview r " +
+           "WHERE r.company.id = :companyId AND r.isDeleted = false AND r.status = 'PUBLISHED' " +
+           "ORDER BY r.createdAt DESC")
+    List<CompanyReview> findRecentByCompanyId(@Param("companyId") Long companyId, Pageable pageable);
+
+    /**
+     * 업체별 리뷰 수 (PUBLISHED 상태만)
+     */
+    @Query("SELECT COUNT(r) FROM CompanyReview r " +
+           "WHERE r.company.id = :companyId AND r.isDeleted = false AND r.status = 'PUBLISHED'")
+    long countPublishedByCompanyId(@Param("companyId") Long companyId);
+
+    /**
+     * 업체별 평균 평점 (PUBLISHED 상태만)
+     */
+    @Query("SELECT AVG(r.rating) FROM CompanyReview r " +
+           "WHERE r.company.id = :companyId AND r.isDeleted = false AND r.status = 'PUBLISHED'")
+    Double getAverageRatingByCompanyId(@Param("companyId") Long companyId);
 }

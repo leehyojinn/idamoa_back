@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -101,4 +102,23 @@ public interface PortfolioConsultationRepository extends JpaRepository<Portfolio
             @Param("keyword") String keyword,
             @Param("isDeleted") Boolean isDeleted,
             Pageable pageable);
+
+    // ===== Dashboard 통계용 쿼리 =====
+
+    // 업체별 상담신청 상태별 카운트
+    @Query("SELECT pc.status, COUNT(pc) FROM PortfolioConsultation pc " +
+           "WHERE pc.company.id = :companyId AND pc.isDeleted = false " +
+           "GROUP BY pc.status")
+    List<Object[]> countByCompanyIdGroupByStatus(@Param("companyId") Long companyId);
+
+    // 업체별 전체 상담신청 수
+    @Query("SELECT COUNT(pc) FROM PortfolioConsultation pc " +
+           "WHERE pc.company.id = :companyId AND pc.isDeleted = false")
+    long countByCompanyId(@Param("companyId") Long companyId);
+
+    // 업체별 최근 상담신청 목록
+    @Query("SELECT pc FROM PortfolioConsultation pc " +
+           "WHERE pc.company.id = :companyId AND pc.isDeleted = false " +
+           "ORDER BY pc.createdAt DESC")
+    List<PortfolioConsultation> findRecentByCompanyId(@Param("companyId") Long companyId, Pageable pageable);
 }
