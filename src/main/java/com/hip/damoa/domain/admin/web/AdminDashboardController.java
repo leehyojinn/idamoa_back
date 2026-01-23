@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 관리자 대시보드 API
  */
-@Tag(name = "1900. Admin - Dashboard", description = "관리자 대시보드 통계 API")
+@Tag(name = "9900. Admin - Dashboard", description = "관리자 대시보드 통계 API")
 @SecurityRequirement(name = "bearerAuth")
 @Slf4j
 @RestController

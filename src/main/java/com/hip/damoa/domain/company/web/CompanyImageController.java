@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  * 업체 이미지 관리 REST API
  */
 @Slf4j
-@Tag(name = "06. Company Image", description = "업체 이미지 관리 API")
+@Tag(name = "1006. Company Image", description = "업체 이미지 관리 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

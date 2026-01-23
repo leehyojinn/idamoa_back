@@ -26,7 +26,7 @@ import java.util.UUID;
  * 리뷰 관리 REST API (관리자용)
  */
 @Slf4j
-@Tag(name = "1910. Admin - Review", description = "리뷰 관리 API (관리자)")
+@Tag(name = "9910. Admin - Review", description = "리뷰 관리 API (관리자)")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

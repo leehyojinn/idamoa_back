@@ -30,7 +30,7 @@ import java.util.UUID;
  * 업체 관리 REST API (관리자용)
  */
 @Slf4j
-@Tag(name = "1902. Admin - Company", description = "업체 관리 API (관리자용)")
+@Tag(name = "9902. Admin - Company", description = "업체 관리 API (관리자용)")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

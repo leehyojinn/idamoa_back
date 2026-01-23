@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 /**
  * 범용 1:1 채팅 REST API 컨트롤러
  */
-@Tag(name = "Direct Chat", description = "1:1 채팅 API")
+@Tag(name = "3000. Direct Chat", description = "1:1 채팅 API")
 @Slf4j
 @RestController
 @RequiredArgsConstructor

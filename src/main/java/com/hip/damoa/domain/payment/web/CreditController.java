@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "05-1. Credit", description = "크레딧 관련 API")
+@Tag(name = "1005-1. Credit", description = "크레딧 관련 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

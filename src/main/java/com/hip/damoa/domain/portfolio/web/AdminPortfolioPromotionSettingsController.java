@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
  * 관리자용 포트폴리오 프로모션 설정 컨트롤러
  */
 @Slf4j
-@Tag(name = "1903-1. Admin Portfolio Promotion Settings", description = "관리자 포트폴리오 프로모션 설정 관리 API")
+@Tag(name = "9903-1. Admin Portfolio Promotion Settings", description = "관리자 포트폴리오 프로모션 설정 관리 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

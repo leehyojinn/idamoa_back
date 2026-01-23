@@ -25,7 +25,7 @@ import java.util.List;
  * 관리자만 접근 가능한 필터 카테고리 및 옵션 관리 API
  */
 @Slf4j
-@Tag(name = "1911. Admin Filter", description = "관리자 필터 관리 API")
+@Tag(name = "9911. Admin Filter", description = "관리자 필터 관리 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

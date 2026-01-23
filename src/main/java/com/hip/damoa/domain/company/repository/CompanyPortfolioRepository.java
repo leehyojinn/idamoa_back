@@ -93,4 +93,28 @@ public interface CompanyPortfolioRepository extends JpaRepository<CompanyPortfol
            "AND pp.status = 'ACTIVE' " +
            "AND pp.isDeleted = false")
     Page<CompanyPortfolio> findWithActivePromotion(Pageable pageable);
+
+    // ===== Dashboard 통계용 메서드 =====
+
+    /**
+     * 업체별 포트폴리오 총 조회수
+     */
+    @Query("SELECT COALESCE(SUM(p.viewCount), 0) FROM CompanyPortfolio p " +
+           "WHERE p.company.id = :companyId AND p.isDeleted = false")
+    long sumViewCountByCompanyId(@Param("companyId") Long companyId);
+
+    /**
+     * 업체별 포트폴리오 수
+     */
+    @Query("SELECT COUNT(p) FROM CompanyPortfolio p " +
+           "WHERE p.company.id = :companyId AND p.isDeleted = false")
+    long countByCompanyId(@Param("companyId") Long companyId);
+
+    /**
+     * 업체별 Top N 포트폴리오 (조회수 기준)
+     */
+    @Query("SELECT p FROM CompanyPortfolio p " +
+           "WHERE p.company.id = :companyId AND p.isDeleted = false " +
+           "ORDER BY p.viewCount DESC")
+    List<CompanyPortfolio> findTopByCompanyIdOrderByViewCountDesc(@Param("companyId") Long companyId, Pageable pageable);
 }

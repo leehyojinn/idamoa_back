@@ -28,7 +28,7 @@ import java.util.UUID;
  *
  * 홈페이지 팝업 등록/수정/삭제 API (ADMIN 전용)
  */
-@Tag(name = "1910. Admin - Popup", description = "팝업 관리 API (관리자 전용)")
+@Tag(name = "9910. Admin - Popup", description = "팝업 관리 API (관리자 전용)")
 @SecurityRequirement(name = "bearerAuth")
 @PreAuthorize("hasRole('ADMIN')")  // 관리자만 접근 가능
 @Slf4j

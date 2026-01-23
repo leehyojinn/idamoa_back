@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
  * 견적 제안 REST API
  */
 @Slf4j
-@Tag(name = "09. Proposal", description = "견적 제안 API")
+@Tag(name = "1009. Proposal", description = "견적 제안 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

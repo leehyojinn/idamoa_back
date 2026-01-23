@@ -31,7 +31,7 @@ import java.util.UUID;
 /**
  * 관리자 자료실 관리 API
  */
-@Tag(name = "1905. Admin - Document Board", description = "관리자 자료실 관리 API")
+@Tag(name = "9905. Admin - Document Board", description = "관리자 자료실 관리 API")
 @SecurityRequirement(name = "bearerAuth")
 @Slf4j
 @RestController

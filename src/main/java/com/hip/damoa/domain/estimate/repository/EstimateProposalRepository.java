@@ -107,4 +107,37 @@ public interface EstimateProposalRepository extends JpaRepository<EstimatePropos
 
     @Query("SELECT AVG(p.price) FROM EstimateProposal p WHERE p.isDeleted = false")
     java.math.BigDecimal getAveragePrice();
+
+    // ===== Dashboard 통계용 메서드 =====
+
+    /**
+     * 업체별 제안 상태별 카운트
+     */
+    @Query("SELECT p.status, COUNT(p) FROM EstimateProposal p " +
+           "WHERE p.company.id = :companyId AND p.isDeleted = false " +
+           "GROUP BY p.status")
+    List<Object[]> countByCompanyIdGroupByStatus(@Param("companyId") Long companyId);
+
+    /**
+     * 업체별 전체 제안 수
+     */
+    @Query("SELECT COUNT(p) FROM EstimateProposal p " +
+           "WHERE p.company.id = :companyId AND p.isDeleted = false")
+    long countByCompanyId(@Param("companyId") Long companyId);
+
+    /**
+     * 업체별 선택된 제안 수
+     */
+    @Query("SELECT COUNT(p) FROM EstimateProposal p " +
+           "WHERE p.company.id = :companyId AND p.isSelected = true AND p.isDeleted = false")
+    long countSelectedByCompanyId(@Param("companyId") Long companyId);
+
+    /**
+     * 업체별 최근 제안 목록
+     */
+    @Query("SELECT p FROM EstimateProposal p " +
+           "LEFT JOIN FETCH p.request " +
+           "WHERE p.company.id = :companyId AND p.isDeleted = false " +
+           "ORDER BY p.createdAt DESC")
+    List<EstimateProposal> findRecentByCompanyId(@Param("companyId") Long companyId, Pageable pageable);
 }

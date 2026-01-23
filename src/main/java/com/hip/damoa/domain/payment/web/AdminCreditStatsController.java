@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 관리자용 크레딧 통계 대시보드 컨트롤러
  */
 @Slf4j
-@Tag(name = "1925. Admin Credit Stats", description = "관리자 크레딧 통계 대시보드 API")
+@Tag(name = "9925. Admin Credit Stats", description = "관리자 크레딧 통계 대시보드 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

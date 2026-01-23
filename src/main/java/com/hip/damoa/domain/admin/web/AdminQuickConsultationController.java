@@ -25,7 +25,7 @@ import java.util.UUID;
 /**
  * 빠른상담 관리자 API 컨트롤러
  */
-@Tag(name = "1909. Admin - Quick Consultation", description = "빠른상담 관리자 API")
+@Tag(name = "9909. Admin - Quick Consultation", description = "빠른상담 관리자 API")
 @SecurityRequirement(name = "bearerAuth")
 @Slf4j
 @RestController

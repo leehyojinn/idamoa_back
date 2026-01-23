@@ -23,7 +23,7 @@ import java.util.UUID;
 /**
  * 커뮤니티 게시글 관리 Controller (관리자용)
  */
-@Tag(name = "1921. Admin - Community Post", description = "커뮤니티 게시글 관리 API (관리자 전용)")
+@Tag(name = "9921. Admin - Community Post", description = "커뮤니티 게시글 관리 API (관리자 전용)")
 @SecurityRequirement(name = "bearerAuth")
 @Slf4j
 @RestController

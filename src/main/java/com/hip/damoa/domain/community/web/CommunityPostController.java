@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-@Tag(name = "Community Post", description = "커뮤니티 게시글 API")
+@Tag(name = "1032. Community Post", description = "커뮤니티 게시글 API")
 @Slf4j
 @RestController
 @RequiredArgsConstructor

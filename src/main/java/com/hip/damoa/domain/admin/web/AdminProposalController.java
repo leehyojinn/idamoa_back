@@ -27,7 +27,7 @@ import java.util.UUID;
  * 견적 제안 관리 REST API (관리자용)
  */
 @Slf4j
-@Tag(name = "1904. Admin - Proposal", description = "견적 제안 관리 API (관리자)")
+@Tag(name = "9904. Admin - Proposal", description = "견적 제안 관리 API (관리자)")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  * 파일 업로드/다운로드 REST API
  */
 @Slf4j
-@Tag(name = "04. File", description = "파일 업로드/다운로드 API")
+@Tag(name = "1004. File", description = "파일 업로드/다운로드 API")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequiredArgsConstructor

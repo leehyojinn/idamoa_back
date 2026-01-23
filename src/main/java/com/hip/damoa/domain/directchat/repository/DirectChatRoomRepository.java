@@ -1,6 +1,7 @@
 package com.hip.damoa.domain.directchat.repository;
 
 import com.hip.damoa.domain.directchat.model.DirectChatRoom;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -122,4 +123,27 @@ public interface DirectChatRoomRepository extends JpaRepository<DirectChatRoom, 
              OR (r.user2_id = :userId AND r.user2_active = true))
         """, nativeQuery = true)
     List<Object[]> getUnreadCountsByUserId(@Param("userId") Long userId);
+
+    // ===== Dashboard 통계용 메서드 =====
+
+    /**
+     * 사용자의 활성 채팅방 수
+     */
+    @Query("SELECT COUNT(r) FROM DirectChatRoom r " +
+           "WHERE r.isDeleted = false " +
+           "AND ((r.user1.id = :userId AND r.user1Active = true) " +
+           "     OR (r.user2.id = :userId AND r.user2Active = true))")
+    long countActiveByUserId(@Param("userId") Long userId);
+
+    /**
+     * 사용자의 최근 채팅방 목록 (with fetch)
+     */
+    @Query("SELECT r FROM DirectChatRoom r " +
+           "LEFT JOIN FETCH r.user1 " +
+           "LEFT JOIN FETCH r.user2 " +
+           "WHERE r.isDeleted = false " +
+           "AND ((r.user1.id = :userId AND r.user1Active = true) " +
+           "     OR (r.user2.id = :userId AND r.user2Active = true)) " +
+           "ORDER BY r.lastMessageAt DESC NULLS LAST")
+    List<DirectChatRoom> findRecentByUserId(@Param("userId") Long userId, Pageable pageable);
 }

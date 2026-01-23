@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
-@Tag(name = "Community Category", description = "커뮤니티 카테고리 API")
+@Tag(name = "1031. Community Category", description = "커뮤니티 카테고리 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/community/categories")
