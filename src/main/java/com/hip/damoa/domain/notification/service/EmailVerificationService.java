@@ -36,6 +36,16 @@ public class EmailVerificationService {
     public void createVerification(String email, String verificationToken, String verificationCode,
                                     String purpose, LocalDateTime expiresAt, String requestIp) {
         try {
+            // 기존 PENDING 상태의 동일 이메일/목적 레코드 삭제 (재요청 시 중복 방지)
+            verificationRepository.deleteByEmailAndPurposeAndStatusPending(email, purpose);
+            log.debug("기존 PENDING 인증 레코드 삭제: email={}, purpose={}", email, purpose);
+
+            // 토큰 중복 체크 (혹시 모를 경우 대비)
+            if (verificationRepository.existsByVerificationToken(verificationToken)) {
+                log.warn("중복 토큰 발견, 건너뜀: token={}", verificationToken);
+                return;
+            }
+
             EmailVerification verification = EmailVerification.builder()
                     .email(email)
                     .verificationToken(verificationToken)

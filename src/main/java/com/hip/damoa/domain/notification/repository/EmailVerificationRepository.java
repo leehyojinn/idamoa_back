@@ -83,4 +83,11 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
 
     // Delete by expires at before (for cleanup)
     long deleteByExpiresAtBefore(LocalDateTime expiresAt);
+
+    // 같은 이메일, 목적의 PENDING 상태 레코드 삭제 (재요청 시 기존 레코드 정리)
+    @Query("DELETE FROM EmailVerification v WHERE v.email = :email AND v.purpose = :purpose AND v.status = 'PENDING'")
+    void deleteByEmailAndPurposeAndStatusPending(@Param("email") String email, @Param("purpose") String purpose);
+
+    // verification_token 존재 여부 확인
+    boolean existsByVerificationToken(String verificationToken);
 }

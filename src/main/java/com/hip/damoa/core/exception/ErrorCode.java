@@ -205,6 +205,7 @@ public enum ErrorCode {
     PROFILE_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "PF003", "이미 완료된 프로필입니다"),
     PROFILE_TYPE_NOT_SELECTED(HttpStatus.BAD_REQUEST, "PF004", "프로필 타입이 선택되지 않았습니다"),
     UNAUTHORIZED_ROLE_CHANGE(HttpStatus.FORBIDDEN, "PF005", "권한 변경 권한이 없습니다"),
+    DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "PF006", "이미 사용 중인 닉네임입니다"),
 
     // Board/Content
     BOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "BD001", "게시글을 찾을 수 없습니다"),

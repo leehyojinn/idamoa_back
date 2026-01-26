@@ -129,6 +129,11 @@ public class ProfileService {
             throw new BusinessException(ErrorCode.PROFILE_ALREADY_COMPLETED);
         }
 
+        // 닉네임 중복 체크
+        if (request.getNickname() != null && userProfileRepository.existsByNickname(request.getNickname())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
+        }
+
         // UserProfile 생성
         UserProfile userProfile = UserProfile.builder()
                 .user(user)
@@ -325,6 +330,13 @@ public class ProfileService {
 
         UserProfile userProfile = userProfileRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
+
+        // 닉네임 변경 시 중복 체크 (본인 제외)
+        if (request.getNickname() != null &&
+            !request.getNickname().equals(userProfile.getNickname()) &&
+            userProfileRepository.existsByNicknameAndUserIdNot(request.getNickname(), user.getId())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
+        }
 
         // 프로필 정보 업데이트
         userProfile.updateProfile(request.getName(), request.getNickname(), request.getBio());
