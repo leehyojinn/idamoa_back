@@ -2,6 +2,7 @@ package com.hip.damoa.domain.notification.repository;
 
 import com.hip.damoa.domain.notification.model.EmailVerification;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -85,6 +86,7 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
     long deleteByExpiresAtBefore(LocalDateTime expiresAt);
 
     // 같은 이메일, 목적의 PENDING 상태 레코드 삭제 (재요청 시 기존 레코드 정리)
+    @Modifying
     @Query("DELETE FROM EmailVerification v WHERE v.email = :email AND v.purpose = :purpose AND v.status = 'PENDING'")
     void deleteByEmailAndPurposeAndStatusPending(@Param("email") String email, @Param("purpose") String purpose);
 
