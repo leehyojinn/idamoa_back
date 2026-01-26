@@ -58,12 +58,25 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(detailedMessage));
     }
 
+    // 크롤러/봇 요청으로 인해 자주 발생하는 에러 코드 (DEBUG 레벨로 로깅)
+    private static final Set<ErrorCode> DEBUG_LEVEL_ERRORS = Set.of(
+            ErrorCode.COMPANY_PROFILE_NOT_FOUND,  // CP001 - SEO 크롤러가 삭제된 업체 페이지 방문 시
+            ErrorCode.PORTFOLIO_NOT_FOUND         // 삭제된 포트폴리오 접근 시
+    );
+
     @ExceptionHandler(BusinessException.class)
     protected ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
         final ErrorCode errorCode = e.getErrorCode();
         // 커스텀 메시지가 있으면 사용, 없으면 기본 에러 메시지 사용
         final String message = e.getMessage();
-        log.warn("비즈니스 예외 발생: {} - {}", errorCode.getCode(), message);
+
+        // 크롤러로 인한 빈번한 에러는 DEBUG로, 나머지는 WARN으로 로깅
+        if (DEBUG_LEVEL_ERRORS.contains(errorCode)) {
+            log.debug("비즈니스 예외 발생 (크롤러 관련): {} - {}", errorCode.getCode(), message);
+        } else {
+            log.warn("비즈니스 예외 발생: {} - {}", errorCode.getCode(), message);
+        }
+
         return ResponseEntity.status(errorCode.getStatus())
                 .body(ApiResponse.error(message));
     }
