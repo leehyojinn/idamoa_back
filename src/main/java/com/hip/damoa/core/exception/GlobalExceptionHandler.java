@@ -1,6 +1,7 @@
 package com.hip.damoa.core.exception;
 
 import com.hip.damoa.core.response.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -163,9 +165,27 @@ public class GlobalExceptionHandler {
                lowerPath.contains("/php");
     }
 
+    /**
+     * 타입 변환 오류 (UUID, Long 등의 파라미터 타입 불일치)
+     * - 잘못된 URL 접근 시 발생
+     * - 어떤 URL에서 발생했는지 상세 로깅
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException e, HttpServletRequest request) {
+        log.error("타입 변환 오류 - URL: {} {}, 파라미터: {}, 값: {}, 필요한 타입: {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                e.getName(),
+                e.getValue(),
+                e.getRequiredType() != null ? e.getRequiredType().getSimpleName() : "unknown");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("잘못된 파라미터 형식입니다: " + e.getName()));
+    }
+
     @ExceptionHandler(Exception.class)
-    protected ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
-        log.error("handleException", e);
+    protected ResponseEntity<ApiResponse<Void>> handleException(Exception e, HttpServletRequest request) {
+        log.error("handleException - URL: {} {}", request.getMethod(), request.getRequestURI(), e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR.getMessage()));
     }
